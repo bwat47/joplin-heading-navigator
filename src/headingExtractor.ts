@@ -67,37 +67,32 @@ export function extractHeadings(content: string): HeadingItem[] {
         const tree = parser.parse(content);
         const headings: HeadingItem[] = [];
         const resolveLineNumber = createLineResolver(content);
-        const cursor = tree.cursor();
 
-        let hasNode = cursor.firstChild();
-        while (hasNode) {
-            const level = parseHeadingLevel(cursor.name);
-            if (level !== null) {
-                const from = cursor.from;
-                const to = cursor.to;
-                const text = normalizeHeadingText(cursor.name, content.slice(from, to));
-
-                if (text) {
-                    headings.push({
-                        id: `heading-${from}`,
-                        text,
-                        level,
-                        from,
-                        to,
-                        line: resolveLineNumber(from),
-                    });
+        tree.iterate({
+            enter(node) {
+                const level = parseHeadingLevel(node.type.name);
+                if (level === null) {
+                    return;
                 }
-            }
 
-            if (!cursor.nextSibling()) {
-                do {
-                    if (!cursor.parent()) {
-                        hasNode = false;
-                        break;
-                    }
-                } while (!cursor.nextSibling());
-            }
-        }
+                const from = node.from;
+                const to = node.to;
+                const text = normalizeHeadingText(node.type.name, content.slice(from, to));
+
+                if (!text) {
+                    return;
+                }
+
+                headings.push({
+                    id: `heading-${from}`,
+                    text,
+                    level,
+                    from,
+                    to,
+                    line: resolveLineNumber(from),
+                });
+            },
+        });
 
         return headings;
     } catch (error) {
