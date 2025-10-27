@@ -373,6 +373,8 @@ class HeadingPanel {
 
             this.list.appendChild(item);
         });
+
+        this.scrollActiveItemIntoView();
     }
 
     private updateSelection(): void {
