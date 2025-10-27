@@ -1,6 +1,6 @@
 {
-    "name": "joplin-plugin-simple-image-resize",
-    "version": "1.2.0",
+    "name": "joplin-plugin-heading-navigator",
+    "version": "0.1.0",
     "scripts": {
         "dist": "webpack --env joplin-plugin-config=buildMain && webpack --env joplin-plugin-config=buildExtraScripts && webpack --env joplin-plugin-config=createArchive",
         "prepare": "npm run dist",
@@ -27,6 +27,7 @@
         "@typescript-eslint/eslint-plugin": "^8.46.2",
         "@typescript-eslint/parser": "^8.46.2",
         "@joplin/utils": "^3.5.1",
+        "@codemirror/lang-markdown": "6.3.1",
         "chalk": "^4.1.0",
         "copy-webpack-plugin": "^13.0.1",
         "eslint": "^9.38.0",

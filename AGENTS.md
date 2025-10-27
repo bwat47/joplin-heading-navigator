@@ -21,7 +21,6 @@
 - **Language**: TypeScript with strict settings; 4-space indentation; semicolons required.
 - **Filenames**: `camelCase.ts` for modules; tests mirror names: `module.test.ts`.
 - **Exports**: Prefer explicit types and narrow public exports.
-- **Error handling**: Use consistent logging prefix `[Image Resize]` or `[image-resize]`.
 - **Style enforcement**: Run `eslint.config.js`, `.prettierrc.js` before commits.
 - **Documentation**: Use JSDoc for complex functions; document regex patterns with examples.
 
