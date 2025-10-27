@@ -428,9 +428,10 @@ function findActiveHeadingId(headings: HeadingItem[], position: number): string 
 }
 
 function setEditorSelection(view: EditorView, heading: HeadingItem, focusEditor: boolean): void {
+    const selection = EditorSelection.single(heading.from);
     view.dispatch({
-        selection: EditorSelection.single(heading.from),
-        scrollIntoView: true,
+        selection,
+        effects: EditorView.scrollIntoView(selection.main, { y: 'center' }),
     });
     if (focusEditor) {
         view.focus();
