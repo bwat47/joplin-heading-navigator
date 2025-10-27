@@ -15,7 +15,8 @@ const PANEL_CSS = `
     max-height: 60%;
     display: flex;
     flex-direction: column;
-    background-color: var(--joplin-color-background) !important;
+    background-color: var(--joplin-editor-background-color, var(--joplin-color-background, #ffffff));
+    color: var(--joplin-editor-foreground-color, var(--joplin-color, #2f3136));
     border: 1px solid var(--joplin-color2);
     border-radius: 6px;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
@@ -27,7 +28,7 @@ const PANEL_CSS = `
     padding: 8px;
     border: none;
     border-bottom: 1px solid var(--joplin-color2);
-    background: transparent;
+    background-color: inherit;
     color: inherit;
     font-size: 14px;
     outline: none;
@@ -39,6 +40,7 @@ const PANEL_CSS = `
     list-style: none;
     overflow-y: auto;
     font-size: 13px;
+    background-color: inherit;
 }
 
 .heading-navigator-item {
@@ -47,6 +49,7 @@ const PANEL_CSS = `
     gap: 2px;
     padding: 8px 12px;
     cursor: pointer;
+    background-color: inherit;
 }
 
 .heading-navigator-item.is-selected {
