@@ -110,6 +110,8 @@ class HeadingPanel {
 
     private readonly handleListClickListener: (event: MouseEvent) => void;
 
+    private readonly handleDocumentMouseDownListener: (event: MouseEvent) => void;
+
     public constructor(view: EditorView, callbacks: PanelCallbacks) {
         this.view = view;
         this.onPreview = callbacks.onPreview;
@@ -142,9 +144,23 @@ class HeadingPanel {
             this.handleListClick(event);
         };
 
+        this.handleDocumentMouseDownListener = (event: MouseEvent) => {
+            const target = event.target as Node | null;
+            if (!target) {
+                return;
+            }
+
+            if (this.container.contains(target)) {
+                return;
+            }
+
+            this.onClose();
+        };
+
         this.input.addEventListener('input', this.handleInputListener);
         this.input.addEventListener('keydown', this.handleKeyDownListener);
         this.list.addEventListener('mousedown', this.handleListClickListener);
+        this.ownerDocument().addEventListener('mousedown', this.handleDocumentMouseDownListener, true);
     }
 
     public open(headings: HeadingItem[], selectedId: string | null): void {
@@ -169,6 +185,7 @@ class HeadingPanel {
         this.input.removeEventListener('input', this.handleInputListener);
         this.input.removeEventListener('keydown', this.handleKeyDownListener);
         this.list.removeEventListener('mousedown', this.handleListClickListener);
+        this.ownerDocument().removeEventListener('mousedown', this.handleDocumentMouseDownListener, true);
         if (this.container.parentElement) {
             this.container.parentElement.removeChild(this.container);
         }
@@ -176,6 +193,10 @@ class HeadingPanel {
 
     public isOpen(): boolean {
         return Boolean(this.container.parentElement);
+    }
+
+    private ownerDocument(): Document {
+        return this.view.dom.ownerDocument ?? document;
     }
 
     private mount(): void {
