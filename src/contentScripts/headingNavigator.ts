@@ -1,4 +1,4 @@
-import { EditorSelection, EditorState } from '@codemirror/state';
+﻿import { EditorSelection, EditorState } from '@codemirror/state';
 import { EditorView, ViewUpdate } from '@codemirror/view';
 import type { CodeMirrorControl, MarkdownEditorContentScriptModule } from 'api/types';
 import { EDITOR_COMMAND_TOGGLE_PANEL } from '../constants';
@@ -76,6 +76,7 @@ const PANEL_CSS = `
 `;
 
 interface PanelCallbacks {
+    onPreview: (heading: HeadingItem) => void;
     onSelect: (heading: HeadingItem) => void;
     onClose: () => void;
 }
@@ -95,6 +96,10 @@ class HeadingPanel {
 
     private selectedHeadingId: string | null = null;
 
+    private lastPreviewedId: string | null = null;
+
+    private readonly onPreview: (heading: HeadingItem) => void;
+
     private readonly onSelect: (heading: HeadingItem) => void;
 
     private readonly onClose: () => void;
@@ -107,6 +112,7 @@ class HeadingPanel {
 
     public constructor(view: EditorView, callbacks: PanelCallbacks) {
         this.view = view;
+        this.onPreview = callbacks.onPreview;
         this.onSelect = callbacks.onSelect;
         this.onClose = callbacks.onClose;
 
@@ -125,6 +131,7 @@ class HeadingPanel {
 
         this.handleInputListener = () => {
             this.applyFilter(this.input.value);
+            this.notifyPreview();
         };
 
         this.handleKeyDownListener = (event: KeyboardEvent) => {
@@ -144,7 +151,8 @@ class HeadingPanel {
         this.mount();
         this.input.value = '';
         this.selectedHeadingId = selectedId;
-        this.setHeadings(headings);
+        this.lastPreviewedId = null;
+        this.setHeadings(headings, '', true);
         setTimeout(() => this.input.focus(), 0);
     }
 
@@ -154,7 +162,7 @@ class HeadingPanel {
             this.input.value = '';
         }
         this.selectedHeadingId = selectedId ?? this.selectedHeadingId;
-        this.setHeadings(headings, filterText);
+        this.setHeadings(headings, filterText, false);
     }
 
     public destroy(): void {
@@ -179,9 +187,14 @@ class HeadingPanel {
         }
     }
 
-    private setHeadings(headings: HeadingItem[], filterText = ''): void {
+    private setHeadings(headings: HeadingItem[], filterText = '', emitPreview = true): void {
         this.headings = headings;
         this.applyFilter(filterText);
+        if (emitPreview) {
+            this.notifyPreview();
+        } else {
+            this.updatePreviewMarker();
+        }
     }
 
     private applyFilter(filterText: string): void {
@@ -204,6 +217,36 @@ class HeadingPanel {
         }
 
         this.render();
+    }
+
+    private notifyPreview(): void {
+        if (!this.selectedHeadingId) {
+            this.lastPreviewedId = null;
+            return;
+        }
+
+        if (this.selectedHeadingId === this.lastPreviewedId) {
+            return;
+        }
+
+        const heading = this.headings.find((item) => item.id === this.selectedHeadingId);
+        if (!heading) {
+            this.lastPreviewedId = null;
+            return;
+        }
+
+        this.lastPreviewedId = heading.id;
+        this.onPreview(heading);
+    }
+
+    private updatePreviewMarker(): void {
+        if (!this.selectedHeadingId) {
+            this.lastPreviewedId = null;
+            return;
+        }
+
+        const heading = this.headings.find((item) => item.id === this.selectedHeadingId);
+        this.lastPreviewedId = heading?.id ?? null;
     }
 
     private handleKeyDown(event: KeyboardEvent): void {
@@ -242,6 +285,7 @@ class HeadingPanel {
         this.selectedHeadingId = this.filtered[nextIndex].id;
         this.updateSelection();
         this.scrollActiveItemIntoView();
+        this.notifyPreview();
     }
 
     private confirmSelection(): void {
@@ -360,12 +404,14 @@ function findActiveHeadingId(headings: HeadingItem[], position: number): string 
     return candidate?.id ?? headings[0].id;
 }
 
-function goToHeading(view: EditorView, heading: HeadingItem): void {
+function setEditorSelection(view: EditorView, heading: HeadingItem, focusEditor: boolean): void {
     view.dispatch({
         selection: EditorSelection.single(heading.from),
         scrollIntoView: true,
     });
-    view.focus();
+    if (focusEditor) {
+        view.focus();
+    }
 }
 
 export default function headingNavigator(): MarkdownEditorContentScriptModule {
@@ -379,13 +425,17 @@ export default function headingNavigator(): MarkdownEditorContentScriptModule {
             const ensurePanel = (): HeadingPanel => {
                 if (!panel) {
                     panel = new HeadingPanel(view, {
+                        onPreview: (heading) => {
+                            selectedHeadingId = heading.id;
+                            setEditorSelection(view, heading, false);
+                        },
                         onSelect: (heading) => {
                             selectedHeadingId = heading.id;
-                            goToHeading(view, heading);
-                            closePanel();
+                            setEditorSelection(view, heading, true);
+                            closePanel(true);
                         },
                         onClose: () => {
-                            closePanel();
+                            closePanel(true);
                         },
                     });
                 }
@@ -398,7 +448,7 @@ export default function headingNavigator(): MarkdownEditorContentScriptModule {
                 selectedHeadingId = findActiveHeadingId(headings, view.state.selection.main.head);
 
                 if (!headings.length) {
-                    closePanel();
+                    closePanel(true);
                     return;
                 }
 
@@ -414,14 +464,17 @@ export default function headingNavigator(): MarkdownEditorContentScriptModule {
                 panel.update(headings, selectedHeadingId);
             };
 
-            const closePanel = (): void => {
+            const closePanel = (focusEditor = false): void => {
                 panel?.destroy();
                 panel = null;
+                if (focusEditor) {
+                    view.focus();
+                }
             };
 
             const togglePanel = (): void => {
                 if (panel?.isOpen()) {
-                    closePanel();
+                    closePanel(true);
                 } else {
                     openPanel();
                 }
