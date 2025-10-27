@@ -1,0 +1,16 @@
+{
+	"manifest_version": 1,
+	"id": "com.bwat47.heading-navigator",
+	"app_min_version": "3.3",
+	"version": "1.0.0",
+	"name": "Heading Navigator",
+	"description": "Navigate through headings in the current note using the keyboard",
+	"author": "bwat47",
+	"homepage_url": "https://github.com/bwat47/joplin-heading-navigator",
+	"repository_url": "https://github.com/bwat47/joplin-heading-navigator",
+	"keywords": [],
+	"categories": [],
+	"screenshots": [],
+	"icons": {},
+	"promo_tile": {}
+}
