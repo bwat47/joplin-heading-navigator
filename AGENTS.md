@@ -1,3 +1,10 @@
+## Project Documentation
+
+heading-navigator-documentation.md
+
+- Internal documentation about project architecture, intended for LLMs to reference for context
+- Keep up to date with architecture changes when applicable
+
 ## Build, Test, and Development Commands
 
 - `npm test` Run Jest test suite with coverage.
