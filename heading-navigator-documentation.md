@@ -28,6 +28,7 @@
 
 - `src/headingExtractor.ts`: wraps the Lezer Markdown parser to detect ATX/Setext headings, normalizes text, and records byte offsets + line numbers.
 - `src/settings.ts`: registers plugin settings and normalizes values for the content script.
+- `src/panelDimensions.ts`: centralizes panel sizing defaults, normalization helpers, and min/max bounds shared between the plugin host and content script.
 - `src/types.ts`: defines shared DTOs (`HeadingItem`, `PanelDimensions`, `DEFAULT_PANEL_DIMENSIONS`) used by both plugin and editor bundles.
 - `src/constants.ts`: centralizes string identifiers (command name, CodeMirror content script id, editor command name).
 - `src/logger.ts`: bootstraps the Joplin logger namespace (`heading-navigator`) for consistent diagnostics.
