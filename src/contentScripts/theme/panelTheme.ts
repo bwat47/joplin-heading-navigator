@@ -191,9 +191,16 @@ function formatMaxHeight(ratio: number): string {
     return `${percentage}%`;
 }
 
+function createCancelIcon(color: string): string {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12"><path d="M2 2l8 8m0-8L2 10" stroke="${color}" stroke-width="1.8" stroke-linecap="round"/></svg>`;
+    return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+}
+
 export function createPanelCss(theme: PanelTheme, dimensions: PanelDimensions): string {
     const panelWidth = formatPanelWidth(dimensions.width);
     const maxHeight = formatMaxHeight(dimensions.maxHeightRatio);
+    const cancelIcon = createCancelIcon(theme.muted);
+    const cancelIconHover = createCancelIcon(theme.foreground);
     return `
 .heading-navigator-panel {
     position: absolute;
@@ -224,6 +231,26 @@ export function createPanelCss(theme: PanelTheme, dimensions: PanelDimensions): 
 
 .heading-navigator-input::placeholder {
     color: ${theme.muted};
+}
+
+.heading-navigator-input::-webkit-search-cancel-button {
+    appearance: none;
+    -webkit-appearance: none;
+    height: 16px;
+    width: 16px;
+    border-radius: 50%;
+    background-color: transparent;
+    background-image: ${cancelIcon};
+    background-repeat: no-repeat;
+    background-position: center;
+    cursor: pointer;
+    opacity: 0.75;
+    transition: opacity 120ms ease-out;
+}
+
+.heading-navigator-input::-webkit-search-cancel-button:hover {
+    opacity: 1;
+    background-image: ${cancelIconHover};
 }
 
 .heading-navigator-list {
