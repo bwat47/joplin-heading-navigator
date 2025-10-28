@@ -203,9 +203,12 @@ export class HeadingPanel {
     private handleKeyDown(event: KeyboardEvent): void {
         switch (event.key) {
             case 'ArrowDown':
-            case 'Tab':
                 event.preventDefault();
                 this.moveSelection(1);
+                break;
+            case 'Tab':
+                event.preventDefault();
+                this.moveSelection(event.shiftKey ? -1 : 1);
                 break;
             case 'ArrowUp':
                 event.preventDefault();
