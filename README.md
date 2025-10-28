@@ -8,7 +8,7 @@ A Joplin plugin that provides a simple overlay panel allowing you to navigate an
 ![heading-navigator-demo](https://github.com/user-attachments/assets/fb0239fe-42a3-4f44-b61b-5fb8ecf7a2ef)
 
 > [!important]
-> This plugin only works in the markdown editor (editor view or split view). It does not work in the reading view or in the rich text editor.
+> This plugin only works in the markdown editor (editor view or split view). It does not work in the reading view or in the rich text editor. Codemirror 6 only, legacy editor is not supported.
 
 ## How to use
 
@@ -28,6 +28,7 @@ You can filter the list of headings using the search filter at the top of the pa
 - Navigate through headings with the keyboard
 - Search filter to filter list of headings
 - Panel adapts to your Joplin theme
+- Adjustable panel size
 
 ### Settings
 
