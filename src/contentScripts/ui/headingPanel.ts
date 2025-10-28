@@ -3,6 +3,8 @@ import type { HeadingItem, PanelDimensions } from '../../types';
 import { createPanelCss, createPanelTheme } from '../theme/panelTheme';
 
 const PANEL_STYLE_ID = 'heading-navigator-styles';
+const INDENT_BASE_PX = 12;
+const INDENT_PER_LEVEL_PX = 12;
 
 export interface PanelCallbacks {
     onPreview: (heading: HeadingItem) => void;
@@ -299,7 +301,7 @@ export class HeadingPanel {
             const item = document.createElement('li');
             item.className = 'heading-navigator-item';
             item.dataset.headingId = heading.id;
-            item.style.paddingLeft = `${12 + (heading.level - 1) * 12}px`;
+            item.style.paddingLeft = `${INDENT_BASE_PX + (heading.level - 1) * INDENT_PER_LEVEL_PX}px`;
 
             const level = document.createElement('span');
             level.className = 'heading-navigator-item-level';
