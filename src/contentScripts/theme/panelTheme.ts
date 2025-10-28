@@ -189,7 +189,7 @@ export function createPanelCss(theme: PanelTheme): string {
     top: 12px;
     right: 12px;
     width: 320px;
-    max-height: 60%;
+    max-height: 75%;
     display: flex;
     flex-direction: column;
     background-color: ${theme.background};
