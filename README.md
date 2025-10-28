@@ -29,6 +29,19 @@ You can filter the list of headings using the search filter at the top of the pa
 - Search filter to filter list of headings
 - Panel adapts to your Joplin theme
 
+### Settings
+
+### User Configuration
+
+The panel appearance can be customized via Settings | Heading Navigator:
+
+- **Panel width**: 240-640px (default: 320px)
+    - Useful for longer heading text or smaller screens
+- **Panel max height**: 40-90% of editor viewport (default: 75%)
+    - Prevents the panel from obscuring too much content
+
+Settings take effect the next time the panel is opened.
+
 ### Screenshots
 
 <img width="673" alt="screenshot1" src="https://github.com/user-attachments/assets/5b026bb7-48e3-43ed-8157-bf07720b6c2d" />
