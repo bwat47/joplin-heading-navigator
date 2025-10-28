@@ -16,6 +16,7 @@ export interface PanelTheme {
     selectedForeground: string;
     scrollbar: string;
     scrollbarHover: string;
+    highlightBackground: string;
 }
 
 function clampToByte(value: number): number {
@@ -163,6 +164,9 @@ export function createPanelTheme(view: EditorView): PanelTheme {
     const selectedForeground = isDark ? '#ffffff' : '#111111';
     const scrollbar = mixColors(panelForeground, panelBackground, 0.6);
     const scrollbarHover = mixColors(panelForeground, panelBackground, 0.45);
+    const highlightBackground = isDark
+        ? mixColors(panelBackground, { r: 255, g: 255, b: 255 }, 0.22)
+        : mixColors(panelBackground, { r: 0, g: 0, b: 0 }, 0.08);
 
     return {
         background: rgbToHex(panelBackground),
@@ -174,6 +178,7 @@ export function createPanelTheme(view: EditorView): PanelTheme {
         selectedForeground,
         scrollbar: rgbToHex(scrollbar),
         scrollbarHover: rgbToHex(scrollbarHover),
+        highlightBackground: rgbToHex(highlightBackground),
     };
 }
 

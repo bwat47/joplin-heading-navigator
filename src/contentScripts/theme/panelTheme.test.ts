@@ -38,6 +38,7 @@ describe('createPanelTheme', () => {
             selectedForeground: '#111111',
             scrollbar: '#a2a2a2',
             scrollbarHover: '#828282',
+            highlightBackground: '#e3e3e3',
         });
     });
 
@@ -60,6 +61,7 @@ describe('createPanelTheme', () => {
             selectedForeground: '#ffffff',
             scrollbar: '#7f7f7f',
             scrollbarHover: '#9c9c9c',
+            highlightBackground: '#5e5e5e',
         });
     });
 });

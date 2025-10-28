@@ -16,7 +16,7 @@
 
 - Owns the CodeMirror plugin wiring: registers `headingNavigator.togglePanel`, listens to doc/selection updates, and coordinates panel lifecycle.
 - Computes headings via `extractHeadings`, tracks the active heading, and keeps the editor selection in sync with panel navigation.
-- Delegates all DOM rendering to `HeadingPanel` and ensures the panel opens/closes based on command toggles.
+- Delegates all DOM rendering to `HeadingPanel`, injects editor highlight decorations for the active heading, and ensures the panel opens/closes based on command toggles.
 
 ### Panel UI Modules
 
