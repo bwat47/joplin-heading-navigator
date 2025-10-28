@@ -4,15 +4,25 @@
     "app_min_version": "3.3",
     "version": "0.1.0",
     "name": "Heading Navigator",
-    "description": "Navigate through headings in the current note using the keyboard",
+    "description": "Overlay panel to navigate through headings in the markdown editor using the keyboard",
     "author": "bwat47",
     "homepage_url": "https://github.com/bwat47/joplin-heading-navigator",
     "repository_url": "https://github.com/bwat47/joplin-heading-navigator",
-    "keywords": ["joplin-plugin"],
+    "keywords": ["joplin-plugin", "Heading", "Outline", "Keyboard", "Navigation"],
     "categories": ["productivity", "editor"],
-    "screenshots": [],
-    "icons": {},
-    "promo_tile": {},
+    "screenshots": [{ "src": "images/screenshot1.png", "label": "Heading Navigator screenshot 1" }],
+    "icons": {
+        "128": "images/128.png",
+        "64": "images/64.png",
+        "48": "images/48.png",
+        "32": "images/32.png",
+        "24": "images/24.png",
+        "16": "images/16.png"
+    },
+    "promo_tile": {
+        "src": "images/heading-navigator_promo_tile.png",
+        "label": "heading Navigator Promo Tile"
+    },
     "content_scripts": [
         {
             "id": "headingNavigatorPanel",
