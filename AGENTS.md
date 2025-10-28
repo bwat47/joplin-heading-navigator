@@ -21,7 +21,6 @@ heading-navigator-documentation.md
 - **One clear way**: Single detection/validation path; avoid multiple competing approaches.
 - **Separation of concerns**: Each module handles one aspect (detection, sizing, building, etc.).
 - **Fail fast**: Validate inputs early; provide clear error messages to users.
-- **Preserve user data**: Never lose alt text, titles, or formatting during conversions.
 
 ## Coding Style & Naming Conventions
 
