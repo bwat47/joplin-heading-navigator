@@ -55,12 +55,12 @@ export async function loadPanelDimensions(): Promise<PanelDimensions> {
 
     const widthResult = normalizePanelWidth(values[SETTING_PANEL_WIDTH]);
     if (widthResult.changed) {
-        logger.warn(`Invalid panel width setting detected. Using ${widthResult.value}px.`);
+        logger.warn(`Invalid panel width setting: ${values[SETTING_PANEL_WIDTH]}. Using ${widthResult.value}px.`);
     }
 
     const heightResult = normalizePanelHeightPercentage(values[SETTING_PANEL_MAX_HEIGHT]);
     if (heightResult.changed) {
-        logger.warn(`Invalid panel height setting detected. Using ${heightResult.value}%.`);
+        logger.warn(`Invalid panel height setting: ${values[SETTING_PANEL_MAX_HEIGHT]}. Using ${heightResult.value}%.`);
     }
 
     return {
