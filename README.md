@@ -31,8 +31,6 @@ You can filter the list of headings using the search filter at the top of the pa
 
 ### Settings
 
-### User Configuration
-
 The panel appearance can be customized via Settings | Heading Navigator:
 
 - **Panel width**: 240-640px (default: 320px)
