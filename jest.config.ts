@@ -7,12 +7,7 @@ const config: Config = {
     moduleNameMapper: {
         '^api/(.*)$': '<rootDir>/api/$1',
     },
-    collectCoverageFrom: [
-        'src/**/*.ts',
-        '!src/**/*.d.ts',
-        '!src/index.ts',
-        '!src/manifest.json',
-    ],
+    collectCoverageFrom: ['src/**/*.ts', '!src/**/*.d.ts', '!src/index.ts', '!src/manifest.json'],
 };
 
 export default config;

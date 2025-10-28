@@ -34,5 +34,3 @@ You can filter the list of headings using the search filter at the top of the pa
 <img width="673" alt="screenshot1" src="https://github.com/user-attachments/assets/5b026bb7-48e3-43ed-8157-bf07720b6c2d" />
 
 <img width="677" alt="Screenshot2" src="https://github.com/user-attachments/assets/0ba7b41f-5de7-43ba-9cf1-652dd6c78991" />
-
-

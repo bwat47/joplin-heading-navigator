@@ -36,5 +36,3 @@
 ### Configuration
 
 - Panel width defaults to 320px (range 240–640). Panel height defaults to 75% of the editor viewport (range 40–90%). Both values are exposed via the Joplin configuration screen (`Heading Navigator` section) and are validated before being applied in the editor.
-
-
