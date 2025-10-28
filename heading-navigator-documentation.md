@@ -2,7 +2,7 @@
 
 - Goal: provide a quick “Go to heading” workflow inside Joplin’s CodeMirror 6 markdown editor, inspired by Sublime Text’s symbol palette.
 - Two major parts: the plugin entry point (`src/index.ts`) and the CodeMirror content script (`src/contentScripts/headingNavigator.ts`) compiled via `plugin.config.json`.
-- Shared helpers: `src/constants.ts` (string IDs), `src/types.ts` (`HeadingItem` DTO), `src/headingExtractor.ts` (Lezer-based heading parser), `src/logger.ts`.
+- Shared helpers: `src/constants.ts` (string IDs), `src/types.ts` (`HeadingItem` DTO), `src/headingExtractor.ts` (Lezer-based heading parser), `src/logger.ts`, plus panel-specific support under `src/contentScripts/ui` and `src/contentScripts/theme`.
 - Build/packaging is the standard yo-joplin scaffold using Webpack, `plugin.config.json` (extra script compilation), and `src/manifest.json` (exposes command + content script).
 
 ### Entry Point (`src/index.ts`)
@@ -13,12 +13,14 @@
 
 ### Content Script (`src/contentScripts/headingNavigator.ts`)
 
-- Implements a CodeMirror plugin that registers `headingNavigator.togglePanel`, renders the floating panel, and manages its lifecycle.
-- Builds a panel UI (filter input + list) with keyboard navigation, filtering, arrow/tab cycling, Enter/Escape handling, and click-to-select support.
-- Highlights the current heading, centers the editor preview (`scrollIntoView`), and closes when the user clicks outside or presses Escape.
-- Observes editor state via `EditorView.updateListener` to refresh headings after document edits or caret moves.
-- Uses `extractHeadings` to parse the note body into `HeadingItem` objects on the client side; caches selections to avoid unnecessary work.
-- Injects theme-aware CSS at runtime (`ensurePanelStyles`) so no static assets are required.
+- Owns the CodeMirror plugin wiring: registers `headingNavigator.togglePanel`, listens to doc/selection updates, and coordinates panel lifecycle.
+- Computes headings via `extractHeadings`, tracks the active heading, and keeps the editor selection in sync with panel navigation.
+- Delegates all DOM rendering to `HeadingPanel` and ensures the panel opens/closes based on command toggles.
+
+### Panel UI Modules
+
+- `src/contentScripts/ui/headingPanel.ts`: renders the floating panel DOM, wires keyboard/mouse interactions, manages filtering, and emits preview/select callbacks.
+- `src/contentScripts/theme/panelTheme.ts`: derives theme-aware colors from the current editor styles and produces the CSS injected by `HeadingPanel`.
 
 ### Utilities & Data
 
