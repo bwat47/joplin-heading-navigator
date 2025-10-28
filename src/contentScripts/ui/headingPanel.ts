@@ -98,7 +98,11 @@ export class HeadingPanel {
         this.selectedHeadingId = selectedId;
         this.lastPreviewedId = null;
         this.setHeadings(headings, '', true);
-        setTimeout(() => this.input.focus(), 0);
+        requestAnimationFrame(() => {
+            if (this.isOpen()) {
+                this.input.focus();
+            }
+        });
     }
 
     public update(headings: HeadingItem[], selectedId: string | null, preserveFilter = true): void {
