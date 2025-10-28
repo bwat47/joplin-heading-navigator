@@ -10,7 +10,10 @@
     "repository_url": "https://github.com/bwat47/joplin-heading-navigator",
     "keywords": ["joplin-plugin", "Heading", "Outline", "Keyboard", "Navigation"],
     "categories": ["productivity", "editor"],
-    "screenshots": [{ "src": "images/screenshot1.png", "label": "Heading Navigator screenshot 1" }],
+    "screenshots": [
+        { "src": "images/screenshot1.png", "label": "Heading Navigator screenshot 1" },
+        { "src": "images/screenshot2.png", "label": "Heading Navigator screenshot 2" }
+    ],
     "icons": {
         "128": "images/128.png",
         "64": "images/64.png",
