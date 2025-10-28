@@ -146,7 +146,6 @@ export default function headingNavigator(): MarkdownEditorContentScriptModule {
                     );
                 }
 
-                panel.setOptions(panelDimensions);
                 return panel;
             };
 
@@ -191,6 +190,10 @@ export default function headingNavigator(): MarkdownEditorContentScriptModule {
                 if (panel?.isOpen()) {
                     closePanel(true);
                 } else {
+                    // Only set options when dimensions are updated
+                    if (dimensions && panel) {
+                        panel.setOptions(panelDimensions);
+                    }
                     openPanel();
                 }
             };
