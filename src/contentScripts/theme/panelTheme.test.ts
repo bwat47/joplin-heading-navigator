@@ -38,7 +38,7 @@ describe('createPanelTheme', () => {
             selectedForeground: '#111111',
             scrollbar: '#a2a2a2',
             scrollbarHover: '#828282',
-            highlightBackground: '#e3e3e3',
+            highlightBackground: '#e4e4e4',
         });
     });
 
