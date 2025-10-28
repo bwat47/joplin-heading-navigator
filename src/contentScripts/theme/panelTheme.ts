@@ -19,6 +19,9 @@ export interface PanelTheme {
     highlightBackground: string;
 }
 
+const WHITE: RGBColor = { r: 255, g: 255, b: 255 };
+const BLACK: RGBColor = { r: 0, g: 0, b: 0 };
+
 function clampToByte(value: number): number {
     return Math.max(0, Math.min(255, Math.round(value)));
 }
@@ -112,7 +115,7 @@ function resolveColorFromStyles(candidates: (string | null | undefined)[], fallb
     }
     const fallbackColor = parseColor(fallback);
     if (!fallbackColor) {
-        return { r: 255, g: 255, b: 255 };
+        return WHITE;
     }
     return fallbackColor;
 }
@@ -148,25 +151,21 @@ export function createPanelTheme(view: EditorView): PanelTheme {
     );
 
     const isDark = relativeLuminance(background) < 0.5;
-    const panelBackground = isDark
-        ? mixColors(background, { r: 255, g: 255, b: 255 }, 0.08)
-        : mixColors(background, { r: 0, g: 0, b: 0 }, 0.03);
+    const panelBackground = isDark ? mixColors(background, WHITE, 0.08) : mixColors(background, BLACK, 0.03);
     const panelForeground = foreground;
 
-    const border = isDark
-        ? mixColors(panelBackground, { r: 255, g: 255, b: 255 }, 0.18)
-        : mixColors(panelBackground, { r: 0, g: 0, b: 0 }, 0.1);
+    const border = isDark ? mixColors(panelBackground, WHITE, 0.18) : mixColors(panelBackground, BLACK, 0.1);
     const divider = border;
     const muted = mixColors(panelForeground, panelBackground, isDark ? 0.45 : 0.35);
     const selectedBackground = isDark
-        ? mixColors(panelBackground, { r: 255, g: 255, b: 255 }, 0.16)
-        : mixColors(panelBackground, { r: 0, g: 0, b: 0 }, 0.12);
+        ? mixColors(panelBackground, WHITE, 0.16)
+        : mixColors(panelBackground, BLACK, 0.12);
     const selectedForeground = isDark ? '#ffffff' : '#111111';
     const scrollbar = mixColors(panelForeground, panelBackground, 0.6);
     const scrollbarHover = mixColors(panelForeground, panelBackground, 0.45);
     const highlightBackground = isDark
-        ? mixColors(panelBackground, { r: 255, g: 255, b: 255 }, 0.22)
-        : mixColors(panelBackground, { r: 0, g: 0, b: 0 }, 0.08);
+        ? mixColors(panelBackground, WHITE, 0.22)
+        : mixColors(panelBackground, BLACK, 0.08);
 
     return {
         background: rgbToHex(panelBackground),
