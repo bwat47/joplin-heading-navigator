@@ -187,7 +187,7 @@ function formatPanelWidth(width: number): string {
 }
 
 function formatMaxHeight(ratio: number): string {
-    const percentage = Number((ratio * 100).toFixed(2));
+    const percentage = (ratio * 100).toFixed(2);
     return `${percentage}%`;
 }
 
