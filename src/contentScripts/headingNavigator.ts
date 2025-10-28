@@ -144,12 +144,10 @@ export default function headingNavigator(): MarkdownEditorContentScriptModule {
                 headings = computeHeadings(view.state);
                 selectedHeadingId = findActiveHeadingId(headings, view.state.selection.main.head);
 
-                if (!headings.length) {
-                    closePanel(true);
-                    return;
-                }
-
                 ensurePanel().open(headings, selectedHeadingId);
+                if (!headings.length) {
+                    applyHeadingHighlight(view, null);
+                }
             };
 
             const updatePanel = (): void => {
