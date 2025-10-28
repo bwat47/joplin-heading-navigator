@@ -133,7 +133,7 @@ export function createPanelTheme(view: EditorView): PanelTheme {
             parentStyle?.backgroundColor,
             bodyStyle.backgroundColor,
         ],
-        '#ffffff',
+        '#ffffff'
     );
 
     const foreground = resolveColorFromStyles(
@@ -144,7 +144,7 @@ export function createPanelTheme(view: EditorView): PanelTheme {
             parentStyle?.color,
             bodyStyle.color,
         ],
-        '#2f3136',
+        '#2f3136'
     );
 
     const isDark = relativeLuminance(background) < 0.5;
