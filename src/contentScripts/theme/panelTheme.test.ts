@@ -73,6 +73,6 @@ describe('createPanelCss', () => {
         const css = createPanelCss(theme, { width: 480, maxHeightRatio: 0.65 });
 
         expect(css).toContain('width: 480px;');
-        expect(css).toContain('max-height: 65%;');
+        expect(css).toContain('max-height: 65.00%;');
     });
 });
