@@ -59,4 +59,42 @@ describe('extractHeadings', () => {
     it('returns an empty array when no headings exist', () => {
         expect(extractHeadings('Plain text only')).toEqual([]);
     });
+
+    it('retains special characters inside heading text', () => {
+        const headings = extractHeadings('## Hello & <world>');
+        expect(headings).toHaveLength(1);
+        expect(headings[0]).toMatchObject({
+            text: 'Hello & <world>',
+            level: 2,
+            line: 0,
+        });
+    });
+
+    it('handles sequences of deeply nested headings by capping at level six', () => {
+        const content = Array.from({ length: 10 }, (_, index) => {
+            const level = Math.min(index + 1, 6);
+            return `${'#'.repeat(level)} Heading ${index + 1}`;
+        }).join('\n');
+
+        const headings = extractHeadings(content);
+        expect(headings).toHaveLength(10);
+
+        headings.forEach((heading, index) => {
+            const expectedLevel = Math.min(index + 1, 6);
+            expect(heading).toMatchObject({
+                text: `Heading ${index + 1}`,
+                level: expectedLevel,
+            });
+        });
+    });
+
+    it('handles very long heading text', () => {
+        const longHeading = `# ${'A'.repeat(120)}`;
+        const headings = extractHeadings(longHeading);
+        expect(headings).toHaveLength(1);
+        expect(headings[0]).toMatchObject({
+            text: 'A'.repeat(120),
+            level: 1,
+        });
+    });
 });
