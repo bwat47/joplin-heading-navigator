@@ -9,7 +9,8 @@
 
 - Registers the CodeMirror content script (`headingNavigator.js`) and the command `headingNavigator.goToHeading`.
 - Command handler calls `joplin.commands.execute('editor.execCommand', { name: EDITOR_COMMAND_TOGGLE_PANEL })`, delegating all UI logic to the editor-side script.
-- Adds a menu item under Edit so the command appears in Joplin’s keyboard shortcut settings.
+- Adds a menu item under Edit so the command appears in Joplin's keyboard shortcut settings.
+- Creates a Markdown editor toolbar button (via `joplin.views.toolbarButtons.create`) for quick access.
 
 ### Content Script (`src/contentScripts/headingNavigator.ts`)
 
@@ -28,3 +29,5 @@
 - `src/types.ts`: defines the `HeadingItem` shape shared between modules.
 - `src/constants.ts`: centralizes string identifiers (command name, CodeMirror content script id, editor command name).
 - `src/logger.ts`: bootstraps the Joplin logger namespace (`heading-navigator`) for consistent diagnostics.
+
+
