@@ -114,6 +114,9 @@ function setEditorSelection(view: EditorView, heading: HeadingItem, focusEditor:
 export default function headingNavigator(): MarkdownEditorContentScriptModule {
     return {
         plugin: (editorControl: CodeMirrorControl) => {
+            // Note: Extensions and listeners are scoped to this EditorView instance.
+            // When Joplin destroys the editor (note close, plugin disable),
+            // all resources are automatically cleaned up. No explicit disposal needed.
             const view = editorControl.editor as EditorView;
             let panel: HeadingPanel | null = null;
             let headings: HeadingItem[] = [];
