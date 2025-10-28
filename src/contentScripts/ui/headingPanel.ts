@@ -1,5 +1,5 @@
 import { EditorView } from '@codemirror/view';
-import type { HeadingItem } from '../../types';
+import type { HeadingItem, PanelDimensions } from '../../types';
 import { createPanelCss, createPanelTheme } from '../theme/panelTheme';
 
 const PANEL_STYLE_ID = 'heading-navigator-styles';
@@ -25,6 +25,8 @@ export class HeadingPanel {
 
     private selectedHeadingId: string | null = null;
 
+    private options: PanelDimensions;
+
     private lastPreviewedId: string | null = null;
 
     private readonly onPreview: (heading: HeadingItem) => void;
@@ -41,11 +43,12 @@ export class HeadingPanel {
 
     private readonly handleDocumentMouseDownListener: (event: MouseEvent) => void;
 
-    public constructor(view: EditorView, callbacks: PanelCallbacks) {
+    public constructor(view: EditorView, callbacks: PanelCallbacks, options: PanelDimensions) {
         this.view = view;
         this.onPreview = callbacks.onPreview;
         this.onSelect = callbacks.onSelect;
         this.onClose = callbacks.onClose;
+        this.options = options;
 
         this.container = document.createElement('div');
         this.container.className = 'heading-navigator-panel';
@@ -128,12 +131,17 @@ export class HeadingPanel {
         return Boolean(this.container.parentElement);
     }
 
+    public setOptions(options: PanelDimensions): void {
+        this.options = options;
+        ensurePanelStyles(this.view, this.options);
+    }
+
     private ownerDocument(): Document {
         return this.view.dom.ownerDocument ?? document;
     }
 
     private mount(): void {
-        ensurePanelStyles(this.view);
+        ensurePanelStyles(this.view, this.options);
 
         if (!this.container.parentElement) {
             const scrollRoot = this.view.scrollDOM.parentElement;
@@ -331,7 +339,7 @@ export class HeadingPanel {
     }
 }
 
-function ensurePanelStyles(view: EditorView): void {
+function ensurePanelStyles(view: EditorView, options: PanelDimensions): void {
     const doc = view.dom.ownerDocument ?? document;
     const theme = createPanelTheme(view);
     const signature = [
@@ -342,6 +350,8 @@ function ensurePanelStyles(view: EditorView): void {
         theme.muted,
         theme.selectedBackground,
         theme.selectedForeground,
+        options.width.toString(),
+        options.maxHeightRatio.toFixed(4),
     ].join('|');
 
     let style = doc.getElementById(PANEL_STYLE_ID) as HTMLStyleElement | null;
@@ -356,5 +366,5 @@ function ensurePanelStyles(view: EditorView): void {
     }
 
     style.setAttribute('data-theme-signature', signature);
-    style.textContent = createPanelCss(theme);
+    style.textContent = createPanelCss(theme, options);
 }

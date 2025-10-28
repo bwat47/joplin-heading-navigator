@@ -2,10 +2,11 @@ import { EditorSelection, EditorState, StateEffect, StateField } from '@codemirr
 import { Decoration, DecorationSet, EditorView, ViewUpdate } from '@codemirror/view';
 import type { CodeMirrorControl, MarkdownEditorContentScriptModule } from 'api/types';
 import { EDITOR_COMMAND_TOGGLE_PANEL } from '../constants';
-import type { HeadingItem } from '../types';
+import type { HeadingItem, PanelDimensions } from '../types';
 import { extractHeadings } from '../headingExtractor';
 import { HeadingPanel } from './ui/headingPanel';
 import { createPanelTheme } from './theme/panelTheme';
+import { normalizePanelDimensions } from '../panelDimensions';
 
 const HIGHLIGHT_STYLE_ID = 'heading-navigator-highlight-style';
 
@@ -121,23 +122,28 @@ export default function headingNavigator(): MarkdownEditorContentScriptModule {
             let panel: HeadingPanel | null = null;
             let headings: HeadingItem[] = [];
             let selectedHeadingId: string | null = null;
+            let panelDimensions: PanelDimensions = normalizePanelDimensions();
 
             const ensurePanel = (): HeadingPanel => {
                 if (!panel) {
-                    panel = new HeadingPanel(view, {
-                        onPreview: (heading) => {
-                            selectedHeadingId = heading.id;
-                            setEditorSelection(view, heading, false);
+                    panel = new HeadingPanel(
+                        view,
+                        {
+                            onPreview: (heading) => {
+                                selectedHeadingId = heading.id;
+                                setEditorSelection(view, heading, false);
+                            },
+                            onSelect: (heading) => {
+                                selectedHeadingId = heading.id;
+                                setEditorSelection(view, heading, true);
+                                closePanel(true);
+                            },
+                            onClose: () => {
+                                closePanel(true);
+                            },
                         },
-                        onSelect: (heading) => {
-                            selectedHeadingId = heading.id;
-                            setEditorSelection(view, heading, true);
-                            closePanel(true);
-                        },
-                        onClose: () => {
-                            closePanel(true);
-                        },
-                    });
+                        panelDimensions
+                    );
                 }
 
                 return panel;
@@ -173,7 +179,14 @@ export default function headingNavigator(): MarkdownEditorContentScriptModule {
                 }
             };
 
-            const togglePanel = (): void => {
+            const togglePanel = (dimensions?: PanelDimensions): void => {
+                if (dimensions) {
+                    panelDimensions = normalizePanelDimensions(dimensions);
+                    if (panel) {
+                        panel.setOptions(panelDimensions);
+                    }
+                }
+
                 if (panel?.isOpen()) {
                     closePanel(true);
                 } else {
