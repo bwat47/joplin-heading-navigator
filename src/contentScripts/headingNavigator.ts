@@ -2,7 +2,8 @@ import { EditorSelection, EditorState, StateEffect, StateField } from '@codemirr
 import { Decoration, DecorationSet, EditorView, ViewUpdate } from '@codemirror/view';
 import type { CodeMirrorControl, MarkdownEditorContentScriptModule } from 'api/types';
 import { EDITOR_COMMAND_TOGGLE_PANEL } from '../constants';
-import type { HeadingItem } from '../types';
+import type { HeadingItem, PanelDimensions } from '../types';
+import { DEFAULT_PANEL_DIMENSIONS } from '../types';
 import { extractHeadings } from '../headingExtractor';
 import { HeadingPanel } from './ui/headingPanel';
 import { createPanelTheme } from './theme/panelTheme';
@@ -40,6 +41,32 @@ const headingHighlightTheme = EditorView.baseTheme({
         transition: 'background-color 120ms ease-out',
     },
 });
+
+const MIN_PANEL_WIDTH = 240;
+const MAX_PANEL_WIDTH = 640;
+const MIN_PANEL_HEIGHT_RATIO = 0.4;
+const MAX_PANEL_HEIGHT_RATIO = 0.9;
+
+function clamp(value: number, minimum: number, maximum: number): number {
+    return Math.min(Math.max(value, minimum), maximum);
+}
+
+function normalizePanelDimensions(dimensions?: PanelDimensions): PanelDimensions {
+    const fallback = DEFAULT_PANEL_DIMENSIONS;
+    if (!dimensions) {
+        return { ...fallback };
+    }
+
+    const rawWidth = Number.isFinite(dimensions.width) ? dimensions.width : fallback.width;
+    const rawMaxHeight = Number.isFinite(dimensions.maxHeightRatio)
+        ? dimensions.maxHeightRatio
+        : fallback.maxHeightRatio;
+
+    return {
+        width: clamp(Math.round(rawWidth), MIN_PANEL_WIDTH, MAX_PANEL_WIDTH),
+        maxHeightRatio: clamp(rawMaxHeight, MIN_PANEL_HEIGHT_RATIO, MAX_PANEL_HEIGHT_RATIO),
+    };
+}
 
 function computeHeadings(state: EditorState): HeadingItem[] {
     return extractHeadings(state.doc.toString());
@@ -121,25 +148,31 @@ export default function headingNavigator(): MarkdownEditorContentScriptModule {
             let panel: HeadingPanel | null = null;
             let headings: HeadingItem[] = [];
             let selectedHeadingId: string | null = null;
+            let panelDimensions: PanelDimensions = normalizePanelDimensions(DEFAULT_PANEL_DIMENSIONS);
 
             const ensurePanel = (): HeadingPanel => {
                 if (!panel) {
-                    panel = new HeadingPanel(view, {
-                        onPreview: (heading) => {
-                            selectedHeadingId = heading.id;
-                            setEditorSelection(view, heading, false);
+                    panel = new HeadingPanel(
+                        view,
+                        {
+                            onPreview: (heading) => {
+                                selectedHeadingId = heading.id;
+                                setEditorSelection(view, heading, false);
+                            },
+                            onSelect: (heading) => {
+                                selectedHeadingId = heading.id;
+                                setEditorSelection(view, heading, true);
+                                closePanel(true);
+                            },
+                            onClose: () => {
+                                closePanel(true);
+                            },
                         },
-                        onSelect: (heading) => {
-                            selectedHeadingId = heading.id;
-                            setEditorSelection(view, heading, true);
-                            closePanel(true);
-                        },
-                        onClose: () => {
-                            closePanel(true);
-                        },
-                    });
+                        panelDimensions
+                    );
                 }
 
+                panel.setOptions(panelDimensions);
                 return panel;
             };
 
@@ -173,7 +206,14 @@ export default function headingNavigator(): MarkdownEditorContentScriptModule {
                 }
             };
 
-            const togglePanel = (): void => {
+            const togglePanel = (dimensions?: PanelDimensions): void => {
+                if (dimensions) {
+                    panelDimensions = normalizePanelDimensions(dimensions);
+                    if (panel) {
+                        panel.setOptions(panelDimensions);
+                    }
+                }
+
                 if (panel?.isOpen()) {
                     closePanel(true);
                 } else {

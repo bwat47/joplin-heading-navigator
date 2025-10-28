@@ -1,4 +1,5 @@
 import { EditorView } from '@codemirror/view';
+import type { PanelDimensions } from '../../types';
 
 export interface RGBColor {
     r: number;
@@ -181,14 +182,25 @@ export function createPanelTheme(view: EditorView): PanelTheme {
     };
 }
 
-export function createPanelCss(theme: PanelTheme): string {
+function formatPanelWidth(width: number): string {
+    return `${Math.round(width)}px`;
+}
+
+function formatMaxHeight(ratio: number): string {
+    const percentage = Number((ratio * 100).toFixed(2));
+    return `${percentage}%`;
+}
+
+export function createPanelCss(theme: PanelTheme, dimensions: PanelDimensions): string {
+    const panelWidth = formatPanelWidth(dimensions.width);
+    const maxHeight = formatMaxHeight(dimensions.maxHeightRatio);
     return `
 .heading-navigator-panel {
     position: absolute;
     top: 12px;
     right: 12px;
-    width: 320px;
-    max-height: 75%;
+    width: ${panelWidth};
+    max-height: ${maxHeight};
     display: flex;
     flex-direction: column;
     background-color: ${theme.background};

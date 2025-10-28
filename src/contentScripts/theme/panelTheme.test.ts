@@ -1,5 +1,5 @@
 import type { EditorView } from '@codemirror/view';
-import { createPanelTheme } from './panelTheme';
+import { createPanelTheme, createPanelCss } from './panelTheme';
 
 function createStubView(): EditorView {
     const container = document.createElement('div');
@@ -63,5 +63,16 @@ describe('createPanelTheme', () => {
             scrollbarHover: '#9c9c9c',
             highlightBackground: '#5e5e5e',
         });
+    });
+});
+
+describe('createPanelCss', () => {
+    it('reflects the provided panel dimensions', () => {
+        const view = createStubView();
+        const theme = createPanelTheme(view);
+        const css = createPanelCss(theme, { width: 480, maxHeightRatio: 0.65 });
+
+        expect(css).toContain('width: 480px;');
+        expect(css).toContain('max-height: 65%;');
     });
 });

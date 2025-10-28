@@ -8,6 +8,7 @@
 ### Entry Point (`src/index.ts`)
 
 - Registers the CodeMirror content script (`headingNavigator.js`) and the command `headingNavigator.goToHeading`.
+- Registers the plugin settings (`panelWidth`, `panelMaxHeightPercentage`) during startup so panel sizing can be customized by users.
 - Command handler calls `joplin.commands.execute('editor.execCommand', { name: EDITOR_COMMAND_TOGGLE_PANEL })`, delegating all UI logic to the editor-side script.
 - Adds a menu item under Edit so the command appears in Joplin's keyboard shortcut settings.
 - Creates a Markdown editor toolbar button (via `joplin.views.toolbarButtons.create`) for quick access.
@@ -26,8 +27,13 @@
 ### Utilities & Data
 
 - `src/headingExtractor.ts`: wraps the Lezer Markdown parser to detect ATX/Setext headings, normalizes text, and records byte offsets + line numbers.
-- `src/types.ts`: defines the `HeadingItem` shape shared between modules.
+- `src/settings.ts`: registers plugin settings and normalizes values for the content script.
+- `src/types.ts`: defines shared DTOs (`HeadingItem`, `PanelDimensions`, `DEFAULT_PANEL_DIMENSIONS`) used by both plugin and editor bundles.
 - `src/constants.ts`: centralizes string identifiers (command name, CodeMirror content script id, editor command name).
 - `src/logger.ts`: bootstraps the Joplin logger namespace (`heading-navigator`) for consistent diagnostics.
+
+### Configuration
+
+- Panel width defaults to 320px (range 240–640). Panel height defaults to 75% of the editor viewport (range 40–90%). Both values are exposed via the Joplin configuration screen (`Heading Navigator` section) and are validated before being applied in the editor.
 
 

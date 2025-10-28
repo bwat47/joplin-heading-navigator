@@ -6,3 +6,13 @@ export interface HeadingItem {
     to: number;
     line: number;
 }
+
+export interface PanelDimensions {
+    width: number;
+    maxHeightRatio: number;
+}
+
+export const DEFAULT_PANEL_DIMENSIONS: PanelDimensions = {
+    width: 320,
+    maxHeightRatio: 0.75,
+};
