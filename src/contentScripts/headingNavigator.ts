@@ -102,7 +102,6 @@ function applyHeadingHighlight(view: EditorView, heading: HeadingItem | null): v
 
 function setEditorSelection(view: EditorView, heading: HeadingItem, focusEditor: boolean): void {
     try {
-        ensureHighlightStyles(view);
         const targetSelection = EditorSelection.single(heading.from);
 
         const pendingId = pendingScrollFrames.get(view);
@@ -116,7 +115,7 @@ function setEditorSelection(view: EditorView, heading: HeadingItem, focusEditor:
             effects: [headingHighlightEffect.of({ from: heading.from, to: heading.to })],
         });
 
-        const frameId = requestAnimationFrame(() => {
+        const frameId = window.requestAnimationFrame(() => {
             pendingScrollFrames.delete(view);
             const currentSelection = view.state.selection.main;
             if (
@@ -126,15 +125,21 @@ function setEditorSelection(view: EditorView, heading: HeadingItem, focusEditor:
                 return;
             }
 
-            try {
-                view.dispatch({
-                    effects: EditorView.scrollIntoView(currentSelection, { y: 'center' }),
-                });
-                if (focusEditor) {
-                    view.focus();
+            const block = view.lineBlockAt(currentSelection.from);
+            const scrollDOM = view.scrollDOM;
+            const clientHeight = scrollDOM.clientHeight;
+            if (clientHeight > 0) {
+                const centeredTop = block.top - Math.max(0, (clientHeight - block.height) / 2);
+                const clampedTop = Math.max(0, Math.min(centeredTop, scrollDOM.scrollHeight - clientHeight));
+                if (typeof scrollDOM.scrollTo === 'function') {
+                    scrollDOM.scrollTo({ top: clampedTop });
+                } else {
+                    scrollDOM.scrollTop = clampedTop;
                 }
-            } catch (error) {
-                logger.warn('Failed to scroll editor to heading', error);
+            }
+
+            if (focusEditor) {
+                view.focus();
             }
         });
         pendingScrollFrames.set(view, frameId);
