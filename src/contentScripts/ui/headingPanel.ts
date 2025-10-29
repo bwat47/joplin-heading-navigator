@@ -95,7 +95,7 @@ export class HeadingPanel {
 
         this.input.addEventListener('input', this.handleInputListener);
         this.input.addEventListener('keydown', this.handleKeyDownListener);
-        this.list.addEventListener('mousedown', this.handleListClickListener);
+        this.list.addEventListener('click', this.handleListClickListener);
         this.ownerDocument().addEventListener('mousedown', this.handleDocumentMouseDownListener, true);
     }
 
@@ -124,7 +124,7 @@ export class HeadingPanel {
     public destroy(): void {
         this.input.removeEventListener('input', this.handleInputListener);
         this.input.removeEventListener('keydown', this.handleKeyDownListener);
-        this.list.removeEventListener('mousedown', this.handleListClickListener);
+        this.list.removeEventListener('click', this.handleListClickListener);
         this.ownerDocument().removeEventListener('mousedown', this.handleDocumentMouseDownListener, true);
         if (this.previewDebounceTimer !== null) {
             clearTimeout(this.previewDebounceTimer);
