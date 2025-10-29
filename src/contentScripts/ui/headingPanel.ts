@@ -31,6 +31,8 @@ export class HeadingPanel {
 
     private lastPreviewedId: string | null = null;
 
+    private previewDebounceTimer: number | null = null;
+
     private readonly onPreview: (heading: HeadingItem) => void;
 
     private readonly onSelect: (heading: HeadingItem) => void;
@@ -124,6 +126,10 @@ export class HeadingPanel {
         this.input.removeEventListener('keydown', this.handleKeyDownListener);
         this.list.removeEventListener('mousedown', this.handleListClickListener);
         this.ownerDocument().removeEventListener('mousedown', this.handleDocumentMouseDownListener, true);
+        if (this.previewDebounceTimer !== null) {
+            clearTimeout(this.previewDebounceTimer);
+            this.previewDebounceTimer = null;
+        }
         if (this.container.parentElement) {
             this.container.parentElement.removeChild(this.container);
         }
@@ -185,6 +191,11 @@ export class HeadingPanel {
     }
 
     private notifyPreview(): void {
+        if (this.previewDebounceTimer !== null) {
+            clearTimeout(this.previewDebounceTimer);
+            this.previewDebounceTimer = null;
+        }
+
         if (!this.selectedHeadingId) {
             this.lastPreviewedId = null;
             return;
@@ -200,8 +211,23 @@ export class HeadingPanel {
             return;
         }
 
-        this.lastPreviewedId = heading.id;
-        this.onPreview(heading);
+        const targetId = heading.id;
+        this.previewDebounceTimer = window.setTimeout(() => {
+            this.previewDebounceTimer = null;
+
+            if (this.selectedHeadingId !== targetId) {
+                return;
+            }
+
+            const currentHeading = this.headings.find((item) => item.id === targetId);
+            if (!currentHeading) {
+                this.lastPreviewedId = null;
+                return;
+            }
+
+            this.lastPreviewedId = currentHeading.id;
+            this.onPreview(currentHeading);
+        }, 30);
     }
 
     private updatePreviewMarker(): void {

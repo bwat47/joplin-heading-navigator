@@ -7,6 +7,7 @@ import { extractHeadings } from '../headingExtractor';
 import { HeadingPanel } from './ui/headingPanel';
 import { createPanelTheme } from './theme/panelTheme';
 import { normalizePanelDimensions } from '../panelDimensions';
+import logger from '../logger';
 
 const HIGHLIGHT_STYLE_ID = 'heading-navigator-highlight-style';
 
@@ -41,6 +42,8 @@ const headingHighlightTheme = EditorView.baseTheme({
         transition: 'background-color 120ms ease-out',
     },
 });
+
+const pendingScrollFrames = new WeakMap<EditorView, number>();
 
 function computeHeadings(state: EditorState): HeadingItem[] {
     return extractHeadings(state.doc.toString());
@@ -98,17 +101,45 @@ function applyHeadingHighlight(view: EditorView, heading: HeadingItem | null): v
 }
 
 function setEditorSelection(view: EditorView, heading: HeadingItem, focusEditor: boolean): void {
-    ensureHighlightStyles(view);
-    const selection = EditorSelection.single(heading.from);
-    view.dispatch({
-        selection,
-        effects: [
-            EditorView.scrollIntoView(selection.main, { y: 'center' }),
-            headingHighlightEffect.of({ from: heading.from, to: heading.to }),
-        ],
-    });
-    if (focusEditor) {
-        view.focus();
+    try {
+        ensureHighlightStyles(view);
+        const targetSelection = EditorSelection.single(heading.from);
+
+        const pendingId = pendingScrollFrames.get(view);
+        if (typeof pendingId === 'number') {
+            cancelAnimationFrame(pendingId);
+            pendingScrollFrames.delete(view);
+        }
+
+        view.dispatch({
+            selection: targetSelection,
+            effects: [headingHighlightEffect.of({ from: heading.from, to: heading.to })],
+        });
+
+        const frameId = requestAnimationFrame(() => {
+            pendingScrollFrames.delete(view);
+            const currentSelection = view.state.selection.main;
+            if (
+                currentSelection.from !== targetSelection.main.from ||
+                currentSelection.to !== targetSelection.main.to
+            ) {
+                return;
+            }
+
+            try {
+                view.dispatch({
+                    effects: EditorView.scrollIntoView(currentSelection, { y: 'center' }),
+                });
+                if (focusEditor) {
+                    view.focus();
+                }
+            } catch (error) {
+                logger.warn('Failed to scroll editor to heading', error);
+            }
+        });
+        pendingScrollFrames.set(view, frameId);
+    } catch (error) {
+        logger.error('Failed to set editor selection', error);
     }
 }
 
