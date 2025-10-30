@@ -324,14 +324,25 @@ export default function headingNavigator(): MarkdownEditorContentScriptModule {
                     }
 
                     if (initialScrollTop !== null) {
-                        const scrollDOM = view.scrollDOM;
-                        const maxScrollTop = Math.max(0, scrollDOM.scrollHeight - scrollDOM.clientHeight);
-                        const targetTop = Math.max(0, Math.min(initialScrollTop, maxScrollTop));
-                        if (typeof scrollDOM.scrollTo === 'function') {
-                            scrollDOM.scrollTo({ top: targetTop });
-                        } else {
-                            scrollDOM.scrollTop = targetTop;
-                        }
+                        const targetScrollTop = initialScrollTop;
+                        // Defer the scroll restoration so it runs after CodeMirror finishes any
+                        // selection-driven adjustments triggered by the close dispatch above.
+                        view.requestMeasure({
+                            read: () => null,
+                            write(_measure, measureView) {
+                                const scrollElement = measureView.scrollDOM;
+                                const maxScrollTop = Math.max(
+                                    0,
+                                    scrollElement.scrollHeight - scrollElement.clientHeight
+                                );
+                                const clampedTop = Math.max(0, Math.min(targetScrollTop, maxScrollTop));
+                                if (typeof scrollElement.scrollTo === 'function') {
+                                    scrollElement.scrollTo({ top: clampedTop });
+                                } else {
+                                    scrollElement.scrollTop = clampedTop;
+                                }
+                            },
+                        });
                     }
                 }
 
