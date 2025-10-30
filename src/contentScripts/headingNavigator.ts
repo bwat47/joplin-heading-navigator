@@ -148,6 +148,10 @@ function setEditorSelection(view: EditorView, heading: HeadingItem, focusEditor:
         });
         pendingScrollFrames.set(view, frameId);
 
+        // Trigger a one-shot visibility check to catch cases where scrollIntoView bails
+        // (CodeMirror can drop the effect in very long docs). If we detect the heading
+        // still hugging the viewport edge, re-centering here keeps navigation reliable
+        // without second-guessing every scroll.
         const verificationId = window.setTimeout(() => {
             pendingScrollVerifications.delete(view);
 
