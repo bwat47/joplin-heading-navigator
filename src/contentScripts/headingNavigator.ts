@@ -44,6 +44,9 @@ const headingHighlightTheme = EditorView.baseTheme({
 });
 
 const pendingScrollFrames = new WeakMap<EditorView, number>();
+const pendingScrollVerifications = new WeakMap<EditorView, number>();
+const SCROLL_VERIFY_DELAY_MS = 160;
+const SCROLL_VERIFY_TOLERANCE_PX = 12;
 
 function computeHeadings(state: EditorState): HeadingItem[] {
     return extractHeadings(state.doc.toString());
@@ -111,6 +114,12 @@ function setEditorSelection(view: EditorView, heading: HeadingItem, focusEditor:
             pendingScrollFrames.delete(view);
         }
 
+        const pendingVerificationId = pendingScrollVerifications.get(view);
+        if (typeof pendingVerificationId === 'number') {
+            window.clearTimeout(pendingVerificationId);
+            pendingScrollVerifications.delete(view);
+        }
+
         view.dispatch({
             selection: targetSelection,
             effects: [headingHighlightEffect.of({ from: heading.from, to: heading.to })],
@@ -138,6 +147,82 @@ function setEditorSelection(view: EditorView, heading: HeadingItem, focusEditor:
             }
         });
         pendingScrollFrames.set(view, frameId);
+
+        const verificationId = window.setTimeout(() => {
+            pendingScrollVerifications.delete(view);
+
+            view.requestMeasure({
+                read(measureView) {
+                    const selection = measureView.state.selection.main;
+                    if (selection.from !== targetSelection.main.from || selection.to !== targetSelection.main.to) {
+                        return null;
+                    }
+
+                    const scrollDOM = measureView.scrollDOM;
+                    const rect = scrollDOM.getBoundingClientRect();
+                    if (Number.isNaN(rect.top)) {
+                        return null;
+                    }
+
+                    const start = measureView.coordsAtPos(selection.from);
+                    const end = measureView.coordsAtPos(selection.to);
+                    if (!start || !end) {
+                        return null;
+                    }
+
+                    const viewportTop = scrollDOM.scrollTop;
+                    const viewportBottom = viewportTop + scrollDOM.clientHeight;
+                    const blockTop = Math.min(start.top, end.top) - rect.top + viewportTop;
+                    const blockBottom = Math.max(start.bottom, end.bottom) - rect.top + viewportTop;
+
+                    return {
+                        selectionFrom: selection.from,
+                        selectionTo: selection.to,
+                        viewportTop,
+                        viewportBottom,
+                        blockTop,
+                        blockBottom,
+                    };
+                },
+                write(measurement, measureView) {
+                    if (!measurement) {
+                        return;
+                    }
+
+                    const selection = measureView.state.selection.main;
+                    if (selection.from !== measurement.selectionFrom || selection.to !== measurement.selectionTo) {
+                        return;
+                    }
+
+                    const tolerance = SCROLL_VERIFY_TOLERANCE_PX;
+                    const needsScroll =
+                        measurement.blockTop < measurement.viewportTop + tolerance ||
+                        measurement.blockBottom > measurement.viewportBottom - tolerance;
+
+                    if (!needsScroll) {
+                        return;
+                    }
+
+                    const blockHeight = Math.max(measurement.blockBottom - measurement.blockTop, 1);
+                    const centeredTop =
+                        measurement.blockTop - Math.max(0, (measureView.scrollDOM.clientHeight - blockHeight) / 2);
+                    const maxScrollTop = measureView.scrollDOM.scrollHeight - measureView.scrollDOM.clientHeight;
+                    const clampedTop = Math.max(0, Math.min(centeredTop, maxScrollTop));
+
+                    if (typeof measureView.scrollDOM.scrollTo === 'function') {
+                        measureView.scrollDOM.scrollTo({ top: clampedTop });
+                    } else {
+                        measureView.scrollDOM.scrollTop = clampedTop;
+                    }
+
+                    if (focusEditor) {
+                        measureView.focus();
+                    }
+                },
+            });
+        }, SCROLL_VERIFY_DELAY_MS);
+
+        pendingScrollVerifications.set(view, verificationId);
     } catch (error) {
         logger.error('Failed to set editor selection', error);
     }
