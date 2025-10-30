@@ -6,10 +6,12 @@ const PANEL_STYLE_ID = 'heading-navigator-styles';
 const INDENT_BASE_PX = 12;
 const INDENT_PER_LEVEL_PX = 12;
 
+export type PanelCloseReason = 'escape' | 'blur';
+
 export interface PanelCallbacks {
     onPreview: (heading: HeadingItem) => void;
     onSelect: (heading: HeadingItem) => void;
-    onClose: () => void;
+    onClose: (reason: PanelCloseReason) => void;
 }
 
 export class HeadingPanel {
@@ -37,7 +39,7 @@ export class HeadingPanel {
 
     private readonly onSelect: (heading: HeadingItem) => void;
 
-    private readonly onClose: () => void;
+    private readonly onClose: (reason: PanelCloseReason) => void;
 
     private readonly handleInputListener: () => void;
 
@@ -90,7 +92,7 @@ export class HeadingPanel {
                 return;
             }
 
-            this.onClose();
+            this.onClose('blur');
         };
 
         this.input.addEventListener('input', this.handleInputListener);
@@ -260,7 +262,7 @@ export class HeadingPanel {
                 break;
             case 'Escape':
                 event.preventDefault();
-                this.onClose();
+                this.onClose('escape');
                 break;
             default:
                 break;

@@ -4,7 +4,7 @@ import type { CodeMirrorControl, MarkdownEditorContentScriptModule } from 'api/t
 import { EDITOR_COMMAND_TOGGLE_PANEL } from '../constants';
 import type { HeadingItem, PanelDimensions } from '../types';
 import { extractHeadings } from '../headingExtractor';
-import { HeadingPanel } from './ui/headingPanel';
+import { HeadingPanel, type PanelCloseReason } from './ui/headingPanel';
 import { createPanelTheme } from './theme/panelTheme';
 import { normalizePanelDimensions } from '../panelDimensions';
 import logger from '../logger';
@@ -243,6 +243,8 @@ export default function headingNavigator(): MarkdownEditorContentScriptModule {
             let headings: HeadingItem[] = [];
             let selectedHeadingId: string | null = null;
             let panelDimensions: PanelDimensions = normalizePanelDimensions();
+            let initialSelectionRange: { from: number; to: number } | null = null;
+            let initialScrollTop: number | null = null;
 
             const ensurePanel = (): HeadingPanel => {
                 if (!panel) {
@@ -258,8 +260,8 @@ export default function headingNavigator(): MarkdownEditorContentScriptModule {
                                 setEditorSelection(view, heading, true);
                                 closePanel(true);
                             },
-                            onClose: () => {
-                                closePanel(true);
+                            onClose: (reason: PanelCloseReason) => {
+                                closePanel(true, reason === 'escape');
                             },
                         },
                         panelDimensions
@@ -272,6 +274,9 @@ export default function headingNavigator(): MarkdownEditorContentScriptModule {
             const openPanel = (): void => {
                 headings = computeHeadings(view.state);
                 selectedHeadingId = findActiveHeadingId(headings, view.state.selection.main.head);
+                const selection = view.state.selection.main;
+                initialSelectionRange = { from: selection.from, to: selection.to };
+                initialScrollTop = view.scrollDOM.scrollTop;
 
                 ensurePanel().open(headings, selectedHeadingId);
                 if (!headings.length) {
@@ -290,10 +295,49 @@ export default function headingNavigator(): MarkdownEditorContentScriptModule {
                 applyHeadingHighlight(view, activeHeading);
             };
 
-            const closePanel = (focusEditor = false): void => {
+            const closePanel = (focusEditor = false, restoreOriginalPosition = false): void => {
                 applyHeadingHighlight(view, null);
                 panel?.destroy();
                 panel = null;
+
+                if (restoreOriginalPosition && initialSelectionRange) {
+                    const pendingFrame = pendingScrollFrames.get(view);
+                    if (typeof pendingFrame === 'number') {
+                        cancelAnimationFrame(pendingFrame);
+                        pendingScrollFrames.delete(view);
+                    }
+
+                    const pendingVerificationId = pendingScrollVerifications.get(view);
+                    if (typeof pendingVerificationId === 'number') {
+                        window.clearTimeout(pendingVerificationId);
+                        pendingScrollVerifications.delete(view);
+                    }
+
+                    try {
+                        const selectionToRestore = EditorSelection.range(
+                            initialSelectionRange.from,
+                            initialSelectionRange.to
+                        );
+                        view.dispatch({ selection: selectionToRestore });
+                    } catch (error) {
+                        logger.warn('Failed to restore editor selection after closing panel', error);
+                    }
+
+                    if (initialScrollTop !== null) {
+                        const scrollDOM = view.scrollDOM;
+                        const maxScrollTop = Math.max(0, scrollDOM.scrollHeight - scrollDOM.clientHeight);
+                        const targetTop = Math.max(0, Math.min(initialScrollTop, maxScrollTop));
+                        if (typeof scrollDOM.scrollTo === 'function') {
+                            scrollDOM.scrollTo({ top: targetTop });
+                        } else {
+                            scrollDOM.scrollTop = targetTop;
+                        }
+                    }
+                }
+
+                initialSelectionRange = null;
+                initialScrollTop = null;
+
                 if (focusEditor) {
                     view.focus();
                 }
