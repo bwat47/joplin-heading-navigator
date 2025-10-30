@@ -110,6 +110,96 @@ function applyHeadingHighlight(view: EditorView, heading: HeadingItem | null): v
     });
 }
 
+function restoreEditorViewport(
+    view: EditorView,
+    snapshot: ViewportSnapshot | null,
+    fallbackScrollTop: number | null
+): void {
+    if (snapshot) {
+        view.requestMeasure({
+            read(measureView): { targetTop: number } | null {
+                const selection = measureView.state.selection.main;
+                if (selection.from !== snapshot.selectionFrom || selection.to !== snapshot.selectionTo) {
+                    return null;
+                }
+
+                const scrollDOM = measureView.scrollDOM;
+                const rect = scrollDOM.getBoundingClientRect();
+                if (Number.isNaN(rect.top)) {
+                    return null;
+                }
+
+                const start = measureView.coordsAtPos(selection.from);
+                const end = measureView.coordsAtPos(selection.to);
+                if (!start || !end) {
+                    return null;
+                }
+
+                const blockTop = Math.min(start.top, end.top) - rect.top;
+                const blockBottom = Math.max(start.bottom, end.bottom) - rect.top;
+                const absoluteTop = scrollDOM.scrollTop + blockTop;
+                const absoluteBottom = scrollDOM.scrollTop + blockBottom;
+                const desiredTop = absoluteTop - snapshot.blockTopOffset;
+                const desiredBottom = absoluteBottom - snapshot.blockBottomOffset;
+                const clientHeight = scrollDOM.clientHeight;
+                const maxScrollTop = Math.max(0, scrollDOM.scrollHeight - clientHeight);
+
+                let targetTop = Math.max(0, Math.min(desiredTop, maxScrollTop));
+                if (desiredBottom > targetTop + clientHeight) {
+                    targetTop = Math.max(0, Math.min(desiredBottom - clientHeight, maxScrollTop));
+                }
+
+                if (!Number.isFinite(targetTop)) {
+                    return null;
+                }
+
+                return { targetTop };
+            },
+            write(measurement: { targetTop: number } | null, measureView) {
+                const scrollElement = measureView.scrollDOM;
+
+                if (measurement) {
+                    const maxScrollTop = Math.max(0, scrollElement.scrollHeight - scrollElement.clientHeight);
+                    const clampedTop = Math.max(0, Math.min(measurement.targetTop, maxScrollTop));
+
+                    if (typeof scrollElement.scrollTo === 'function') {
+                        scrollElement.scrollTo({ top: clampedTop });
+                    } else {
+                        scrollElement.scrollTop = clampedTop;
+                    }
+                    return;
+                }
+
+                if (fallbackScrollTop !== null) {
+                    const maxScrollTop = Math.max(0, scrollElement.scrollHeight - scrollElement.clientHeight);
+                    const clampedTop = Math.max(0, Math.min(fallbackScrollTop, maxScrollTop));
+                    if (typeof scrollElement.scrollTo === 'function') {
+                        scrollElement.scrollTo({ top: clampedTop });
+                    } else {
+                        scrollElement.scrollTop = clampedTop;
+                    }
+                }
+            },
+        });
+    } else if (fallbackScrollTop !== null) {
+        // Defer the scroll restoration so it runs after CodeMirror finishes any
+        // selection-driven adjustments triggered by the close dispatch above.
+        view.requestMeasure({
+            read: () => null,
+            write(_measure, measureView) {
+                const scrollElement = measureView.scrollDOM;
+                const maxScrollTop = Math.max(0, scrollElement.scrollHeight - scrollElement.clientHeight);
+                const clampedTop = Math.max(0, Math.min(fallbackScrollTop, maxScrollTop));
+                if (typeof scrollElement.scrollTo === 'function') {
+                    scrollElement.scrollTo({ top: clampedTop });
+                } else {
+                    scrollElement.scrollTop = clampedTop;
+                }
+            },
+        });
+    }
+}
+
 function setEditorSelection(view: EditorView, heading: HeadingItem, focusEditor: boolean): void {
     try {
         ensureHighlightStyles(view);
@@ -384,101 +474,7 @@ export default function headingNavigator(): MarkdownEditorContentScriptModule {
                     initialViewportSnapshot = null;
                     initialViewportSnapshotToken = null;
 
-                    if (snapshot) {
-                        view.requestMeasure({
-                            read(measureView): { targetTop: number } | null {
-                                const selection = measureView.state.selection.main;
-                                if (
-                                    selection.from !== snapshot.selectionFrom ||
-                                    selection.to !== snapshot.selectionTo
-                                ) {
-                                    return null;
-                                }
-
-                                const scrollDOM = measureView.scrollDOM;
-                                const rect = scrollDOM.getBoundingClientRect();
-                                if (Number.isNaN(rect.top)) {
-                                    return null;
-                                }
-
-                                const start = measureView.coordsAtPos(selection.from);
-                                const end = measureView.coordsAtPos(selection.to);
-                                if (!start || !end) {
-                                    return null;
-                                }
-
-                                const blockTop = Math.min(start.top, end.top) - rect.top;
-                                const blockBottom = Math.max(start.bottom, end.bottom) - rect.top;
-                                const absoluteTop = scrollDOM.scrollTop + blockTop;
-                                const absoluteBottom = scrollDOM.scrollTop + blockBottom;
-                                const desiredTop = absoluteTop - snapshot.blockTopOffset;
-                                const desiredBottom = absoluteBottom - snapshot.blockBottomOffset;
-                                const clientHeight = scrollDOM.clientHeight;
-                                const maxScrollTop = Math.max(0, scrollDOM.scrollHeight - clientHeight);
-
-                                let targetTop = Math.max(0, Math.min(desiredTop, maxScrollTop));
-                                if (desiredBottom > targetTop + clientHeight) {
-                                    targetTop = Math.max(0, Math.min(desiredBottom - clientHeight, maxScrollTop));
-                                }
-
-                                if (!Number.isFinite(targetTop)) {
-                                    return null;
-                                }
-
-                                return { targetTop };
-                            },
-                            write(measurement: { targetTop: number } | null, measureView) {
-                                const scrollElement = measureView.scrollDOM;
-
-                                if (measurement) {
-                                    const maxScrollTop = Math.max(
-                                        0,
-                                        scrollElement.scrollHeight - scrollElement.clientHeight
-                                    );
-                                    const clampedTop = Math.max(0, Math.min(measurement.targetTop, maxScrollTop));
-
-                                    if (typeof scrollElement.scrollTo === 'function') {
-                                        scrollElement.scrollTo({ top: clampedTop });
-                                    } else {
-                                        scrollElement.scrollTop = clampedTop;
-                                    }
-                                    return;
-                                }
-
-                                if (fallbackScrollTop !== null) {
-                                    const maxScrollTop = Math.max(
-                                        0,
-                                        scrollElement.scrollHeight - scrollElement.clientHeight
-                                    );
-                                    const clampedTop = Math.max(0, Math.min(fallbackScrollTop, maxScrollTop));
-                                    if (typeof scrollElement.scrollTo === 'function') {
-                                        scrollElement.scrollTo({ top: clampedTop });
-                                    } else {
-                                        scrollElement.scrollTop = clampedTop;
-                                    }
-                                }
-                            },
-                        });
-                    } else if (fallbackScrollTop !== null) {
-                        // Defer the scroll restoration so it runs after CodeMirror finishes any
-                        // selection-driven adjustments triggered by the close dispatch above.
-                        view.requestMeasure({
-                            read: () => null,
-                            write(_measure, measureView) {
-                                const scrollElement = measureView.scrollDOM;
-                                const maxScrollTop = Math.max(
-                                    0,
-                                    scrollElement.scrollHeight - scrollElement.clientHeight
-                                );
-                                const clampedTop = Math.max(0, Math.min(fallbackScrollTop, maxScrollTop));
-                                if (typeof scrollElement.scrollTo === 'function') {
-                                    scrollElement.scrollTo({ top: clampedTop });
-                                } else {
-                                    scrollElement.scrollTop = clampedTop;
-                                }
-                            },
-                        });
-                    }
+                    restoreEditorViewport(view, snapshot, fallbackScrollTop);
                 }
 
                 initialSelectionRange = null;
