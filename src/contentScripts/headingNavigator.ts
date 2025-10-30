@@ -48,6 +48,13 @@ const pendingScrollVerifications = new WeakMap<EditorView, number>();
 const SCROLL_VERIFY_DELAY_MS = 160;
 const SCROLL_VERIFY_TOLERANCE_PX = 12;
 
+type ViewportSnapshot = {
+    selectionFrom: number;
+    selectionTo: number;
+    blockTopOffset: number;
+    blockBottomOffset: number;
+};
+
 function computeHeadings(state: EditorState): HeadingItem[] {
     return extractHeadings(state.doc.toString());
 }
@@ -245,6 +252,8 @@ export default function headingNavigator(): MarkdownEditorContentScriptModule {
             let panelDimensions: PanelDimensions = normalizePanelDimensions();
             let initialSelectionRange: { from: number; to: number } | null = null;
             let initialScrollTop: number | null = null;
+            let initialViewportSnapshot: ViewportSnapshot | null = null;
+            let initialViewportSnapshotToken: symbol | null = null;
 
             const ensurePanel = (): HeadingPanel => {
                 if (!panel) {
@@ -277,6 +286,53 @@ export default function headingNavigator(): MarkdownEditorContentScriptModule {
                 const selection = view.state.selection.main;
                 initialSelectionRange = { from: selection.from, to: selection.to };
                 initialScrollTop = view.scrollDOM.scrollTop;
+                initialViewportSnapshot = null;
+                const snapshotSelection = initialSelectionRange;
+                const snapshotToken = Symbol('viewportSnapshot');
+                initialViewportSnapshotToken = snapshotToken;
+
+                if (snapshotSelection) {
+                    view.requestMeasure({
+                        read(measureView): ViewportSnapshot | null {
+                            const selectionView = measureView.state.selection.main;
+                            if (
+                                selectionView.from !== snapshotSelection.from ||
+                                selectionView.to !== snapshotSelection.to
+                            ) {
+                                return null;
+                            }
+
+                            const scrollDOM = measureView.scrollDOM;
+                            const rect = scrollDOM.getBoundingClientRect();
+                            if (Number.isNaN(rect.top)) {
+                                return null;
+                            }
+
+                            const start = measureView.coordsAtPos(selectionView.from);
+                            const end = measureView.coordsAtPos(selectionView.to);
+                            if (!start || !end) {
+                                return null;
+                            }
+
+                            const blockTopOffset = Math.min(start.top, end.top) - rect.top;
+                            const blockBottomOffset = Math.max(start.bottom, end.bottom) - rect.top;
+
+                            return {
+                                selectionFrom: selectionView.from,
+                                selectionTo: selectionView.to,
+                                blockTopOffset,
+                                blockBottomOffset,
+                            };
+                        },
+                        write(measurement: ViewportSnapshot | null) {
+                            if (!measurement || initialViewportSnapshotToken !== snapshotToken) {
+                                return;
+                            }
+
+                            initialViewportSnapshot = measurement;
+                        },
+                    });
+                }
 
                 ensurePanel().open(headings, selectedHeadingId);
                 if (!headings.length) {
@@ -323,8 +379,87 @@ export default function headingNavigator(): MarkdownEditorContentScriptModule {
                         logger.warn('Failed to restore editor selection after closing panel', error);
                     }
 
-                    if (initialScrollTop !== null) {
-                        const targetScrollTop = initialScrollTop;
+                    const snapshot = initialViewportSnapshot;
+                    const fallbackScrollTop = initialScrollTop;
+                    initialViewportSnapshot = null;
+                    initialViewportSnapshotToken = null;
+
+                    if (snapshot) {
+                        view.requestMeasure({
+                            read(measureView): { targetTop: number } | null {
+                                const selection = measureView.state.selection.main;
+                                if (
+                                    selection.from !== snapshot.selectionFrom ||
+                                    selection.to !== snapshot.selectionTo
+                                ) {
+                                    return null;
+                                }
+
+                                const scrollDOM = measureView.scrollDOM;
+                                const rect = scrollDOM.getBoundingClientRect();
+                                if (Number.isNaN(rect.top)) {
+                                    return null;
+                                }
+
+                                const start = measureView.coordsAtPos(selection.from);
+                                const end = measureView.coordsAtPos(selection.to);
+                                if (!start || !end) {
+                                    return null;
+                                }
+
+                                const blockTop = Math.min(start.top, end.top) - rect.top;
+                                const blockBottom = Math.max(start.bottom, end.bottom) - rect.top;
+                                const absoluteTop = scrollDOM.scrollTop + blockTop;
+                                const absoluteBottom = scrollDOM.scrollTop + blockBottom;
+                                const desiredTop = absoluteTop - snapshot.blockTopOffset;
+                                const desiredBottom = absoluteBottom - snapshot.blockBottomOffset;
+                                const clientHeight = scrollDOM.clientHeight;
+                                const maxScrollTop = Math.max(0, scrollDOM.scrollHeight - clientHeight);
+
+                                let targetTop = Math.max(0, Math.min(desiredTop, maxScrollTop));
+                                if (desiredBottom > targetTop + clientHeight) {
+                                    targetTop = Math.max(0, Math.min(desiredBottom - clientHeight, maxScrollTop));
+                                }
+
+                                if (!Number.isFinite(targetTop)) {
+                                    return null;
+                                }
+
+                                return { targetTop };
+                            },
+                            write(measurement: { targetTop: number } | null, measureView) {
+                                const scrollElement = measureView.scrollDOM;
+
+                                if (measurement) {
+                                    const maxScrollTop = Math.max(
+                                        0,
+                                        scrollElement.scrollHeight - scrollElement.clientHeight
+                                    );
+                                    const clampedTop = Math.max(0, Math.min(measurement.targetTop, maxScrollTop));
+
+                                    if (typeof scrollElement.scrollTo === 'function') {
+                                        scrollElement.scrollTo({ top: clampedTop });
+                                    } else {
+                                        scrollElement.scrollTop = clampedTop;
+                                    }
+                                    return;
+                                }
+
+                                if (fallbackScrollTop !== null) {
+                                    const maxScrollTop = Math.max(
+                                        0,
+                                        scrollElement.scrollHeight - scrollElement.clientHeight
+                                    );
+                                    const clampedTop = Math.max(0, Math.min(fallbackScrollTop, maxScrollTop));
+                                    if (typeof scrollElement.scrollTo === 'function') {
+                                        scrollElement.scrollTo({ top: clampedTop });
+                                    } else {
+                                        scrollElement.scrollTop = clampedTop;
+                                    }
+                                }
+                            },
+                        });
+                    } else if (fallbackScrollTop !== null) {
                         // Defer the scroll restoration so it runs after CodeMirror finishes any
                         // selection-driven adjustments triggered by the close dispatch above.
                         view.requestMeasure({
@@ -335,7 +470,7 @@ export default function headingNavigator(): MarkdownEditorContentScriptModule {
                                     0,
                                     scrollElement.scrollHeight - scrollElement.clientHeight
                                 );
-                                const clampedTop = Math.max(0, Math.min(targetScrollTop, maxScrollTop));
+                                const clampedTop = Math.max(0, Math.min(fallbackScrollTop, maxScrollTop));
                                 if (typeof scrollElement.scrollTo === 'function') {
                                     scrollElement.scrollTo({ top: clampedTop });
                                 } else {
@@ -348,6 +483,8 @@ export default function headingNavigator(): MarkdownEditorContentScriptModule {
 
                 initialSelectionRange = null;
                 initialScrollTop = null;
+                initialViewportSnapshot = null;
+                initialViewportSnapshotToken = null;
 
                 if (focusEditor) {
                     view.focus();
