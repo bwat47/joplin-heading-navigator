@@ -87,6 +87,46 @@ function applyScrollTop(element: ScrollContainer, desiredTop: number): void {
     }
 }
 
+type SelectionBlockMeasurement = {
+    selectionFrom: number;
+    selectionTo: number;
+    blockTopOffset: number;
+    blockBottomOffset: number;
+    viewportTop: number;
+    viewportBottom: number;
+};
+
+function measureSelectionBlock(
+    view: EditorView,
+    selection: { from: number; to: number }
+): SelectionBlockMeasurement | null {
+    const scrollDOM = view.scrollDOM;
+    const rect = scrollDOM.getBoundingClientRect();
+    if (Number.isNaN(rect.top)) {
+        return null;
+    }
+
+    const start = view.coordsAtPos(selection.from);
+    const end = view.coordsAtPos(selection.to);
+    if (!start || !end) {
+        return null;
+    }
+
+    const blockTopOffset = Math.min(start.top, end.top) - rect.top;
+    const blockBottomOffset = Math.max(start.bottom, end.bottom) - rect.top;
+    const viewportTop = scrollDOM.scrollTop;
+    const viewportBottom = viewportTop + scrollDOM.clientHeight;
+
+    return {
+        selectionFrom: selection.from,
+        selectionTo: selection.to,
+        blockTopOffset,
+        blockBottomOffset,
+        viewportTop,
+        viewportBottom,
+    };
+}
+
 function computeHeadings(state: EditorState): HeadingItem[] {
     return extractHeadings(state.doc.toString());
 }
@@ -252,15 +292,8 @@ function setEditorSelection(view: EditorView, heading: HeadingItem, focusEditor:
                             return null;
                         }
 
-                        const scrollDOM = measureView.scrollDOM;
-                        const rect = scrollDOM.getBoundingClientRect();
-                        if (Number.isNaN(rect.top)) {
-                            return null;
-                        }
-
-                        const start = measureView.coordsAtPos(selection.from);
-                        const end = measureView.coordsAtPos(selection.to);
-                        if (!start || !end) {
+                        const blockMeasurement = measureSelectionBlock(measureView, selection);
+                        if (!blockMeasurement) {
                             return {
                                 status: 'retry',
                                 selectionFrom: selection.from,
@@ -268,17 +301,15 @@ function setEditorSelection(view: EditorView, heading: HeadingItem, focusEditor:
                             };
                         }
 
-                        const viewportTop = scrollDOM.scrollTop;
-                        const viewportBottom = viewportTop + scrollDOM.clientHeight;
-                        const blockTop = Math.min(start.top, end.top) - rect.top + viewportTop;
-                        const blockBottom = Math.max(start.bottom, end.bottom) - rect.top + viewportTop;
+                        const blockTop = blockMeasurement.blockTopOffset + blockMeasurement.viewportTop;
+                        const blockBottom = blockMeasurement.blockBottomOffset + blockMeasurement.viewportTop;
 
                         return {
                             status: 'geometry',
-                            selectionFrom: selection.from,
-                            selectionTo: selection.to,
-                            viewportTop,
-                            viewportBottom,
+                            selectionFrom: blockMeasurement.selectionFrom,
+                            selectionTo: blockMeasurement.selectionTo,
+                            viewportTop: blockMeasurement.viewportTop,
+                            viewportBottom: blockMeasurement.viewportBottom,
                             blockTop,
                             blockBottom,
                         };
@@ -295,7 +326,7 @@ function setEditorSelection(view: EditorView, heading: HeadingItem, focusEditor:
 
                         if (measurement.status === 'retry') {
                             measureView.dispatch({
-                                effects: EditorView.scrollIntoView(selection, { y: 'start' }),
+                                effects: EditorView.scrollIntoView(selection, { y: 'center' }),
                             });
 
                             if (focusEditor) {
@@ -408,26 +439,16 @@ export default function headingNavigator(): MarkdownEditorContentScriptModule {
                                 return null;
                             }
 
-                            const scrollDOM = measureView.scrollDOM;
-                            const rect = scrollDOM.getBoundingClientRect();
-                            if (Number.isNaN(rect.top)) {
+                            const blockMeasurement = measureSelectionBlock(measureView, selectionView);
+                            if (!blockMeasurement) {
                                 return null;
                             }
-
-                            const start = measureView.coordsAtPos(selectionView.from);
-                            const end = measureView.coordsAtPos(selectionView.to);
-                            if (!start || !end) {
-                                return null;
-                            }
-
-                            const blockTopOffset = Math.min(start.top, end.top) - rect.top;
-                            const blockBottomOffset = Math.max(start.bottom, end.bottom) - rect.top;
 
                             return {
                                 selectionFrom: selectionView.from,
                                 selectionTo: selectionView.to,
-                                blockTopOffset,
-                                blockBottomOffset,
+                                blockTopOffset: blockMeasurement.blockTopOffset,
+                                blockBottomOffset: blockMeasurement.blockBottomOffset,
                             };
                         },
                         write(measurement: ViewportSnapshot | null) {
