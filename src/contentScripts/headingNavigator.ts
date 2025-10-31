@@ -100,6 +100,17 @@ function restoreScroll(view: EditorView, targetTop: number | null, fallbackTop: 
     }
 }
 
+function planScrollVerification(view: EditorView, attempt: number, run: () => void): void {
+    const delay = attempt === 0 ? SCROLL_VERIFY_DELAY_MS : SCROLL_VERIFY_RETRY_DELAY_MS;
+
+    const timeoutId = window.setTimeout(() => {
+        pendingScrollVerifications.delete(view);
+        run();
+    }, delay);
+
+    pendingScrollVerifications.set(view, timeoutId);
+}
+
 type SelectionBlockMeasurement = {
     selectionFrom: number;
     selectionTo: number;
@@ -285,11 +296,7 @@ function setEditorSelection(view: EditorView, heading: HeadingItem, focusEditor:
                 return;
             }
 
-            const delay = attempt === 0 ? SCROLL_VERIFY_DELAY_MS : SCROLL_VERIFY_RETRY_DELAY_MS;
-
-            const verificationId = window.setTimeout(() => {
-                pendingScrollVerifications.delete(view);
-
+            planScrollVerification(view, attempt, () => {
                 view.requestMeasure({
                     read(measureView): ScrollVerificationMeasurement | null {
                         const selection = measureView.state.selection.main;
@@ -367,9 +374,7 @@ function setEditorSelection(view: EditorView, heading: HeadingItem, focusEditor:
                         }
                     },
                 });
-            }, delay);
-
-            pendingScrollVerifications.set(view, verificationId);
+            });
         };
 
         // Trigger visibility checks to catch cases where scrollIntoView bails or later layout
