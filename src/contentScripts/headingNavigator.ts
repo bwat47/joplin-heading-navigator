@@ -161,6 +161,14 @@ function createScrollVerifier(options: {
                     }
 
                     if (measurement.status === 'retry') {
+                        if (attempt + 1 >= SCROLL_VERIFY_MAX_ATTEMPTS) {
+                            logger.warn('Scroll verification gave up after measurement failures', {
+                                selection: targetRange,
+                                attempts: attempt + 1,
+                            });
+                            return;
+                        }
+
                         measureView.dispatch({
                             effects: EditorView.scrollIntoView(selection, { y: 'center' }),
                         });
@@ -177,6 +185,8 @@ function createScrollVerifier(options: {
                         measurement.blockBottom > measurement.viewportBottom - tolerance;
 
                     if (!needsScroll) {
+                        // Stay on guard for late layout shifts (e.g. images loading) that can nudge the heading
+                        // back out of view—one or two extra checks keep the viewport stable.
                         if (attempt + 1 < SCROLL_VERIFY_MAX_ATTEMPTS) {
                             verify(attempt + 1);
                         }
