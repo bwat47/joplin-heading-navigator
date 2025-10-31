@@ -101,6 +101,7 @@ function restoreScroll(view: EditorView, targetTop: number | null, fallbackTop: 
 }
 
 function planScrollVerification(view: EditorView, attempt: number, run: () => void): void {
+    // attempt is 0-based: 0 for the first verification pass, 1 for the second, etc.
     const delay = attempt === 0 ? SCROLL_VERIFY_DELAY_MS : SCROLL_VERIFY_RETRY_DELAY_MS;
 
     const timeoutId = window.setTimeout(() => {
@@ -193,6 +194,7 @@ function createScrollVerifier(options: {
                         return;
                     }
 
+                    // Clamp to a 1px minimum so centering math stays stable when the heading collapses to a point.
                     const blockHeight = Math.max(measurement.blockBottom - measurement.blockTop, 1);
                     const centeredTop =
                         measurement.blockTop - Math.max(0, (measureView.scrollDOM.clientHeight - blockHeight) / 2);
@@ -219,7 +221,7 @@ type SelectionBlockMeasurement = {
     viewportBottom: number;
 };
 
-type SelectionLike = { from: number; to: number } | { selectionFrom: number; selectionTo: number } | null | undefined;
+type SelectionLike = { from: number; to: number } | { selectionFrom: number; selectionTo: number } | null;
 
 function normalizeSelection(selection: SelectionLike): { from: number; to: number } | null {
     if (!selection) {
