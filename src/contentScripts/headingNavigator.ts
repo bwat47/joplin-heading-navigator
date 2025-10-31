@@ -87,6 +87,18 @@ function applyScrollTop(element: ScrollContainer, desiredTop: number): void {
     }
 }
 
+function restoreScroll(view: EditorView, targetTop: number | null, fallbackTop: number | null): void {
+    const scrollElement = view.scrollDOM as ScrollContainer;
+    if (targetTop !== null) {
+        applyScrollTop(scrollElement, targetTop);
+        return;
+    }
+
+    if (fallbackTop !== null) {
+        applyScrollTop(scrollElement, fallbackTop);
+    }
+}
+
 type SelectionBlockMeasurement = {
     selectionFrom: number;
     selectionTo: number;
@@ -228,16 +240,8 @@ function restoreEditorViewport(
                 return { targetTop };
             },
             write(measurement: { targetTop: number } | null, measureView) {
-                const scrollElement = measureView.scrollDOM as ScrollContainer;
-
-                if (measurement) {
-                    applyScrollTop(scrollElement, measurement.targetTop);
-                    return;
-                }
-
-                if (fallbackScrollTop !== null) {
-                    applyScrollTop(scrollElement, fallbackScrollTop);
-                }
+                const targetTop = measurement ? measurement.targetTop : null;
+                restoreScroll(measureView, targetTop, fallbackScrollTop);
             },
         });
     } else if (fallbackScrollTop !== null) {
@@ -246,7 +250,7 @@ function restoreEditorViewport(
         view.requestMeasure({
             read: () => null,
             write(_measure, measureView) {
-                applyScrollTop(measureView.scrollDOM as ScrollContainer, fallbackScrollTop);
+                restoreScroll(measureView, null, fallbackScrollTop);
             },
         });
     }
