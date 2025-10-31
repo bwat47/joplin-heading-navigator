@@ -48,6 +48,7 @@ const SCROLL_VERIFY_DELAY_MS = 160;
 const SCROLL_VERIFY_RETRY_DELAY_MS = 260;
 const SCROLL_VERIFY_TOLERANCE_PX = 12;
 const SCROLL_VERIFY_MAX_ATTEMPTS = 3;
+const VIEWPORT_SNAPSHOT_MEASURE_KEY = { id: 'headingNavigatorViewportSnapshot' };
 
 type ViewportSnapshot = {
     selectionFrom: number;
@@ -394,7 +395,6 @@ export default function headingNavigator(): MarkdownEditorContentScriptModule {
             let initialSelectionRange: { from: number; to: number } | null = null;
             let initialScrollTop: number | null = null;
             let initialViewportSnapshot: ViewportSnapshot | null = null;
-            let initialViewportSnapshotToken: symbol | null = null;
 
             const ensurePanel = (): HeadingPanel => {
                 if (!panel) {
@@ -429,11 +429,10 @@ export default function headingNavigator(): MarkdownEditorContentScriptModule {
                 initialScrollTop = view.scrollDOM.scrollTop;
                 initialViewportSnapshot = null;
                 const snapshotSelection = initialSelectionRange;
-                const snapshotToken = Symbol('viewportSnapshot');
-                initialViewportSnapshotToken = snapshotToken;
 
                 if (snapshotSelection) {
                     view.requestMeasure({
+                        key: VIEWPORT_SNAPSHOT_MEASURE_KEY,
                         read(measureView): ViewportSnapshot | null {
                             const selectionView = measureView.state.selection.main;
                             if (
@@ -456,7 +455,7 @@ export default function headingNavigator(): MarkdownEditorContentScriptModule {
                             };
                         },
                         write(measurement: ViewportSnapshot | null) {
-                            if (!measurement || initialViewportSnapshotToken !== snapshotToken) {
+                            if (!measurement) {
                                 return;
                             }
 
@@ -507,7 +506,6 @@ export default function headingNavigator(): MarkdownEditorContentScriptModule {
                     const snapshot = initialViewportSnapshot;
                     const fallbackScrollTop = initialScrollTop;
                     initialViewportSnapshot = null;
-                    initialViewportSnapshotToken = null;
 
                     restoreEditorViewport(view, snapshot, fallbackScrollTop);
                 }
@@ -515,7 +513,6 @@ export default function headingNavigator(): MarkdownEditorContentScriptModule {
                 initialSelectionRange = null;
                 initialScrollTop = null;
                 initialViewportSnapshot = null;
-                initialViewportSnapshotToken = null;
 
                 if (focusEditor) {
                     view.focus();
