@@ -43,7 +43,6 @@ const headingHighlightTheme = EditorView.baseTheme({
     },
 });
 
-const pendingScrollFrames = new WeakMap<EditorView, number>();
 const pendingScrollVerifications = new WeakMap<EditorView, number>();
 const SCROLL_VERIFY_DELAY_MS = 160;
 const SCROLL_VERIFY_TOLERANCE_PX = 12;
@@ -205,12 +204,6 @@ function setEditorSelection(view: EditorView, heading: HeadingItem, focusEditor:
         ensureHighlightStyles(view);
         const targetSelection = EditorSelection.single(heading.from);
 
-        const pendingId = pendingScrollFrames.get(view);
-        if (typeof pendingId === 'number') {
-            cancelAnimationFrame(pendingId);
-            pendingScrollFrames.delete(view);
-        }
-
         const pendingVerificationId = pendingScrollVerifications.get(view);
         if (typeof pendingVerificationId === 'number') {
             window.clearTimeout(pendingVerificationId);
@@ -219,31 +212,15 @@ function setEditorSelection(view: EditorView, heading: HeadingItem, focusEditor:
 
         view.dispatch({
             selection: targetSelection,
-            effects: [headingHighlightEffect.of({ from: heading.from, to: heading.to })],
+            effects: [
+                headingHighlightEffect.of({ from: heading.from, to: heading.to }),
+                EditorView.scrollIntoView(targetSelection.main, { y: 'center' }),
+            ],
         });
 
-        const frameId = requestAnimationFrame(() => {
-            pendingScrollFrames.delete(view);
-            const currentSelection = view.state.selection.main;
-            if (
-                currentSelection.from !== targetSelection.main.from ||
-                currentSelection.to !== targetSelection.main.to
-            ) {
-                return;
-            }
-
-            try {
-                view.dispatch({
-                    effects: EditorView.scrollIntoView(currentSelection, { y: 'center' }),
-                });
-                if (focusEditor) {
-                    view.focus();
-                }
-            } catch (error) {
-                logger.warn('Failed to scroll editor to heading', error);
-            }
-        });
-        pendingScrollFrames.set(view, frameId);
+        if (focusEditor) {
+            view.focus();
+        }
 
         // Trigger a one-shot visibility check to catch cases where scrollIntoView bails
         // (CodeMirror can drop the effect in very long docs). If we detect the heading
@@ -447,12 +424,6 @@ export default function headingNavigator(): MarkdownEditorContentScriptModule {
                 panel = null;
 
                 if (restoreOriginalPosition && initialSelectionRange) {
-                    const pendingFrame = pendingScrollFrames.get(view);
-                    if (typeof pendingFrame === 'number') {
-                        cancelAnimationFrame(pendingFrame);
-                        pendingScrollFrames.delete(view);
-                    }
-
                     const pendingVerificationId = pendingScrollVerifications.get(view);
                     if (typeof pendingVerificationId === 'number') {
                         window.clearTimeout(pendingVerificationId);
