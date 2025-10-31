@@ -63,9 +63,7 @@ type ScrollVerificationMeasurement =
           selectionFrom: number;
           selectionTo: number;
           viewportTop: number;
-          viewportBottom: number;
           blockTop: number;
-          blockBottom: number;
       }
     | {
           status: 'retry';
@@ -171,7 +169,7 @@ function createScrollVerifier(options: {
                         }
 
                         measureView.dispatch({
-                            effects: EditorView.scrollIntoView(selection, { y: 'center' }),
+                            effects: EditorView.scrollIntoView(selection, { y: 'start' }),
                         });
 
                         ensureEditorFocus(measureView, focusEditor);
@@ -181,9 +179,7 @@ function createScrollVerifier(options: {
                     }
 
                     const tolerance = SCROLL_VERIFY_TOLERANCE_PX;
-                    const needsScroll =
-                        measurement.blockTop < measurement.viewportTop + tolerance ||
-                        measurement.blockBottom > measurement.viewportBottom - tolerance;
+                    const needsScroll = measurement.blockTop < measurement.viewportTop + tolerance;
 
                     if (!needsScroll) {
                         // Stay on guard for late layout shifts (e.g. images loading) that can nudge the heading
@@ -194,11 +190,9 @@ function createScrollVerifier(options: {
                         return;
                     }
 
-                    // Clamp to a 1px minimum so centering math stays stable when the heading collapses to a point.
-                    const blockHeight = Math.max(measurement.blockBottom - measurement.blockTop, 1);
-                    const centeredTop =
-                        measurement.blockTop - Math.max(0, (measureView.scrollDOM.clientHeight - blockHeight) / 2);
-                    applyScrollTop(measureView.scrollDOM as ScrollContainer, centeredTop);
+                    measureView.dispatch({
+                        effects: EditorView.scrollIntoView(selection, { y: 'start' }),
+                    });
                     ensureEditorFocus(measureView, focusEditor);
 
                     if (attempt + 1 < SCROLL_VERIFY_MAX_ATTEMPTS) {
@@ -283,16 +277,13 @@ function measureSelectionBlock(
 
 function buildGeometryMeasurement(block: SelectionBlockMeasurement): ScrollVerificationMeasurement {
     const blockTop = block.blockTopOffset + block.viewportTop;
-    const blockBottom = block.blockBottomOffset + block.viewportTop;
 
     return {
         status: 'geometry',
         selectionFrom: block.selectionFrom,
         selectionTo: block.selectionTo,
         viewportTop: block.viewportTop,
-        viewportBottom: block.viewportBottom,
         blockTop,
-        blockBottom,
     };
 }
 
@@ -428,7 +419,7 @@ function setEditorSelection(view: EditorView, heading: HeadingItem, focusEditor:
             selection: targetSelection,
             effects: [
                 headingHighlightEffect.of({ from: heading.from, to: heading.to }),
-                EditorView.scrollIntoView(targetSelection.main, { y: 'center' }),
+                EditorView.scrollIntoView(targetSelection.main, { y: 'start' }),
             ],
         });
 
@@ -441,8 +432,8 @@ function setEditorSelection(view: EditorView, heading: HeadingItem, focusEditor:
         });
 
         // Trigger visibility checks to catch cases where scrollIntoView bails or later layout
-        // shifts push the target outside the viewport. Re-running the centering logic keeps the
-        // heading visible even when the document settles a moment later.
+        // shifts push the target outside the viewport. Start alignment is more resilient to
+        // content changes above the heading since it doesn't depend on relative centering math.
         runVerification(0);
     } catch (error) {
         logger.error('Failed to set editor selection', error);
