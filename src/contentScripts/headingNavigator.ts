@@ -148,18 +148,7 @@ function createScrollVerifier(options: {
                         };
                     }
 
-                    const blockTop = blockMeasurement.blockTopOffset + blockMeasurement.viewportTop;
-                    const blockBottom = blockMeasurement.blockBottomOffset + blockMeasurement.viewportTop;
-
-                    return {
-                        status: 'geometry',
-                        selectionFrom: blockMeasurement.selectionFrom,
-                        selectionTo: blockMeasurement.selectionTo,
-                        viewportTop: blockMeasurement.viewportTop,
-                        viewportBottom: blockMeasurement.viewportBottom,
-                        blockTop,
-                        blockBottom,
-                    };
+                    return buildGeometryMeasurement(blockMeasurement);
                 },
                 write(measurement, measureView) {
                     if (!measurement) {
@@ -277,6 +266,21 @@ function measureSelectionBlock(
         blockBottomOffset,
         viewportTop,
         viewportBottom,
+    };
+}
+
+function buildGeometryMeasurement(block: SelectionBlockMeasurement): ScrollVerificationMeasurement {
+    const blockTop = block.blockTopOffset + block.viewportTop;
+    const blockBottom = block.blockBottomOffset + block.viewportTop;
+
+    return {
+        status: 'geometry',
+        selectionFrom: block.selectionFrom,
+        selectionTo: block.selectionTo,
+        viewportTop: block.viewportTop,
+        viewportBottom: block.viewportBottom,
+        blockTop,
+        blockBottom,
     };
 }
 
