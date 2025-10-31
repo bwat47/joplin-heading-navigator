@@ -13,13 +13,6 @@ const SCROLL_VERIFY_DELAY_MS = 160;
 const SCROLL_VERIFY_RETRY_DELAY_MS = 260;
 const SCROLL_VERIFY_TOLERANCE_PX = 12;
 const SCROLL_VERIFY_MAX_ATTEMPTS = 2;
-const VIEWPORT_SNAPSHOT_MEASURE_KEY = { id: 'headingNavigatorViewportSnapshot' };
-
-type ViewportSnapshot = {
-    selectionFrom: number;
-    selectionTo: number;
-    blockTopOffset: number;
-};
 
 type ScrollVerificationMeasurement =
     | {
@@ -34,33 +27,6 @@ type ScrollVerificationMeasurement =
           selectionFrom: number;
           selectionTo: number;
       };
-
-type ScrollContainer = HTMLElement & {
-    scrollTo?: (options: ScrollToOptions) => void;
-};
-
-function applyScrollTop(element: ScrollContainer, desiredTop: number): void {
-    const maxScrollTop = Math.max(0, element.scrollHeight - element.clientHeight);
-    const clampedTop = Math.max(0, Math.min(desiredTop, maxScrollTop));
-
-    if (typeof element.scrollTo === 'function') {
-        element.scrollTo({ top: clampedTop });
-    } else {
-        element.scrollTop = clampedTop;
-    }
-}
-
-function restoreScroll(view: EditorView, targetTop: number | null, fallbackTop: number | null): void {
-    const scrollElement = view.scrollDOM as ScrollContainer;
-    if (targetTop !== null) {
-        applyScrollTop(scrollElement, targetTop);
-        return;
-    }
-
-    if (fallbackTop !== null) {
-        applyScrollTop(scrollElement, fallbackTop);
-    }
-}
 
 function planScrollVerification(view: EditorView, attempt: number, run: () => void): void {
     // attempt is 0-based: 0 for the first verification pass, 1 for the second, etc.
@@ -257,57 +223,6 @@ function findActiveHeadingId(headings: HeadingItem[], position: number): string 
     return candidate?.id ?? headings[0].id;
 }
 
-function restoreEditorViewport(
-    view: EditorView,
-    snapshot: ViewportSnapshot | null,
-    fallbackScrollTop: number | null
-): void {
-    if (snapshot) {
-        view.requestMeasure({
-            read(measureView): { targetTop: number } | null {
-                const selection = measureView.state.selection.main;
-                if (!isSameSelection(selection, snapshot)) {
-                    return null;
-                }
-
-                const scrollDOM = measureView.scrollDOM;
-                const rect = scrollDOM.getBoundingClientRect();
-                if (Number.isNaN(rect.top)) {
-                    return null;
-                }
-
-                const start = measureView.coordsAtPos(selection.from);
-                if (!start) {
-                    return null;
-                }
-
-                const blockTop = start.top - rect.top;
-                const absoluteTop = scrollDOM.scrollTop + blockTop;
-                const targetTop = absoluteTop - snapshot.blockTopOffset;
-
-                if (!Number.isFinite(targetTop)) {
-                    return null;
-                }
-
-                return { targetTop };
-            },
-            write(measurement: { targetTop: number } | null, measureView) {
-                const targetTop = measurement ? measurement.targetTop : null;
-                restoreScroll(measureView, targetTop, fallbackScrollTop);
-            },
-        });
-    } else if (fallbackScrollTop !== null) {
-        // Defer the scroll restoration so it runs after CodeMirror finishes any
-        // selection-driven adjustments triggered by the close dispatch above.
-        view.requestMeasure({
-            read: () => null,
-            write(_measure, measureView) {
-                restoreScroll(measureView, null, fallbackScrollTop);
-            },
-        });
-    }
-}
-
 function setEditorSelection(view: EditorView, heading: HeadingItem, focusEditor: boolean): void {
     try {
         const targetSelection = EditorSelection.single(heading.from);
@@ -352,8 +267,7 @@ export default function headingNavigator(): MarkdownEditorContentScriptModule {
             let selectedHeadingId: string | null = null;
             let panelDimensions: PanelDimensions = normalizePanelDimensions();
             let initialSelectionRange: { from: number; to: number } | null = null;
-            let initialScrollTop: number | null = null;
-            let initialViewportSnapshot: ViewportSnapshot | null = null;
+            let initialScrollSnapshot: ReturnType<EditorView['scrollSnapshot']> | null = null;
 
             const ensurePanel = (): HeadingPanel => {
                 if (!panel) {
@@ -385,39 +299,7 @@ export default function headingNavigator(): MarkdownEditorContentScriptModule {
                 selectedHeadingId = findActiveHeadingId(headings, view.state.selection.main.head);
                 const selection = view.state.selection.main;
                 initialSelectionRange = { from: selection.from, to: selection.to };
-                initialScrollTop = view.scrollDOM.scrollTop;
-                initialViewportSnapshot = null;
-                const snapshotSelection = initialSelectionRange;
-
-                if (snapshotSelection) {
-                    view.requestMeasure({
-                        key: VIEWPORT_SNAPSHOT_MEASURE_KEY,
-                        read(measureView): ViewportSnapshot | null {
-                            const selectionView = measureView.state.selection.main;
-                            if (!isSameSelection(selectionView, snapshotSelection)) {
-                                return null;
-                            }
-
-                            const blockMeasurement = measureSelectionBlock(measureView, selectionView);
-                            if (!blockMeasurement) {
-                                return null;
-                            }
-
-                            return {
-                                selectionFrom: selectionView.from,
-                                selectionTo: selectionView.to,
-                                blockTopOffset: blockMeasurement.blockTopOffset,
-                            };
-                        },
-                        write(measurement: ViewportSnapshot | null) {
-                            if (!measurement) {
-                                return;
-                            }
-
-                            initialViewportSnapshot = measurement;
-                        },
-                    });
-                }
+                initialScrollSnapshot = view.scrollSnapshot();
 
                 ensurePanel().open(headings, selectedHeadingId);
             };
@@ -447,21 +329,18 @@ export default function headingNavigator(): MarkdownEditorContentScriptModule {
                             initialSelectionRange.from,
                             initialSelectionRange.to
                         );
-                        view.dispatch({ selection: selectionToRestore });
+
+                        view.dispatch({
+                            selection: selectionToRestore,
+                            effects: initialScrollSnapshot,
+                        });
                     } catch (error) {
                         logger.warn('Failed to restore editor selection after closing panel', error);
                     }
-
-                    const snapshot = initialViewportSnapshot;
-                    const fallbackScrollTop = initialScrollTop;
-                    initialViewportSnapshot = null;
-
-                    restoreEditorViewport(view, snapshot, fallbackScrollTop);
                 }
 
                 initialSelectionRange = null;
-                initialScrollTop = null;
-                initialViewportSnapshot = null;
+                initialScrollSnapshot = null;
 
                 ensureEditorFocus(view, focusEditor);
             };
