@@ -47,7 +47,7 @@ const pendingScrollVerifications = new WeakMap<EditorView, number>();
 const SCROLL_VERIFY_DELAY_MS = 160;
 const SCROLL_VERIFY_RETRY_DELAY_MS = 260;
 const SCROLL_VERIFY_TOLERANCE_PX = 12;
-const SCROLL_VERIFY_MAX_ATTEMPTS = 3;
+const SCROLL_VERIFY_MAX_ATTEMPTS = 2;
 const VIEWPORT_SNAPSHOT_MEASURE_KEY = { id: 'headingNavigatorViewportSnapshot' };
 
 type ViewportSnapshot = {
@@ -146,7 +146,13 @@ function createScrollVerifier(options: {
                         };
                     }
 
-                    return buildGeometryMeasurement(blockMeasurement);
+                    return {
+                        status: 'geometry' as const,
+                        selectionFrom: blockMeasurement.selectionFrom,
+                        selectionTo: blockMeasurement.selectionTo,
+                        viewportTop: blockMeasurement.viewportTop,
+                        blockTop: blockMeasurement.blockTopOffset + blockMeasurement.viewportTop,
+                    };
                 },
                 write(measurement, measureView) {
                     if (!measurement) {
@@ -181,8 +187,8 @@ function createScrollVerifier(options: {
                     const needsScroll = measurement.blockTop < measurement.viewportTop + tolerance;
 
                     if (!needsScroll) {
-                        // Stay on guard for late layout shifts (e.g. images loading) that can nudge the heading
-                        // back out of view—one or two extra checks keep the viewport stable.
+                        // Stay on guard for late layout shifts (e.g. images loading) that can push the heading
+                        // below the viewport top—extra checks keep it pinned even when content settles.
                         if (attempt + 1 < SCROLL_VERIFY_MAX_ATTEMPTS) {
                             verify(attempt + 1);
                         }
@@ -264,18 +270,6 @@ function measureSelectionBlock(
         selectionTo: selection.to,
         blockTopOffset,
         viewportTop,
-    };
-}
-
-function buildGeometryMeasurement(block: SelectionBlockMeasurement): ScrollVerificationMeasurement {
-    const blockTop = block.blockTopOffset + block.viewportTop;
-
-    return {
-        status: 'geometry',
-        selectionFrom: block.selectionFrom,
-        selectionTo: block.selectionTo,
-        viewportTop: block.viewportTop,
-        blockTop,
     };
 }
 
