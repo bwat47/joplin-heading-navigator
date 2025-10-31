@@ -111,6 +111,14 @@ function planScrollVerification(view: EditorView, attempt: number, run: () => vo
     pendingScrollVerifications.set(view, timeoutId);
 }
 
+function ensureEditorFocus(view: EditorView, shouldFocus: boolean): void {
+    if (!shouldFocus) {
+        return;
+    }
+
+    view.focus();
+}
+
 function createScrollVerifier(options: {
     view: EditorView;
     targetRange: { from: number; to: number };
@@ -168,9 +176,7 @@ function createScrollVerifier(options: {
                             effects: EditorView.scrollIntoView(selection, { y: 'center' }),
                         });
 
-                        if (focusEditor) {
-                            measureView.focus();
-                        }
+                        ensureEditorFocus(measureView, focusEditor);
 
                         verify(attempt + 1);
                         return;
@@ -192,9 +198,7 @@ function createScrollVerifier(options: {
                     const centeredTop =
                         measurement.blockTop - Math.max(0, (measureView.scrollDOM.clientHeight - blockHeight) / 2);
                     applyScrollTop(measureView.scrollDOM as ScrollContainer, centeredTop);
-                    if (focusEditor) {
-                        measureView.focus();
-                    }
+                    ensureEditorFocus(measureView, focusEditor);
 
                     if (attempt + 1 < SCROLL_VERIFY_MAX_ATTEMPTS) {
                         verify(attempt + 1);
@@ -412,9 +416,7 @@ function setEditorSelection(view: EditorView, heading: HeadingItem, focusEditor:
             ],
         });
 
-        if (focusEditor) {
-            view.focus();
-        }
+        ensureEditorFocus(view, focusEditor);
 
         const runVerification = createScrollVerifier({
             view,
@@ -561,9 +563,7 @@ export default function headingNavigator(): MarkdownEditorContentScriptModule {
                 initialScrollTop = null;
                 initialViewportSnapshot = null;
 
-                if (focusEditor) {
-                    view.focus();
-                }
+                ensureEditorFocus(view, focusEditor);
             };
 
             const togglePanel = (dimensions?: PanelDimensions): void => {
