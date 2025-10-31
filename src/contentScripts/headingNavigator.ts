@@ -149,7 +149,7 @@ function createScrollVerifier(options: {
                     return {
                         status: 'geometry' as const,
                         selectionFrom: blockMeasurement.selectionFrom,
-                        selectionTo: blockMeasurement.selectionTo,
+                        selectionTo: selection.to,
                         viewportTop: blockMeasurement.viewportTop,
                         blockTop: blockMeasurement.blockTopOffset + blockMeasurement.viewportTop,
                     };
@@ -213,7 +213,6 @@ function createScrollVerifier(options: {
 
 type SelectionBlockMeasurement = {
     selectionFrom: number;
-    selectionTo: number;
     blockTopOffset: number;
     viewportTop: number;
 };
@@ -267,7 +266,6 @@ function measureSelectionBlock(
 
     return {
         selectionFrom: selection.from,
-        selectionTo: selection.to,
         blockTopOffset,
         viewportTop,
     };
