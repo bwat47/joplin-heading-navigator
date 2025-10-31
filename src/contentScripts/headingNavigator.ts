@@ -441,8 +441,8 @@ function setEditorSelection(view: EditorView, heading: HeadingItem, focusEditor:
         });
 
         // Trigger visibility checks to catch cases where scrollIntoView bails or later layout
-        // shifts push the target outside the viewport. Retrying with a 'start' alignment ensures
-        // the heading at least becomes visible before we attempt to re-center it.
+        // shifts push the target outside the viewport. Re-running the centering logic keeps the
+        // heading visible even when the document settles a moment later.
         runVerification(0);
     } catch (error) {
         logger.error('Failed to set editor selection', error);
