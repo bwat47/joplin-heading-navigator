@@ -111,6 +111,102 @@ function planScrollVerification(view: EditorView, attempt: number, run: () => vo
     pendingScrollVerifications.set(view, timeoutId);
 }
 
+function createScrollVerifier(options: {
+    view: EditorView;
+    targetRange: { from: number; to: number };
+    focusEditor: boolean;
+}): (attempt: number) => void {
+    const { view, targetRange, focusEditor } = options;
+
+    const verify = (attempt: number): void => {
+        if (attempt >= SCROLL_VERIFY_MAX_ATTEMPTS) {
+            return;
+        }
+
+        planScrollVerification(view, attempt, () => {
+            view.requestMeasure({
+                read(measureView): ScrollVerificationMeasurement | null {
+                    const selection = measureView.state.selection.main;
+                    if (selection.from !== targetRange.from || selection.to !== targetRange.to) {
+                        return null;
+                    }
+
+                    const blockMeasurement = measureSelectionBlock(measureView, selection);
+                    if (!blockMeasurement) {
+                        return {
+                            status: 'retry',
+                            selectionFrom: selection.from,
+                            selectionTo: selection.to,
+                        };
+                    }
+
+                    const blockTop = blockMeasurement.blockTopOffset + blockMeasurement.viewportTop;
+                    const blockBottom = blockMeasurement.blockBottomOffset + blockMeasurement.viewportTop;
+
+                    return {
+                        status: 'geometry',
+                        selectionFrom: blockMeasurement.selectionFrom,
+                        selectionTo: blockMeasurement.selectionTo,
+                        viewportTop: blockMeasurement.viewportTop,
+                        viewportBottom: blockMeasurement.viewportBottom,
+                        blockTop,
+                        blockBottom,
+                    };
+                },
+                write(measurement, measureView) {
+                    if (!measurement) {
+                        return;
+                    }
+
+                    const selection = measureView.state.selection.main;
+                    if (selection.from !== measurement.selectionFrom || selection.to !== measurement.selectionTo) {
+                        return;
+                    }
+
+                    if (measurement.status === 'retry') {
+                        measureView.dispatch({
+                            effects: EditorView.scrollIntoView(selection, { y: 'center' }),
+                        });
+
+                        if (focusEditor) {
+                            measureView.focus();
+                        }
+
+                        verify(attempt + 1);
+                        return;
+                    }
+
+                    const tolerance = SCROLL_VERIFY_TOLERANCE_PX;
+                    const needsScroll =
+                        measurement.blockTop < measurement.viewportTop + tolerance ||
+                        measurement.blockBottom > measurement.viewportBottom - tolerance;
+
+                    if (!needsScroll) {
+                        if (attempt + 1 < SCROLL_VERIFY_MAX_ATTEMPTS) {
+                            verify(attempt + 1);
+                        }
+                        return;
+                    }
+
+                    const blockHeight = Math.max(measurement.blockBottom - measurement.blockTop, 1);
+                    const centeredTop =
+                        measurement.blockTop - Math.max(0, (measureView.scrollDOM.clientHeight - blockHeight) / 2);
+                    applyScrollTop(measureView.scrollDOM as ScrollContainer, centeredTop);
+                    if (focusEditor) {
+                        measureView.focus();
+                    }
+
+                    if (attempt + 1 < SCROLL_VERIFY_MAX_ATTEMPTS) {
+                        verify(attempt + 1);
+                    }
+                },
+            });
+        });
+    };
+
+    return verify;
+}
+
 type SelectionBlockMeasurement = {
     selectionFrom: number;
     selectionTo: number;
@@ -291,96 +387,16 @@ function setEditorSelection(view: EditorView, heading: HeadingItem, focusEditor:
             view.focus();
         }
 
-        const scheduleVerification = (attempt: number): void => {
-            if (attempt >= SCROLL_VERIFY_MAX_ATTEMPTS) {
-                return;
-            }
-
-            planScrollVerification(view, attempt, () => {
-                view.requestMeasure({
-                    read(measureView): ScrollVerificationMeasurement | null {
-                        const selection = measureView.state.selection.main;
-                        if (selection.from !== targetSelection.main.from || selection.to !== targetSelection.main.to) {
-                            return null;
-                        }
-
-                        const blockMeasurement = measureSelectionBlock(measureView, selection);
-                        if (!blockMeasurement) {
-                            return {
-                                status: 'retry',
-                                selectionFrom: selection.from,
-                                selectionTo: selection.to,
-                            };
-                        }
-
-                        const blockTop = blockMeasurement.blockTopOffset + blockMeasurement.viewportTop;
-                        const blockBottom = blockMeasurement.blockBottomOffset + blockMeasurement.viewportTop;
-
-                        return {
-                            status: 'geometry',
-                            selectionFrom: blockMeasurement.selectionFrom,
-                            selectionTo: blockMeasurement.selectionTo,
-                            viewportTop: blockMeasurement.viewportTop,
-                            viewportBottom: blockMeasurement.viewportBottom,
-                            blockTop,
-                            blockBottom,
-                        };
-                    },
-                    write(measurement, measureView) {
-                        if (!measurement) {
-                            return;
-                        }
-
-                        const selection = measureView.state.selection.main;
-                        if (selection.from !== measurement.selectionFrom || selection.to !== measurement.selectionTo) {
-                            return;
-                        }
-
-                        if (measurement.status === 'retry') {
-                            measureView.dispatch({
-                                effects: EditorView.scrollIntoView(selection, { y: 'center' }),
-                            });
-
-                            if (focusEditor) {
-                                measureView.focus();
-                            }
-
-                            scheduleVerification(attempt + 1);
-                            return;
-                        }
-
-                        const tolerance = SCROLL_VERIFY_TOLERANCE_PX;
-                        const needsScroll =
-                            measurement.blockTop < measurement.viewportTop + tolerance ||
-                            measurement.blockBottom > measurement.viewportBottom - tolerance;
-
-                        if (!needsScroll) {
-                            if (attempt + 1 < SCROLL_VERIFY_MAX_ATTEMPTS) {
-                                scheduleVerification(attempt + 1);
-                            }
-                            return;
-                        }
-
-                        const blockHeight = Math.max(measurement.blockBottom - measurement.blockTop, 1);
-                        const centeredTop =
-                            measurement.blockTop - Math.max(0, (measureView.scrollDOM.clientHeight - blockHeight) / 2);
-                        applyScrollTop(measureView.scrollDOM as ScrollContainer, centeredTop);
-                        if (focusEditor) {
-                            measureView.focus();
-                        }
-
-                        if (attempt + 1 < SCROLL_VERIFY_MAX_ATTEMPTS) {
-                            scheduleVerification(attempt + 1);
-                        }
-                    },
-                });
-            });
-        };
+        const runVerification = createScrollVerifier({
+            view,
+            targetRange: targetSelection.main,
+            focusEditor,
+        });
 
         // Trigger visibility checks to catch cases where scrollIntoView bails or later layout
         // shifts push the target outside the viewport. Retrying with a 'start' alignment ensures
         // the heading at least becomes visible before we attempt to re-center it.
-        scheduleVerification(0);
+        runVerification(0);
     } catch (error) {
         logger.error('Failed to set editor selection', error);
     }
