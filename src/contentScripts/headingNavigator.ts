@@ -54,7 +54,6 @@ type ViewportSnapshot = {
     selectionFrom: number;
     selectionTo: number;
     blockTopOffset: number;
-    blockBottomOffset: number;
 };
 
 type ScrollVerificationMeasurement =
@@ -210,9 +209,7 @@ type SelectionBlockMeasurement = {
     selectionFrom: number;
     selectionTo: number;
     blockTopOffset: number;
-    blockBottomOffset: number;
     viewportTop: number;
-    viewportBottom: number;
 };
 
 type SelectionLike = { from: number; to: number } | { selectionFrom: number; selectionTo: number } | null;
@@ -255,23 +252,18 @@ function measureSelectionBlock(
     }
 
     const start = view.coordsAtPos(selection.from);
-    const end = view.coordsAtPos(selection.to);
-    if (!start || !end) {
+    if (!start) {
         return null;
     }
 
-    const blockTopOffset = Math.min(start.top, end.top) - rect.top;
-    const blockBottomOffset = Math.max(start.bottom, end.bottom) - rect.top;
+    const blockTopOffset = start.top - rect.top;
     const viewportTop = scrollDOM.scrollTop;
-    const viewportBottom = viewportTop + scrollDOM.clientHeight;
 
     return {
         selectionFrom: selection.from,
         selectionTo: selection.to,
         blockTopOffset,
-        blockBottomOffset,
         viewportTop,
-        viewportBottom,
     };
 }
 
@@ -362,24 +354,13 @@ function restoreEditorViewport(
                 }
 
                 const start = measureView.coordsAtPos(selection.from);
-                const end = measureView.coordsAtPos(selection.to);
-                if (!start || !end) {
+                if (!start) {
                     return null;
                 }
 
-                const blockTop = Math.min(start.top, end.top) - rect.top;
-                const blockBottom = Math.max(start.bottom, end.bottom) - rect.top;
+                const blockTop = start.top - rect.top;
                 const absoluteTop = scrollDOM.scrollTop + blockTop;
-                const absoluteBottom = scrollDOM.scrollTop + blockBottom;
-                const desiredTop = absoluteTop - snapshot.blockTopOffset;
-                const desiredBottom = absoluteBottom - snapshot.blockBottomOffset;
-                const clientHeight = scrollDOM.clientHeight;
-                const maxScrollTop = Math.max(0, scrollDOM.scrollHeight - clientHeight);
-
-                let targetTop = Math.max(0, Math.min(desiredTop, maxScrollTop));
-                if (desiredBottom > targetTop + clientHeight) {
-                    targetTop = Math.max(0, Math.min(desiredBottom - clientHeight, maxScrollTop));
-                }
+                const targetTop = absoluteTop - snapshot.blockTopOffset;
 
                 if (!Number.isFinite(targetTop)) {
                     return null;
@@ -507,7 +488,6 @@ export default function headingNavigator(): MarkdownEditorContentScriptModule {
                                 selectionFrom: selectionView.from,
                                 selectionTo: selectionView.to,
                                 blockTopOffset: blockMeasurement.blockTopOffset,
-                                blockBottomOffset: blockMeasurement.blockBottomOffset,
                             };
                         },
                         write(measurement: ViewportSnapshot | null) {
