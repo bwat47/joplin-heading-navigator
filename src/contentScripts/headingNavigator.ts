@@ -127,7 +127,7 @@ function createScrollVerifier(options: {
             view.requestMeasure({
                 read(measureView): ScrollVerificationMeasurement | null {
                     const selection = measureView.state.selection.main;
-                    if (selection.from !== targetRange.from || selection.to !== targetRange.to) {
+                    if (!isSameSelection(selection, targetRange)) {
                         return null;
                     }
 
@@ -159,7 +159,7 @@ function createScrollVerifier(options: {
                     }
 
                     const selection = measureView.state.selection.main;
-                    if (selection.from !== measurement.selectionFrom || selection.to !== measurement.selectionTo) {
+                    if (!isSameSelection(selection, measurement)) {
                         return;
                     }
 
@@ -215,6 +215,35 @@ type SelectionBlockMeasurement = {
     viewportTop: number;
     viewportBottom: number;
 };
+
+type SelectionLike = { from: number; to: number } | { selectionFrom: number; selectionTo: number } | null | undefined;
+
+function normalizeSelection(selection: SelectionLike): { from: number; to: number } | null {
+    if (!selection) {
+        return null;
+    }
+
+    if ('from' in selection && 'to' in selection) {
+        return { from: selection.from, to: selection.to };
+    }
+
+    if ('selectionFrom' in selection && 'selectionTo' in selection) {
+        return { from: selection.selectionFrom, to: selection.selectionTo };
+    }
+
+    return null;
+}
+
+function isSameSelection(a: SelectionLike, b: SelectionLike): boolean {
+    const normalizedA = normalizeSelection(a);
+    const normalizedB = normalizeSelection(b);
+
+    if (!normalizedA || !normalizedB) {
+        return false;
+    }
+
+    return normalizedA.from === normalizedB.from && normalizedA.to === normalizedB.to;
+}
 
 function measureSelectionBlock(
     view: EditorView,
@@ -311,7 +340,7 @@ function restoreEditorViewport(
         view.requestMeasure({
             read(measureView): { targetTop: number } | null {
                 const selection = measureView.state.selection.main;
-                if (selection.from !== snapshot.selectionFrom || selection.to !== snapshot.selectionTo) {
+                if (!isSameSelection(selection, snapshot)) {
                     return null;
                 }
 
@@ -456,10 +485,7 @@ export default function headingNavigator(): MarkdownEditorContentScriptModule {
                         key: VIEWPORT_SNAPSHOT_MEASURE_KEY,
                         read(measureView): ViewportSnapshot | null {
                             const selectionView = measureView.state.selection.main;
-                            if (
-                                selectionView.from !== snapshotSelection.from ||
-                                selectionView.to !== snapshotSelection.to
-                            ) {
+                            if (!isSameSelection(selectionView, snapshotSelection)) {
                                 return null;
                             }
 
