@@ -45,7 +45,9 @@ const headingHighlightTheme = EditorView.baseTheme({
 
 const pendingScrollVerifications = new WeakMap<EditorView, number>();
 const SCROLL_VERIFY_DELAY_MS = 160;
+const SCROLL_VERIFY_RETRY_DELAY_MS = 260;
 const SCROLL_VERIFY_TOLERANCE_PX = 12;
+const SCROLL_VERIFY_MAX_ATTEMPTS = 3;
 
 type ViewportSnapshot = {
     selectionFrom: number;
@@ -53,6 +55,37 @@ type ViewportSnapshot = {
     blockTopOffset: number;
     blockBottomOffset: number;
 };
+
+type ScrollVerificationMeasurement =
+    | {
+          status: 'geometry';
+          selectionFrom: number;
+          selectionTo: number;
+          viewportTop: number;
+          viewportBottom: number;
+          blockTop: number;
+          blockBottom: number;
+      }
+    | {
+          status: 'retry';
+          selectionFrom: number;
+          selectionTo: number;
+      };
+
+type ScrollContainer = HTMLElement & {
+    scrollTo?: (options: ScrollToOptions) => void;
+};
+
+function applyScrollTop(element: ScrollContainer, desiredTop: number): void {
+    const maxScrollTop = Math.max(0, element.scrollHeight - element.clientHeight);
+    const clampedTop = Math.max(0, Math.min(desiredTop, maxScrollTop));
+
+    if (typeof element.scrollTo === 'function') {
+        element.scrollTo({ top: clampedTop });
+    } else {
+        element.scrollTop = clampedTop;
+    }
+}
 
 function computeHeadings(state: EditorState): HeadingItem[] {
     return extractHeadings(state.doc.toString());
@@ -155,28 +188,15 @@ function restoreEditorViewport(
                 return { targetTop };
             },
             write(measurement: { targetTop: number } | null, measureView) {
-                const scrollElement = measureView.scrollDOM;
+                const scrollElement = measureView.scrollDOM as ScrollContainer;
 
                 if (measurement) {
-                    const maxScrollTop = Math.max(0, scrollElement.scrollHeight - scrollElement.clientHeight);
-                    const clampedTop = Math.max(0, Math.min(measurement.targetTop, maxScrollTop));
-
-                    if (typeof scrollElement.scrollTo === 'function') {
-                        scrollElement.scrollTo({ top: clampedTop });
-                    } else {
-                        scrollElement.scrollTop = clampedTop;
-                    }
+                    applyScrollTop(scrollElement, measurement.targetTop);
                     return;
                 }
 
                 if (fallbackScrollTop !== null) {
-                    const maxScrollTop = Math.max(0, scrollElement.scrollHeight - scrollElement.clientHeight);
-                    const clampedTop = Math.max(0, Math.min(fallbackScrollTop, maxScrollTop));
-                    if (typeof scrollElement.scrollTo === 'function') {
-                        scrollElement.scrollTo({ top: clampedTop });
-                    } else {
-                        scrollElement.scrollTop = clampedTop;
-                    }
+                    applyScrollTop(scrollElement, fallbackScrollTop);
                 }
             },
         });
@@ -186,14 +206,7 @@ function restoreEditorViewport(
         view.requestMeasure({
             read: () => null,
             write(_measure, measureView) {
-                const scrollElement = measureView.scrollDOM;
-                const maxScrollTop = Math.max(0, scrollElement.scrollHeight - scrollElement.clientHeight);
-                const clampedTop = Math.max(0, Math.min(fallbackScrollTop, maxScrollTop));
-                if (typeof scrollElement.scrollTo === 'function') {
-                    scrollElement.scrollTo({ top: clampedTop });
-                } else {
-                    scrollElement.scrollTop = clampedTop;
-                }
+                applyScrollTop(measureView.scrollDOM as ScrollContainer, fallbackScrollTop);
             },
         });
     }
@@ -222,85 +235,111 @@ function setEditorSelection(view: EditorView, heading: HeadingItem, focusEditor:
             view.focus();
         }
 
-        // Trigger a one-shot visibility check to catch cases where scrollIntoView bails
-        // (CodeMirror can drop the effect in very long docs). If we detect the heading
-        // still hugging the viewport edge, re-centering here keeps navigation reliable
-        // without second-guessing every scroll.
-        const verificationId = window.setTimeout(() => {
-            pendingScrollVerifications.delete(view);
+        const scheduleVerification = (attempt: number): void => {
+            if (attempt >= SCROLL_VERIFY_MAX_ATTEMPTS) {
+                return;
+            }
 
-            view.requestMeasure({
-                read(measureView) {
-                    const selection = measureView.state.selection.main;
-                    if (selection.from !== targetSelection.main.from || selection.to !== targetSelection.main.to) {
-                        return null;
-                    }
+            const delay = attempt === 0 ? SCROLL_VERIFY_DELAY_MS : SCROLL_VERIFY_RETRY_DELAY_MS;
 
-                    const scrollDOM = measureView.scrollDOM;
-                    const rect = scrollDOM.getBoundingClientRect();
-                    if (Number.isNaN(rect.top)) {
-                        return null;
-                    }
+            const verificationId = window.setTimeout(() => {
+                pendingScrollVerifications.delete(view);
 
-                    const start = measureView.coordsAtPos(selection.from);
-                    const end = measureView.coordsAtPos(selection.to);
-                    if (!start || !end) {
-                        return null;
-                    }
+                view.requestMeasure({
+                    read(measureView): ScrollVerificationMeasurement | null {
+                        const selection = measureView.state.selection.main;
+                        if (selection.from !== targetSelection.main.from || selection.to !== targetSelection.main.to) {
+                            return null;
+                        }
 
-                    const viewportTop = scrollDOM.scrollTop;
-                    const viewportBottom = viewportTop + scrollDOM.clientHeight;
-                    const blockTop = Math.min(start.top, end.top) - rect.top + viewportTop;
-                    const blockBottom = Math.max(start.bottom, end.bottom) - rect.top + viewportTop;
+                        const scrollDOM = measureView.scrollDOM;
+                        const rect = scrollDOM.getBoundingClientRect();
+                        if (Number.isNaN(rect.top)) {
+                            return null;
+                        }
 
-                    return {
-                        selectionFrom: selection.from,
-                        selectionTo: selection.to,
-                        viewportTop,
-                        viewportBottom,
-                        blockTop,
-                        blockBottom,
-                    };
-                },
-                write(measurement, measureView) {
-                    if (!measurement) {
-                        return;
-                    }
+                        const start = measureView.coordsAtPos(selection.from);
+                        const end = measureView.coordsAtPos(selection.to);
+                        if (!start || !end) {
+                            return {
+                                status: 'retry',
+                                selectionFrom: selection.from,
+                                selectionTo: selection.to,
+                            };
+                        }
 
-                    const selection = measureView.state.selection.main;
-                    if (selection.from !== measurement.selectionFrom || selection.to !== measurement.selectionTo) {
-                        return;
-                    }
+                        const viewportTop = scrollDOM.scrollTop;
+                        const viewportBottom = viewportTop + scrollDOM.clientHeight;
+                        const blockTop = Math.min(start.top, end.top) - rect.top + viewportTop;
+                        const blockBottom = Math.max(start.bottom, end.bottom) - rect.top + viewportTop;
 
-                    const tolerance = SCROLL_VERIFY_TOLERANCE_PX;
-                    const needsScroll =
-                        measurement.blockTop < measurement.viewportTop + tolerance ||
-                        measurement.blockBottom > measurement.viewportBottom - tolerance;
+                        return {
+                            status: 'geometry',
+                            selectionFrom: selection.from,
+                            selectionTo: selection.to,
+                            viewportTop,
+                            viewportBottom,
+                            blockTop,
+                            blockBottom,
+                        };
+                    },
+                    write(measurement, measureView) {
+                        if (!measurement) {
+                            return;
+                        }
 
-                    if (!needsScroll) {
-                        return;
-                    }
+                        const selection = measureView.state.selection.main;
+                        if (selection.from !== measurement.selectionFrom || selection.to !== measurement.selectionTo) {
+                            return;
+                        }
 
-                    const blockHeight = Math.max(measurement.blockBottom - measurement.blockTop, 1);
-                    const centeredTop =
-                        measurement.blockTop - Math.max(0, (measureView.scrollDOM.clientHeight - blockHeight) / 2);
-                    const maxScrollTop = measureView.scrollDOM.scrollHeight - measureView.scrollDOM.clientHeight;
-                    const clampedTop = Math.max(0, Math.min(centeredTop, maxScrollTop));
+                        if (measurement.status === 'retry') {
+                            measureView.dispatch({
+                                effects: EditorView.scrollIntoView(selection, { y: 'start' }),
+                            });
 
-                    if (typeof measureView.scrollDOM.scrollTo === 'function') {
-                        measureView.scrollDOM.scrollTo({ top: clampedTop });
-                    } else {
-                        measureView.scrollDOM.scrollTop = clampedTop;
-                    }
+                            if (focusEditor) {
+                                measureView.focus();
+                            }
 
-                    if (focusEditor) {
-                        measureView.focus();
-                    }
-                },
-            });
-        }, SCROLL_VERIFY_DELAY_MS);
+                            scheduleVerification(attempt + 1);
+                            return;
+                        }
 
-        pendingScrollVerifications.set(view, verificationId);
+                        const tolerance = SCROLL_VERIFY_TOLERANCE_PX;
+                        const needsScroll =
+                            measurement.blockTop < measurement.viewportTop + tolerance ||
+                            measurement.blockBottom > measurement.viewportBottom - tolerance;
+
+                        if (!needsScroll) {
+                            if (attempt + 1 < SCROLL_VERIFY_MAX_ATTEMPTS) {
+                                scheduleVerification(attempt + 1);
+                            }
+                            return;
+                        }
+
+                        const blockHeight = Math.max(measurement.blockBottom - measurement.blockTop, 1);
+                        const centeredTop =
+                            measurement.blockTop - Math.max(0, (measureView.scrollDOM.clientHeight - blockHeight) / 2);
+                        applyScrollTop(measureView.scrollDOM as ScrollContainer, centeredTop);
+                        if (focusEditor) {
+                            measureView.focus();
+                        }
+
+                        if (attempt + 1 < SCROLL_VERIFY_MAX_ATTEMPTS) {
+                            scheduleVerification(attempt + 1);
+                        }
+                    },
+                });
+            }, delay);
+
+            pendingScrollVerifications.set(view, verificationId);
+        };
+
+        // Trigger visibility checks to catch cases where scrollIntoView bails or later layout
+        // shifts push the target outside the viewport. Retrying with a 'start' alignment ensures
+        // the heading at least becomes visible before we attempt to re-center it.
+        scheduleVerification(0);
     } catch (error) {
         logger.error('Failed to set editor selection', error);
     }
