@@ -18,6 +18,8 @@
 - Owns the CodeMirror plugin wiring: registers `headingNavigator.togglePanel`, listens to doc/selection updates, and coordinates panel lifecycle.
 - Computes headings via `extractHeadings`, tracks the active heading, and keeps the editor selection in sync with panel navigation.
 - Delegates all DOM rendering to `HeadingPanel`, injects editor highlight decorations for the active heading, and ensures the panel opens/closes based on command toggles.
+- Navigation scrolls headings into view with CodeMirror’s `scrollIntoView` using `y: 'start'`, which keeps the heading pinned to the top of the editor. A short retry loop re-runs the scroll if late layout shifts (for example, rich Markdown images loading) nudge the heading out of view.
+- When the panel is closed with escape, the original selection and scroll position are restored via a snapshot taken when the panel opened, with a stored `scrollTop` fallback if geometry can’t be measured.
 
 ### Panel UI Modules
 

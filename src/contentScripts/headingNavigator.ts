@@ -1,59 +1,213 @@
-import { EditorSelection, EditorState, StateEffect, StateField } from '@codemirror/state';
-import { Decoration, DecorationSet, EditorView, ViewUpdate } from '@codemirror/view';
+import { EditorSelection, EditorState } from '@codemirror/state';
+import { EditorView, ViewUpdate } from '@codemirror/view';
 import type { CodeMirrorControl, MarkdownEditorContentScriptModule } from 'api/types';
 import { EDITOR_COMMAND_TOGGLE_PANEL } from '../constants';
 import type { HeadingItem, PanelDimensions } from '../types';
 import { extractHeadings } from '../headingExtractor';
 import { HeadingPanel, type PanelCloseReason } from './ui/headingPanel';
-import { createPanelTheme } from './theme/panelTheme';
 import { normalizePanelDimensions } from '../panelDimensions';
 import logger from '../logger';
 
-const HIGHLIGHT_STYLE_ID = 'heading-navigator-highlight-style';
-
-const headingHighlightMark = Decoration.mark({
-    class: 'heading-navigator-highlight',
-});
-
-const headingHighlightEffect = StateEffect.define<{ from: number; to: number } | null>();
-
-const headingHighlightField = StateField.define<DecorationSet>({
-    create: () => Decoration.none,
-    update(decorations, transaction) {
-        let mapped = decorations.map(transaction.changes);
-        for (const effect of transaction.effects) {
-            if (effect.is(headingHighlightEffect)) {
-                if (!effect.value) {
-                    mapped = Decoration.none;
-                } else {
-                    mapped = Decoration.set([headingHighlightMark.range(effect.value.from, effect.value.to)]);
-                }
-            }
-        }
-        return mapped;
-    },
-    provide: (field) => EditorView.decorations.from(field),
-});
-
-const headingHighlightTheme = EditorView.baseTheme({
-    '.heading-navigator-highlight': {
-        borderRadius: '4px',
-        padding: '0 2px',
-        transition: 'background-color 120ms ease-out',
-    },
-});
-
-const pendingScrollFrames = new WeakMap<EditorView, number>();
 const pendingScrollVerifications = new WeakMap<EditorView, number>();
 const SCROLL_VERIFY_DELAY_MS = 160;
+const SCROLL_VERIFY_RETRY_DELAY_MS = 260;
 const SCROLL_VERIFY_TOLERANCE_PX = 12;
+const SCROLL_VERIFY_MAX_ATTEMPTS = 2;
 
-type ViewportSnapshot = {
+type ScrollVerificationMeasurement =
+    | {
+          status: 'geometry';
+          selectionFrom: number;
+          selectionTo: number;
+          viewportTop: number;
+          blockTopOffset: number;
+      }
+    | {
+          status: 'retry';
+          selectionFrom: number;
+          selectionTo: number;
+      };
+
+function planScrollVerification(view: EditorView, attempt: number, run: () => void): void {
+    // attempt is 0-based: 0 for the first verification pass, 1 for the second, etc.
+    const delay = attempt === 0 ? SCROLL_VERIFY_DELAY_MS : SCROLL_VERIFY_RETRY_DELAY_MS;
+
+    const timeoutId = window.setTimeout(() => {
+        pendingScrollVerifications.delete(view);
+        run();
+    }, delay);
+
+    pendingScrollVerifications.set(view, timeoutId);
+}
+
+function ensureEditorFocus(view: EditorView, shouldFocus: boolean): void {
+    if (!shouldFocus) {
+        return;
+    }
+
+    view.focus();
+}
+
+function createScrollVerifier(options: {
+    view: EditorView;
+    targetRange: { from: number; to: number };
+    focusEditor: boolean;
+}): (attempt: number) => void {
+    const { view, targetRange, focusEditor } = options;
+
+    const verify = (attempt: number): void => {
+        if (attempt >= SCROLL_VERIFY_MAX_ATTEMPTS) {
+            return;
+        }
+
+        planScrollVerification(view, attempt, () => {
+            view.requestMeasure({
+                read(measureView): ScrollVerificationMeasurement | null {
+                    const selection = measureView.state.selection.main;
+                    if (!isSameSelection(selection, targetRange)) {
+                        return null;
+                    }
+
+                    const blockMeasurement = measureSelectionBlock(measureView, selection);
+                    if (!blockMeasurement) {
+                        return {
+                            status: 'retry',
+                            selectionFrom: selection.from,
+                            selectionTo: selection.to,
+                        };
+                    }
+
+                    return {
+                        status: 'geometry' as const,
+                        selectionFrom: blockMeasurement.selectionFrom,
+                        selectionTo: selection.to,
+                        viewportTop: blockMeasurement.viewportTop,
+                        blockTopOffset: blockMeasurement.blockTopOffset,
+                    };
+                },
+                write(measurement, measureView) {
+                    if (!measurement) {
+                        return;
+                    }
+
+                    const selection = measureView.state.selection.main;
+                    if (!isSameSelection(selection, measurement)) {
+                        return;
+                    }
+
+                    if (measurement.status === 'retry') {
+                        if (attempt + 1 >= SCROLL_VERIFY_MAX_ATTEMPTS) {
+                            logger.warn('Scroll verification gave up after measurement failures', {
+                                selection: targetRange,
+                                attempts: attempt + 1,
+                            });
+                            return;
+                        }
+
+                        measureView.dispatch({
+                            effects: EditorView.scrollIntoView(selection, { y: 'start' }),
+                        });
+
+                        ensureEditorFocus(measureView, focusEditor);
+
+                        verify(attempt + 1);
+                        return;
+                    }
+
+                    const tolerance = SCROLL_VERIFY_TOLERANCE_PX;
+                    const offsetFromViewportTop = measurement.blockTopOffset;
+                    const needsScroll = Math.abs(offsetFromViewportTop) > tolerance;
+
+                    if (!needsScroll) {
+                        // Stay on guard for late layout shifts (e.g. images loading) that can push the heading
+                        // below the viewport top; extra checks keep it pinned even when content settles.
+                        if (attempt + 1 < SCROLL_VERIFY_MAX_ATTEMPTS) {
+                            verify(attempt + 1);
+                        }
+                        return;
+                    }
+
+                    const targetScrollTop = Math.max(measurement.viewportTop + offsetFromViewportTop, 0);
+                    // Force the scroll position in case CodeMirror bails out when it thinks the range is already visible.
+                    if (Math.abs(measureView.scrollDOM.scrollTop - targetScrollTop) > 1) {
+                        measureView.scrollDOM.scrollTop = targetScrollTop;
+                    }
+
+                    measureView.dispatch({
+                        effects: EditorView.scrollIntoView(selection, { y: 'start' }),
+                    });
+                    ensureEditorFocus(measureView, focusEditor);
+
+                    if (attempt + 1 < SCROLL_VERIFY_MAX_ATTEMPTS) {
+                        verify(attempt + 1);
+                    }
+                },
+            });
+        });
+    };
+
+    return verify;
+}
+
+type SelectionBlockMeasurement = {
     selectionFrom: number;
-    selectionTo: number;
     blockTopOffset: number;
-    blockBottomOffset: number;
+    viewportTop: number;
 };
+
+type SelectionLike = { from: number; to: number } | { selectionFrom: number; selectionTo: number } | null;
+
+function normalizeSelection(selection: SelectionLike): { from: number; to: number } | null {
+    if (!selection) {
+        return null;
+    }
+
+    if ('from' in selection && 'to' in selection) {
+        return { from: selection.from, to: selection.to };
+    }
+
+    if ('selectionFrom' in selection && 'selectionTo' in selection) {
+        return { from: selection.selectionFrom, to: selection.selectionTo };
+    }
+
+    return null;
+}
+
+function isSameSelection(a: SelectionLike, b: SelectionLike): boolean {
+    const normalizedA = normalizeSelection(a);
+    const normalizedB = normalizeSelection(b);
+
+    if (!normalizedA || !normalizedB) {
+        return false;
+    }
+
+    return normalizedA.from === normalizedB.from && normalizedA.to === normalizedB.to;
+}
+
+function measureSelectionBlock(
+    view: EditorView,
+    selection: { from: number; to: number }
+): SelectionBlockMeasurement | null {
+    const scrollDOM = view.scrollDOM;
+    const rect = scrollDOM.getBoundingClientRect();
+    if (Number.isNaN(rect.top)) {
+        return null;
+    }
+
+    const start = view.coordsAtPos(selection.from);
+    if (!start) {
+        return null;
+    }
+
+    const blockTopOffset = start.top - rect.top;
+    const viewportTop = scrollDOM.scrollTop;
+
+    return {
+        selectionFrom: selection.from,
+        blockTopOffset,
+        viewportTop,
+    };
+}
 
 function computeHeadings(state: EditorState): HeadingItem[] {
     return extractHeadings(state.doc.toString());
@@ -76,140 +230,9 @@ function findActiveHeadingId(headings: HeadingItem[], position: number): string 
     return candidate?.id ?? headings[0].id;
 }
 
-function ensureHighlightStyles(view: EditorView): void {
-    const doc = view.dom.ownerDocument ?? document;
-    const theme = createPanelTheme(view);
-    const signature = `${theme.background}|${theme.highlightBackground}`;
-
-    let style = doc.getElementById(HIGHLIGHT_STYLE_ID) as HTMLStyleElement | null;
-    if (!style) {
-        style = doc.createElement('style');
-        style.id = HIGHLIGHT_STYLE_ID;
-        (doc.head ?? doc.body).appendChild(style);
-    }
-
-    if (style.getAttribute('data-theme-signature') === signature) {
-        return;
-    }
-
-    style.setAttribute('data-theme-signature', signature);
-    style.textContent = `
-.cm-content .heading-navigator-highlight {
-    background-color: ${theme.highlightBackground};
-}
-`;
-}
-
-function applyHeadingHighlight(view: EditorView, heading: HeadingItem | null): void {
-    if (heading) {
-        ensureHighlightStyles(view);
-    }
-
-    view.dispatch({
-        effects: headingHighlightEffect.of(heading ? { from: heading.from, to: heading.to } : null),
-    });
-}
-
-function restoreEditorViewport(
-    view: EditorView,
-    snapshot: ViewportSnapshot | null,
-    fallbackScrollTop: number | null
-): void {
-    if (snapshot) {
-        view.requestMeasure({
-            read(measureView): { targetTop: number } | null {
-                const selection = measureView.state.selection.main;
-                if (selection.from !== snapshot.selectionFrom || selection.to !== snapshot.selectionTo) {
-                    return null;
-                }
-
-                const scrollDOM = measureView.scrollDOM;
-                const rect = scrollDOM.getBoundingClientRect();
-                if (Number.isNaN(rect.top)) {
-                    return null;
-                }
-
-                const start = measureView.coordsAtPos(selection.from);
-                const end = measureView.coordsAtPos(selection.to);
-                if (!start || !end) {
-                    return null;
-                }
-
-                const blockTop = Math.min(start.top, end.top) - rect.top;
-                const blockBottom = Math.max(start.bottom, end.bottom) - rect.top;
-                const absoluteTop = scrollDOM.scrollTop + blockTop;
-                const absoluteBottom = scrollDOM.scrollTop + blockBottom;
-                const desiredTop = absoluteTop - snapshot.blockTopOffset;
-                const desiredBottom = absoluteBottom - snapshot.blockBottomOffset;
-                const clientHeight = scrollDOM.clientHeight;
-                const maxScrollTop = Math.max(0, scrollDOM.scrollHeight - clientHeight);
-
-                let targetTop = Math.max(0, Math.min(desiredTop, maxScrollTop));
-                if (desiredBottom > targetTop + clientHeight) {
-                    targetTop = Math.max(0, Math.min(desiredBottom - clientHeight, maxScrollTop));
-                }
-
-                if (!Number.isFinite(targetTop)) {
-                    return null;
-                }
-
-                return { targetTop };
-            },
-            write(measurement: { targetTop: number } | null, measureView) {
-                const scrollElement = measureView.scrollDOM;
-
-                if (measurement) {
-                    const maxScrollTop = Math.max(0, scrollElement.scrollHeight - scrollElement.clientHeight);
-                    const clampedTop = Math.max(0, Math.min(measurement.targetTop, maxScrollTop));
-
-                    if (typeof scrollElement.scrollTo === 'function') {
-                        scrollElement.scrollTo({ top: clampedTop });
-                    } else {
-                        scrollElement.scrollTop = clampedTop;
-                    }
-                    return;
-                }
-
-                if (fallbackScrollTop !== null) {
-                    const maxScrollTop = Math.max(0, scrollElement.scrollHeight - scrollElement.clientHeight);
-                    const clampedTop = Math.max(0, Math.min(fallbackScrollTop, maxScrollTop));
-                    if (typeof scrollElement.scrollTo === 'function') {
-                        scrollElement.scrollTo({ top: clampedTop });
-                    } else {
-                        scrollElement.scrollTop = clampedTop;
-                    }
-                }
-            },
-        });
-    } else if (fallbackScrollTop !== null) {
-        // Defer the scroll restoration so it runs after CodeMirror finishes any
-        // selection-driven adjustments triggered by the close dispatch above.
-        view.requestMeasure({
-            read: () => null,
-            write(_measure, measureView) {
-                const scrollElement = measureView.scrollDOM;
-                const maxScrollTop = Math.max(0, scrollElement.scrollHeight - scrollElement.clientHeight);
-                const clampedTop = Math.max(0, Math.min(fallbackScrollTop, maxScrollTop));
-                if (typeof scrollElement.scrollTo === 'function') {
-                    scrollElement.scrollTo({ top: clampedTop });
-                } else {
-                    scrollElement.scrollTop = clampedTop;
-                }
-            },
-        });
-    }
-}
-
 function setEditorSelection(view: EditorView, heading: HeadingItem, focusEditor: boolean): void {
     try {
-        ensureHighlightStyles(view);
         const targetSelection = EditorSelection.single(heading.from);
-
-        const pendingId = pendingScrollFrames.get(view);
-        if (typeof pendingId === 'number') {
-            cancelAnimationFrame(pendingId);
-            pendingScrollFrames.delete(view);
-        }
 
         const pendingVerificationId = pendingScrollVerifications.get(view);
         if (typeof pendingVerificationId === 'number') {
@@ -219,111 +242,21 @@ function setEditorSelection(view: EditorView, heading: HeadingItem, focusEditor:
 
         view.dispatch({
             selection: targetSelection,
-            effects: [headingHighlightEffect.of({ from: heading.from, to: heading.to })],
+            effects: EditorView.scrollIntoView(targetSelection.main, { y: 'start' }),
         });
 
-        const frameId = requestAnimationFrame(() => {
-            pendingScrollFrames.delete(view);
-            const currentSelection = view.state.selection.main;
-            if (
-                currentSelection.from !== targetSelection.main.from ||
-                currentSelection.to !== targetSelection.main.to
-            ) {
-                return;
-            }
+        ensureEditorFocus(view, focusEditor);
 
-            try {
-                view.dispatch({
-                    effects: EditorView.scrollIntoView(currentSelection, { y: 'center' }),
-                });
-                if (focusEditor) {
-                    view.focus();
-                }
-            } catch (error) {
-                logger.warn('Failed to scroll editor to heading', error);
-            }
+        const runVerification = createScrollVerifier({
+            view,
+            targetRange: targetSelection.main,
+            focusEditor,
         });
-        pendingScrollFrames.set(view, frameId);
 
-        // Trigger a one-shot visibility check to catch cases where scrollIntoView bails
-        // (CodeMirror can drop the effect in very long docs). If we detect the heading
-        // still hugging the viewport edge, re-centering here keeps navigation reliable
-        // without second-guessing every scroll.
-        const verificationId = window.setTimeout(() => {
-            pendingScrollVerifications.delete(view);
-
-            view.requestMeasure({
-                read(measureView) {
-                    const selection = measureView.state.selection.main;
-                    if (selection.from !== targetSelection.main.from || selection.to !== targetSelection.main.to) {
-                        return null;
-                    }
-
-                    const scrollDOM = measureView.scrollDOM;
-                    const rect = scrollDOM.getBoundingClientRect();
-                    if (Number.isNaN(rect.top)) {
-                        return null;
-                    }
-
-                    const start = measureView.coordsAtPos(selection.from);
-                    const end = measureView.coordsAtPos(selection.to);
-                    if (!start || !end) {
-                        return null;
-                    }
-
-                    const viewportTop = scrollDOM.scrollTop;
-                    const viewportBottom = viewportTop + scrollDOM.clientHeight;
-                    const blockTop = Math.min(start.top, end.top) - rect.top + viewportTop;
-                    const blockBottom = Math.max(start.bottom, end.bottom) - rect.top + viewportTop;
-
-                    return {
-                        selectionFrom: selection.from,
-                        selectionTo: selection.to,
-                        viewportTop,
-                        viewportBottom,
-                        blockTop,
-                        blockBottom,
-                    };
-                },
-                write(measurement, measureView) {
-                    if (!measurement) {
-                        return;
-                    }
-
-                    const selection = measureView.state.selection.main;
-                    if (selection.from !== measurement.selectionFrom || selection.to !== measurement.selectionTo) {
-                        return;
-                    }
-
-                    const tolerance = SCROLL_VERIFY_TOLERANCE_PX;
-                    const needsScroll =
-                        measurement.blockTop < measurement.viewportTop + tolerance ||
-                        measurement.blockBottom > measurement.viewportBottom - tolerance;
-
-                    if (!needsScroll) {
-                        return;
-                    }
-
-                    const blockHeight = Math.max(measurement.blockBottom - measurement.blockTop, 1);
-                    const centeredTop =
-                        measurement.blockTop - Math.max(0, (measureView.scrollDOM.clientHeight - blockHeight) / 2);
-                    const maxScrollTop = measureView.scrollDOM.scrollHeight - measureView.scrollDOM.clientHeight;
-                    const clampedTop = Math.max(0, Math.min(centeredTop, maxScrollTop));
-
-                    if (typeof measureView.scrollDOM.scrollTo === 'function') {
-                        measureView.scrollDOM.scrollTo({ top: clampedTop });
-                    } else {
-                        measureView.scrollDOM.scrollTop = clampedTop;
-                    }
-
-                    if (focusEditor) {
-                        measureView.focus();
-                    }
-                },
-            });
-        }, SCROLL_VERIFY_DELAY_MS);
-
-        pendingScrollVerifications.set(view, verificationId);
+        // Trigger visibility checks to catch cases where scrollIntoView bails or later layout
+        // shifts push the target outside the viewport. Start alignment is more resilient to
+        // content changes above the heading since it doesn't depend on relative centering math.
+        runVerification(0);
     } catch (error) {
         logger.error('Failed to set editor selection', error);
     }
@@ -341,9 +274,7 @@ export default function headingNavigator(): MarkdownEditorContentScriptModule {
             let selectedHeadingId: string | null = null;
             let panelDimensions: PanelDimensions = normalizePanelDimensions();
             let initialSelectionRange: { from: number; to: number } | null = null;
-            let initialScrollTop: number | null = null;
-            let initialViewportSnapshot: ViewportSnapshot | null = null;
-            let initialViewportSnapshotToken: symbol | null = null;
+            let initialScrollSnapshot: ReturnType<EditorView['scrollSnapshot']> | null = null;
 
             const ensurePanel = (): HeadingPanel => {
                 if (!panel) {
@@ -375,59 +306,9 @@ export default function headingNavigator(): MarkdownEditorContentScriptModule {
                 selectedHeadingId = findActiveHeadingId(headings, view.state.selection.main.head);
                 const selection = view.state.selection.main;
                 initialSelectionRange = { from: selection.from, to: selection.to };
-                initialScrollTop = view.scrollDOM.scrollTop;
-                initialViewportSnapshot = null;
-                const snapshotSelection = initialSelectionRange;
-                const snapshotToken = Symbol('viewportSnapshot');
-                initialViewportSnapshotToken = snapshotToken;
-
-                if (snapshotSelection) {
-                    view.requestMeasure({
-                        read(measureView): ViewportSnapshot | null {
-                            const selectionView = measureView.state.selection.main;
-                            if (
-                                selectionView.from !== snapshotSelection.from ||
-                                selectionView.to !== snapshotSelection.to
-                            ) {
-                                return null;
-                            }
-
-                            const scrollDOM = measureView.scrollDOM;
-                            const rect = scrollDOM.getBoundingClientRect();
-                            if (Number.isNaN(rect.top)) {
-                                return null;
-                            }
-
-                            const start = measureView.coordsAtPos(selectionView.from);
-                            const end = measureView.coordsAtPos(selectionView.to);
-                            if (!start || !end) {
-                                return null;
-                            }
-
-                            const blockTopOffset = Math.min(start.top, end.top) - rect.top;
-                            const blockBottomOffset = Math.max(start.bottom, end.bottom) - rect.top;
-
-                            return {
-                                selectionFrom: selectionView.from,
-                                selectionTo: selectionView.to,
-                                blockTopOffset,
-                                blockBottomOffset,
-                            };
-                        },
-                        write(measurement: ViewportSnapshot | null) {
-                            if (!measurement || initialViewportSnapshotToken !== snapshotToken) {
-                                return;
-                            }
-
-                            initialViewportSnapshot = measurement;
-                        },
-                    });
-                }
+                initialScrollSnapshot = view.scrollSnapshot();
 
                 ensurePanel().open(headings, selectedHeadingId);
-                if (!headings.length) {
-                    applyHeadingHighlight(view, null);
-                }
             };
 
             const updatePanel = (): void => {
@@ -437,22 +318,13 @@ export default function headingNavigator(): MarkdownEditorContentScriptModule {
 
                 selectedHeadingId = findActiveHeadingId(headings, view.state.selection.main.head);
                 panel.update(headings, selectedHeadingId);
-                const activeHeading = headings.find((heading) => heading.id === selectedHeadingId) ?? null;
-                applyHeadingHighlight(view, activeHeading);
             };
 
             const closePanel = (focusEditor = false, restoreOriginalPosition = false): void => {
-                applyHeadingHighlight(view, null);
                 panel?.destroy();
                 panel = null;
 
                 if (restoreOriginalPosition && initialSelectionRange) {
-                    const pendingFrame = pendingScrollFrames.get(view);
-                    if (typeof pendingFrame === 'number') {
-                        cancelAnimationFrame(pendingFrame);
-                        pendingScrollFrames.delete(view);
-                    }
-
                     const pendingVerificationId = pendingScrollVerifications.get(view);
                     if (typeof pendingVerificationId === 'number') {
                         window.clearTimeout(pendingVerificationId);
@@ -464,27 +336,20 @@ export default function headingNavigator(): MarkdownEditorContentScriptModule {
                             initialSelectionRange.from,
                             initialSelectionRange.to
                         );
-                        view.dispatch({ selection: selectionToRestore });
+
+                        view.dispatch({
+                            selection: selectionToRestore,
+                            effects: initialScrollSnapshot,
+                        });
                     } catch (error) {
                         logger.warn('Failed to restore editor selection after closing panel', error);
                     }
-
-                    const snapshot = initialViewportSnapshot;
-                    const fallbackScrollTop = initialScrollTop;
-                    initialViewportSnapshot = null;
-                    initialViewportSnapshotToken = null;
-
-                    restoreEditorViewport(view, snapshot, fallbackScrollTop);
                 }
 
                 initialSelectionRange = null;
-                initialScrollTop = null;
-                initialViewportSnapshot = null;
-                initialViewportSnapshotToken = null;
+                initialScrollSnapshot = null;
 
-                if (focusEditor) {
-                    view.focus();
-                }
+                ensureEditorFocus(view, focusEditor);
             };
 
             const togglePanel = (dimensions?: PanelDimensions): void => {
@@ -511,7 +376,6 @@ export default function headingNavigator(): MarkdownEditorContentScriptModule {
                 }
             });
 
-            editorControl.addExtension([headingHighlightField, headingHighlightTheme]);
             editorControl.addExtension(updateListener);
             editorControl.registerCommand(EDITOR_COMMAND_TOGGLE_PANEL, togglePanel);
         },
