@@ -5,7 +5,7 @@
 
 A Joplin plugin that provides a simple overlay panel allowing you to navigate and filter headings in the markdown editor, inspired by sublime text's "go to symbol" function.
 
-![heading-navigator-demo](https://github.com/user-attachments/assets/fb0239fe-42a3-4f44-b61b-5fb8ecf7a2ef)
+![heading-navigator-demo](https://github.com/user-attachments/assets/5b2e2772-877b-4779-b53d-fd404566362e)
 
 > [!important]
 > This plugin only works in the markdown editor (editor view or split view). It does not work in the reading view or in the rich text editor. Codemirror 6 only, legacy editor is not supported.
