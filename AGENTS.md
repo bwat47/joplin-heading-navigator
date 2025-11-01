@@ -19,7 +19,7 @@ heading-navigator-documentation.md
 
 - **Simple over complex:** prefer focused, single-responsibility modules.
 - **One clear way**: Single detection/validation path; avoid multiple competing approaches.
-- **Separation of concerns**: Each module handles one aspect (detection, sizing, building, etc.).
+- **Separation of concerns**: Each module handles one aspect.
 - **Fail fast**: Validate inputs early; provide clear error messages to users.
 
 ## Coding Style & Naming Conventions
@@ -34,7 +34,9 @@ heading-navigator-documentation.md
 
 User Joplin logger instead of console.log, usage example:
 
-`import logger from './logger';`
+```
+import logger from './logger';
 
-`logger.info('Plugin started');`
-`logger.warn('error test', err);`
+logger.info('Plugin started');
+logger.warn('error test', err);
+```
