@@ -18,20 +18,44 @@ function parseHeadingLevel(nodeName: string): number | null {
     return null;
 }
 
+function stripInlineMarkdown(text: string): string {
+    return (
+        text
+            // Inline images: keep alt text if present.
+            .replace(/!\[([^\]]*)\]\([^)]+\)/g, '$1')
+            // Inline and reference links: keep link label only.
+            .replace(/\[([^\]]*?)\]\s*(\([^)]+\)|\[[^\]]*\])/g, '$1')
+            // Bold/italic markers.
+            .replace(/\*\*([^*]+)\*\*/g, '$1')
+            .replace(/__([^_]+)__/g, '$1')
+            .replace(/\*([^*]+)\*/g, '$1')
+            .replace(/_([^_]+)_/g, '$1')
+            // Inline code.
+            .replace(/`([^`]+)`/g, '$1')
+            // Escaped characters.
+            .replace(/\\([\\`*_{}\[\]()#+\-.!])/g, '$1')
+            // Collapse repeated whitespace.
+            .replace(/\s+/g, ' ')
+            .trim()
+    );
+}
+
 function normalizeHeadingText(nodeName: string, raw: string): string {
     if (nodeName.startsWith('ATXHeading')) {
-        return raw
-            .replace(/^#{1,6}[ \t]*/, '')
-            .replace(/[ \t]*#{0,}\s*$/, '')
-            .trim();
+        return stripInlineMarkdown(
+            raw
+                .replace(/^#{1,6}[ \t]*/, '')
+                .replace(/[ \t]*#{0,}\s*$/, '')
+                .trim()
+        );
     }
 
     if (nodeName.startsWith('SetextHeading')) {
         const lines = raw.split('\n');
-        return lines[0]?.trim() ?? '';
+        return stripInlineMarkdown(lines[0]?.trim() ?? '');
     }
 
-    return raw.trim();
+    return stripInlineMarkdown(raw.trim());
 }
 
 function createLineResolver(content: string): (position: number) => number {
