@@ -19,7 +19,7 @@ In the markdown editor, click the Heading Navigator toolbar button, or use the a
 
 You can navigate through headings using tab key (goes to next heading), shift tab key (goes to previous heading), arrow keys, or by scrolling and selecting a heading.
 
-When selecting a heading with the keyboard, the editor will immediately scroll to the selected heading. Hitting enter in the dialogue (or clicking somewhere else) will close the dialogue.
+When selecting a heading with the keyboard, the editor will immediately scroll to the selected heading. Hitting enter in the dialogue (or clicking somewhere else) will close the dialogue. Hitting escape will close the dialogue & return to your original scroll/cursor position.
 
 You can filter the list of headings using the search filter at the top of the panel.
 
