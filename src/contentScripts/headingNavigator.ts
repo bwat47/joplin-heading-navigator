@@ -20,7 +20,7 @@ type ScrollVerificationMeasurement =
           selectionFrom: number;
           selectionTo: number;
           viewportTop: number;
-          blockTop: number;
+          blockTopOffset: number;
       }
     | {
           status: 'retry';
@@ -82,7 +82,7 @@ function createScrollVerifier(options: {
                         selectionFrom: blockMeasurement.selectionFrom,
                         selectionTo: selection.to,
                         viewportTop: blockMeasurement.viewportTop,
-                        blockTop: blockMeasurement.blockTopOffset + blockMeasurement.viewportTop,
+                        blockTopOffset: blockMeasurement.blockTopOffset,
                     };
                 },
                 write(measurement, measureView) {
@@ -115,15 +115,22 @@ function createScrollVerifier(options: {
                     }
 
                     const tolerance = SCROLL_VERIFY_TOLERANCE_PX;
-                    const needsScroll = measurement.blockTop < measurement.viewportTop + tolerance;
+                    const offsetFromViewportTop = measurement.blockTopOffset;
+                    const needsScroll = Math.abs(offsetFromViewportTop) > tolerance;
 
                     if (!needsScroll) {
                         // Stay on guard for late layout shifts (e.g. images loading) that can push the heading
-                        // below the viewport top—extra checks keep it pinned even when content settles.
+                        // below the viewport top; extra checks keep it pinned even when content settles.
                         if (attempt + 1 < SCROLL_VERIFY_MAX_ATTEMPTS) {
                             verify(attempt + 1);
                         }
                         return;
+                    }
+
+                    const targetScrollTop = Math.max(measurement.viewportTop + offsetFromViewportTop, 0);
+                    // Force the scroll position in case CodeMirror bails out when it thinks the range is already visible.
+                    if (Math.abs(measureView.scrollDOM.scrollTop - targetScrollTop) > 1) {
+                        measureView.scrollDOM.scrollTop = targetScrollTop;
                     }
 
                     measureView.dispatch({
