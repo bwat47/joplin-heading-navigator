@@ -40,9 +40,3 @@ The panel appearance can be customized via Settings | Heading Navigator:
     - Prevents the panel from obscuring too much content
 
 Settings take effect the next time the panel is opened.
-
-### Screenshots
-
-<img width="673" alt="screenshot1" src="https://github.com/user-attachments/assets/5b026bb7-48e3-43ed-8157-bf07720b6c2d" />
-
-<img width="677" alt="Screenshot2" src="https://github.com/user-attachments/assets/0ba7b41f-5de7-43ba-9cf1-652dd6c78991" />
