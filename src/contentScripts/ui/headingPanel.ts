@@ -306,7 +306,7 @@ export class HeadingPanel {
         if (this.filterDebounceTimer !== null) {
             clearTimeout(this.filterDebounceTimer);
             this.filterDebounceTimer = null;
-            this.applyFilter(this.input.value, true);
+            this.applyFilter(this.input.value);
         }
     }
 
