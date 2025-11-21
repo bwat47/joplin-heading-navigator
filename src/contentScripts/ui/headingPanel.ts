@@ -239,7 +239,7 @@ export class HeadingPanel {
         }
     }
 
-    private applyFilter(filterText: string): void {
+    private applyFilter(filterText: string, restoreInitialWhenCleared = false): void {
         const normalized = filterText.trim().toLowerCase();
         if (!normalized) {
             this.filtered = [...this.headings];
@@ -249,13 +249,18 @@ export class HeadingPanel {
 
         if (this.filtered.length === 0) {
             this.selectedHeadingId = null;
-        } else if (!normalized) {
-            // When filter is completely cleared, restore the initial selection
+        } else if (!normalized && restoreInitialWhenCleared) {
+            // When filter is completely cleared by user input, restore the initial selection
             // If the initial selection is still valid, use it; otherwise use first heading
             const initialHeading = this.initialSelectedHeadingId
                 ? this.filtered.find((h) => h.id === this.initialSelectedHeadingId)
                 : null;
             this.selectedHeadingId = initialHeading ? initialHeading.id : this.filtered[0].id;
+        } else if (!normalized) {
+            // When filter is empty but this is a programmatic update (keyboard navigation), preserve current selection if valid
+            if (!this.selectedHeadingId || !this.filtered.find((h) => h.id === this.selectedHeadingId)) {
+                this.selectedHeadingId = this.filtered[0].id;
+            }
         } else {
             // When actively filtering, always select the first matching heading
             // This matches VS Code/Sublime Text behavior: as you type or backspace,
@@ -273,7 +278,7 @@ export class HeadingPanel {
 
         this.filterDebounceTimer = window.setTimeout(() => {
             this.filterDebounceTimer = null;
-            this.applyFilter(this.input.value);
+            this.applyFilter(this.input.value, true);
             this.notifyPreview(true);
         }, FILTER_DEBOUNCE_MS);
     }
