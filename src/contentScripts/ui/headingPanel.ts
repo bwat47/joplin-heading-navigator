@@ -56,6 +56,8 @@ export class HeadingPanel {
 
     private selectedHeadingId: string | null = null;
 
+    private initialSelectedHeadingId: string | null = null;
+
     private options: PanelDimensions;
 
     private lastPreviewedId: string | null = null;
@@ -141,6 +143,7 @@ export class HeadingPanel {
         this.mount();
         this.input.value = '';
         this.selectedHeadingId = selectedId;
+        this.initialSelectedHeadingId = selectedId;
         this.lastPreviewedId = null;
         this.setHeadings(headings, '', true);
         requestAnimationFrame(() => {
@@ -246,7 +249,17 @@ export class HeadingPanel {
 
         if (this.filtered.length === 0) {
             this.selectedHeadingId = null;
-        } else if (!this.selectedHeadingId || !this.filtered.find((h) => h.id === this.selectedHeadingId)) {
+        } else if (!normalized) {
+            // When filter is completely cleared, restore the initial selection
+            // If the initial selection is still valid, use it; otherwise use first heading
+            const initialHeading = this.initialSelectedHeadingId
+                ? this.filtered.find((h) => h.id === this.initialSelectedHeadingId)
+                : null;
+            this.selectedHeadingId = initialHeading ? initialHeading.id : this.filtered[0].id;
+        } else {
+            // When actively filtering, always select the first matching heading
+            // This matches VS Code/Sublime Text behavior: as you type or backspace,
+            // the selection follows the first match in document order
             this.selectedHeadingId = this.filtered[0].id;
         }
 
