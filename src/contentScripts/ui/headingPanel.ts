@@ -56,6 +56,10 @@ export class HeadingPanel {
 
     private selectedHeadingId: string | null = null;
 
+    private initialSelectedHeadingId: string | null = null;
+
+    private previousFilterText = '';
+
     private options: PanelDimensions;
 
     private lastPreviewedId: string | null = null;
@@ -141,6 +145,8 @@ export class HeadingPanel {
         this.mount();
         this.input.value = '';
         this.selectedHeadingId = selectedId;
+        this.initialSelectedHeadingId = selectedId;
+        this.previousFilterText = '';
         this.lastPreviewedId = null;
         this.setHeadings(headings, '', true);
         requestAnimationFrame(() => {
@@ -236,8 +242,11 @@ export class HeadingPanel {
         }
     }
 
-    private applyFilter(filterText: string): void {
+    private applyFilter(filterText: string, restoreInitialWhenCleared = false): void {
         const normalized = filterText.trim().toLowerCase();
+        const filterChanged = normalized !== this.previousFilterText;
+        this.previousFilterText = normalized;
+
         if (!normalized) {
             this.filtered = [...this.headings];
         } else {
@@ -246,8 +255,29 @@ export class HeadingPanel {
 
         if (this.filtered.length === 0) {
             this.selectedHeadingId = null;
-        } else if (!this.selectedHeadingId || !this.filtered.find((h) => h.id === this.selectedHeadingId)) {
+        } else if (!normalized && restoreInitialWhenCleared) {
+            // When filter is completely cleared by user input, restore the initial selection
+            // If the initial selection is still valid, use it; otherwise use first heading
+            const initialHeading = this.initialSelectedHeadingId
+                ? this.filtered.find((h) => h.id === this.initialSelectedHeadingId)
+                : null;
+            this.selectedHeadingId = initialHeading ? initialHeading.id : this.filtered[0].id;
+        } else if (!normalized) {
+            // When filter is empty but this is a programmatic update (keyboard navigation), preserve current selection if valid
+            if (!this.selectedHeadingId || !this.filtered.find((h) => h.id === this.selectedHeadingId)) {
+                this.selectedHeadingId = this.filtered[0].id;
+            }
+        } else if (filterChanged) {
+            // When filter text changed, always select the first matching heading
+            // This matches VS Code/Sublime Text behavior: as you type or backspace,
+            // the selection follows the first match in document order
             this.selectedHeadingId = this.filtered[0].id;
+        } else {
+            // When filter text is the same (e.g., debounce firing after arrow key navigation),
+            // preserve current selection if valid
+            if (!this.selectedHeadingId || !this.filtered.find((h) => h.id === this.selectedHeadingId)) {
+                this.selectedHeadingId = this.filtered[0].id;
+            }
         }
 
         this.render();
@@ -260,9 +290,24 @@ export class HeadingPanel {
 
         this.filterDebounceTimer = window.setTimeout(() => {
             this.filterDebounceTimer = null;
-            this.applyFilter(this.input.value);
+            this.applyFilter(this.input.value, true);
             this.notifyPreview(true);
         }, FILTER_DEBOUNCE_MS);
+    }
+
+    /**
+     * Immediately applies any pending filter update and cancels the debounce timer.
+     *
+     * Called before arrow key navigation to ensure the filtered list is up-to-date
+     * before changing selection. This prevents arrow navigation from being overridden
+     * when the debounce timer fires after the user has already navigated.
+     */
+    private flushPendingFilter(): void {
+        if (this.filterDebounceTimer !== null) {
+            clearTimeout(this.filterDebounceTimer);
+            this.filterDebounceTimer = null;
+            this.applyFilter(this.input.value);
+        }
     }
 
     private notifyPreview(force = false): void {
@@ -319,14 +364,17 @@ export class HeadingPanel {
         switch (event.key) {
             case 'ArrowDown':
                 event.preventDefault();
+                this.flushPendingFilter();
                 this.moveSelection(1);
                 break;
             case 'Tab':
                 event.preventDefault();
+                this.flushPendingFilter();
                 this.moveSelection(event.shiftKey ? -1 : 1);
                 break;
             case 'ArrowUp':
                 event.preventDefault();
+                this.flushPendingFilter();
                 this.moveSelection(-1);
                 break;
             case 'Enter':
