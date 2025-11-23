@@ -35,7 +35,7 @@
 - `src/panelDimensions.ts`: centralizes panel sizing defaults, normalization helpers, and min/max bounds shared between the plugin host and content script.
 - `src/types.ts`: defines shared DTOs (`HeadingItem`, `PanelDimensions`, `DEFAULT_PANEL_DIMENSIONS`) used by both plugin and editor bundles.
 - `src/constants.ts`: centralizes string identifiers (command name, CodeMirror content script id, editor command name).
-- `src/logger.ts`: Centralized logging utility. Provides `debug()`, `info()`, `warn()`, and `error()` methods with configurable log levels (DEBUG, INFO, WARN, ERROR, NONE). Log level can be adjusted at runtime via browser console using `joplinLogger.setLevel(level)` and `joplinLogger.getLevel()`. Defaults to WARN level.
+- `src/logger.ts`: Centralized logging utility. Provides `debug()`, `info()`, `warn()`, and `error()` methods with configurable log levels (DEBUG, INFO, WARN, ERROR, NONE). Log level can be adjusted at runtime via browser console using `console.headingNavigator.setLogLevel(level)` and `console.headingNavigator.getLogLevel()`. Defaults to WARN level.
 
 ### Configuration
 
