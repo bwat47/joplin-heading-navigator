@@ -2,6 +2,7 @@ import { EditorView } from '@codemirror/view';
 import type { HeadingItem, PanelDimensions } from '../../types';
 import { createPanelCss } from '../theme/panelTheme';
 import { CopyButtonController } from './copyButtonController';
+import { fuzzyFilter, highlightMatch } from './fuzzyFilter';
 
 const PANEL_STYLE_ID = 'heading-navigator-styles';
 const INDENT_BASE_PX = 12;
@@ -247,11 +248,7 @@ export class HeadingPanel {
         const filterChanged = normalized !== this.previousFilterText;
         this.previousFilterText = normalized;
 
-        if (!normalized) {
-            this.filtered = [...this.headings];
-        } else {
-            this.filtered = this.headings.filter((heading) => heading.text.toLowerCase().includes(normalized));
-        }
+        this.filtered = fuzzyFilter(normalized, this.headings);
 
         if (this.filtered.length === 0) {
             this.selectedHeadingId = null;
@@ -596,7 +593,7 @@ export class HeadingPanel {
 
         const text = document.createElement('span');
         text.className = 'heading-navigator-item-text';
-        text.textContent = heading.text;
+        text.appendChild(highlightMatch(heading.text, this.previousFilterText));
 
         const copyButton = this.copyButtonController.createCopyButton();
 
@@ -621,10 +618,12 @@ export class HeadingPanel {
             levelSpan.textContent = newLevelText;
         }
 
-        // Update heading text
+        // Update heading text with highlighting
+        // Always rebuild when filter is active since highlight positions may change
         const textSpan = item.querySelector('.heading-navigator-item-text');
-        if (textSpan && textSpan.textContent !== heading.text) {
-            textSpan.textContent = heading.text;
+        if (textSpan) {
+            textSpan.textContent = '';
+            textSpan.appendChild(highlightMatch(heading.text, this.previousFilterText));
         }
     }
 

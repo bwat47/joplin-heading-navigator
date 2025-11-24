@@ -20,15 +20,15 @@
         "publish"
     ],
     "devDependencies": {
+        "@codemirror/state": "6.5.2",
+        "@codemirror/view": "6.38.7",
         "@eslint/eslintrc": "^3.3.1",
         "@eslint/js": "^9.39.1",
+        "@lezer/markdown": "1.6.0",
         "@types/jest": "^30.0.0",
         "@types/node": "^24.10.1",
         "@typescript-eslint/eslint-plugin": "^8.46.4",
         "@typescript-eslint/parser": "^8.46.4",
-        "@codemirror/state": "6.5.2",
-        "@codemirror/view": "6.38.7",
-        "@lezer/markdown": "1.6.0",
         "chalk": "^4.1.0",
         "copy-webpack-plugin": "^13.0.1",
         "eslint": "^9.39.1",
@@ -47,6 +47,7 @@
         "webpack-cli": "^6.0.1"
     },
     "dependencies": {
-        "@joplin/fork-uslug": "^2.0.3"
+        "@joplin/fork-uslug": "^2.0.3",
+        "fuzzysort": "^3.1.0"
     }
 }
