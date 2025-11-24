@@ -1,8 +1,10 @@
 /**
- * @fileoverview Centralized logger with configurable log levels.
+ * Centralized logger with configurable log levels.
  *
  * Provides consistent prefixing for all plugin logs and exposes runtime
  * controls via the browser console for dynamic log level adjustment.
+ *
+ * modified from: https://github.com/cipherswami/joplin-plugin-quick-note/blob/main/src/logger.ts
  *
  * @usage
  * import logger from './logger';
@@ -17,8 +19,6 @@
  * console.headingNavigator.setLogLevel(3) // ERROR
  * console.headingNavigator.setLogLevel(4) // NONE
  * console.headingNavigator.getLogLevel()  // get current log level
- *
- * modified from: https://github.com/cipherswami/joplin-plugin-quick-note/blob/main/src/logger.ts
  */
 
 const PREFIX = '[heading-navigator]';
