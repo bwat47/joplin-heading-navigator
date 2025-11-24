@@ -589,7 +589,7 @@ export class HeadingPanel {
 
         const level = document.createElement('span');
         level.className = 'heading-navigator-item-level';
-        level.textContent = `H${heading.level} · line ${heading.line + 1}`;
+        level.textContent = `H${heading.level} - line ${heading.line + 1}`;
 
         const text = document.createElement('span');
         text.className = 'heading-navigator-item-text';
@@ -613,7 +613,7 @@ export class HeadingPanel {
 
         // Update level text
         const levelSpan = item.querySelector('.heading-navigator-item-level');
-        const newLevelText = `H${heading.level} · line ${heading.line + 1}`;
+        const newLevelText = `H${heading.level} - line ${heading.line + 1}`;
         if (levelSpan && levelSpan.textContent !== newLevelText) {
             levelSpan.textContent = newLevelText;
         }
