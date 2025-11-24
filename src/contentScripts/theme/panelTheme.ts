@@ -139,6 +139,11 @@ export function createPanelCss(dimensions: PanelDimensions): string {
     font-weight: 400;
 }
 
+.heading-navigator-item-text b {
+    font-weight: 600;
+    color: var(--joplin-color-bright, inherit);
+}
+
 .heading-navigator-copy-button {
     position: absolute;
     top: 50%;

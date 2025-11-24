@@ -24,7 +24,8 @@
 
 ### Panel UI Modules
 
-- `src/contentScripts/ui/headingPanel.ts`: renders the floating panel DOM, wires keyboard/mouse interactions, manages filtering, and emits preview/select/copy callbacks. Each heading exposes a hover-only copy button that animates to a confirmation checkmark and fades out after copying.
+- `src/contentScripts/ui/headingPanel.ts`: renders the floating panel DOM, wires keyboard/mouse interactions, manages fuzzy filtering, and emits preview/select/copy callbacks. Each heading exposes a hover-only copy button that animates to a confirmation checkmark and fades out after copying.
+- `src/contentScripts/ui/fuzzyFilter.ts`: wraps the `fuzzysort` library for Sublime Text-like fuzzy matching. Provides `fuzzyFilter()` for ranking headings by match relevance and `highlightMatch()` for rendering matched characters in bold. Uses DOM manipulation (not innerHTML) for secure highlighting.
 - `src/contentScripts/theme/panelTheme.ts`: generates CSS using Joplin's theme variables (e.g., `--joplin-color`, `--joplin-background-color3`, `--joplin-selected-color`) for automatic theme integration. The panel adapts to light/dark themes and custom user themes without JavaScript color computation. Only dynamic panel dimensions (width, maxHeight) are injected at runtime; all colors are handled via CSS variables with fallback values.
 
 ### Utilities & Data
