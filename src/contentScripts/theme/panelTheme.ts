@@ -140,7 +140,7 @@ export function createPanelCss(dimensions: PanelDimensions): string {
 }
 
 .heading-navigator-item-text b {
-    font-weight: 600;
+    font-weight: 700;
     color: var(--joplin-color-bright, inherit);
 }
 
