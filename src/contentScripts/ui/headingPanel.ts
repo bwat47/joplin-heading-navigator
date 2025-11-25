@@ -7,7 +7,7 @@ import { fuzzyFilter, highlightMatch } from './fuzzyFilter';
 const PANEL_STYLE_ID = 'heading-navigator-styles';
 const INDENT_BASE_PX = 12;
 const INDENT_PER_LEVEL_PX = 12;
-const FILTER_DEBOUNCE_MS = 150;
+const FILTER_DEBOUNCE_MS = 100;
 const PREVIEW_DEBOUNCE_MS = 30;
 
 export type PanelCloseReason = 'escape' | 'blur';
