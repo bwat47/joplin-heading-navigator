@@ -87,7 +87,12 @@ export class HeadingPanel {
 
     private readonly copyButtonController = new CopyButtonController();
 
-    public constructor(view: EditorView, callbacks: PanelCallbacks, options: PanelDimensions) {
+    public constructor(
+        view: EditorView,
+        callbacks: PanelCallbacks,
+        options: PanelDimensions,
+        private readonly isMobile = false
+    ) {
         this.view = view;
         this.onPreview = callbacks.onPreview;
         this.onSelect = callbacks.onSelect;
@@ -97,6 +102,9 @@ export class HeadingPanel {
 
         this.container = document.createElement('div');
         this.container.className = 'heading-navigator-panel';
+        if (this.isMobile) {
+            this.container.classList.add('is-mobile');
+        }
 
         this.input = document.createElement('input');
         this.input.type = 'search';
@@ -130,7 +138,82 @@ export class HeadingPanel {
         this.input.addEventListener('input', this.handleInputListener);
         this.input.addEventListener('keydown', this.handleKeyDownListener);
         this.list.addEventListener('click', this.handleListClickListener);
+
+        if (this.isMobile) {
+            this.list.addEventListener('touchstart', (e) => this.handleTouchStart(e));
+            this.list.addEventListener('touchmove', (e) => this.handleTouchMove(e));
+            this.list.addEventListener('touchend', (e) => this.handleTouchEnd(e));
+        }
+
         this.view.dom.ownerDocument!.addEventListener('mousedown', this.handleDocumentMouseDownListener, true);
+    }
+
+    private longPressTimer: number | null = null;
+    private touchStartCoords: { x: number; y: number } | null = null;
+    private isLongPressTriggered = false;
+
+    private handleTouchStart(event: TouchEvent): void {
+        const touch = event.touches[0];
+        this.touchStartCoords = { x: touch.clientX, y: touch.clientY };
+        this.isLongPressTriggered = false;
+
+        const item = (event.target as HTMLElement).closest<HTMLLIElement>('.heading-navigator-item');
+        if (!item) return;
+
+        this.longPressTimer = window.setTimeout(() => {
+            this.isLongPressTriggered = true;
+            this.triggerMobileCopy(item);
+        }, 600);
+    }
+
+    private handleTouchMove(event: TouchEvent): void {
+        if (!this.touchStartCoords) return;
+
+        const touch = event.touches[0];
+        const moveX = Math.abs(touch.clientX - this.touchStartCoords.x);
+        const moveY = Math.abs(touch.clientY - this.touchStartCoords.y);
+
+        // Cancel if moved more than 10px (scrolling)
+        if (moveX > 10 || moveY > 10) {
+            this.cancelLongPress();
+        }
+    }
+
+    private handleTouchEnd(event: TouchEvent): void {
+        this.cancelLongPress();
+
+        // Prevent click if long press triggered copy
+        if (this.isLongPressTriggered) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+    }
+
+    private cancelLongPress(): void {
+        if (this.longPressTimer !== null) {
+            clearTimeout(this.longPressTimer);
+            this.longPressTimer = null;
+        }
+        this.touchStartCoords = null;
+    }
+
+    private triggerMobileCopy(item: HTMLLIElement): void {
+        const headingId = item.dataset.headingId;
+        if (!headingId) return;
+
+        const heading = this.headings.find((h) => h.id === headingId);
+        if (heading) {
+            this.onCopy(heading);
+
+            // Visual feedback
+            item.classList.add('is-mobile-copied');
+            setTimeout(() => item.classList.remove('is-mobile-copied'), 300);
+
+            // Haptic feedback if available
+            if (navigator.vibrate) {
+                navigator.vibrate(50);
+            }
+        }
     }
 
     /**
@@ -149,7 +232,7 @@ export class HeadingPanel {
         this.initialSelectedHeadingId = selectedId;
         this.previousFilterText = '';
         this.lastPreviewedId = null;
-        this.setHeadings(headings, '', true);
+        this.setHeadings(headings, '', false); // Avoid triggering scroll/verification on initial open
         requestAnimationFrame(() => {
             if (this.isOpen()) {
                 this.input.focus();
@@ -445,6 +528,11 @@ export class HeadingPanel {
         // Handle item selection clicks
         const itemElement = target?.closest<HTMLLIElement>('.heading-navigator-item');
         if (!itemElement) {
+            return;
+        }
+
+        // On mobile, if this click followed a long-press, ignore it to prevent navigation
+        if (this.isMobile && this.isLongPressTriggered) {
             return;
         }
 

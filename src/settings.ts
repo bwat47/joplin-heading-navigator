@@ -47,7 +47,7 @@ export async function registerPanelSettings(): Promise<void> {
             public: true,
             section: SECTION_ID,
             label: 'Panel width (px)',
-            description: 'Set the width of the heading navigator panel (min: 240px, max: 640px).',
+            description: '[Desktop Only] Set the width of the heading navigator panel (min: 240px, max: 640px).',
             minimum: MIN_PANEL_WIDTH,
             maximum: MAX_PANEL_WIDTH,
             step: 10,
@@ -58,7 +58,8 @@ export async function registerPanelSettings(): Promise<void> {
             public: true,
             section: SECTION_ID,
             label: 'Panel max height (% of editor)',
-            description: 'Set the maximum height for the panel relative to the editor viewport (min: 40%, max: 90%).',
+            description:
+                '[Desktop Only] Set the maximum height for the panel relative to the editor viewport (min: 40%, max: 90%).',
             minimum: MIN_PANEL_HEIGHT_PERCENTAGE,
             maximum: MAX_PANEL_HEIGHT_PERCENTAGE,
             step: 5,

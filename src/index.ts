@@ -79,9 +79,12 @@ async function registerCommands(): Promise<void> {
         execute: async () => {
             logger.info('Go to Heading command triggered');
             const panelDimensions = await loadPanelDimensions();
+            const versionInfo = await joplin.versionInfo();
+            const isMobile = versionInfo.platform === 'mobile';
+
             await joplin.commands.execute('editor.execCommand', {
                 name: EDITOR_COMMAND_TOGGLE_PANEL,
-                args: [panelDimensions],
+                args: [panelDimensions, isMobile],
             });
         },
     });

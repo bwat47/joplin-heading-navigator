@@ -169,13 +169,18 @@ function createScrollVerifier(options: {
                             return;
                         }
 
-                        measureView.dispatch({
-                            effects: EditorView.scrollIntoView(selection, { y: 'start' }),
-                        });
+                        // Defer dispatch to avoid "update is in progress" errors on mobile.
+                        // Mobile WebViews can have different event timing that causes the
+                        // write phase to overlap with other CodeMirror updates.
+                        setTimeout(() => {
+                            measureView.dispatch({
+                                effects: EditorView.scrollIntoView(selection, { y: 'start' }),
+                            });
 
-                        ensureEditorFocus(measureView, focusEditor);
+                            ensureEditorFocus(measureView, focusEditor);
 
-                        verify(attempt + 1);
+                            verify(attempt + 1);
+                        }, 0);
                         return;
                     }
 
@@ -195,20 +200,25 @@ function createScrollVerifier(options: {
                         return;
                     }
 
-                    const targetScrollTop = Math.max(measurement.viewportTop + offsetFromViewportTop, 0);
-                    // Force the scroll position in case CodeMirror bails out when it thinks the range is already visible.
-                    if (Math.abs(measureView.scrollDOM.scrollTop - targetScrollTop) > 1) {
-                        measureView.scrollDOM.scrollTop = targetScrollTop;
-                    }
+                    // Defer dispatch to avoid "update is in progress" errors on mobile.
+                    // Mobile WebViews can have different event timing that causes the
+                    // write phase to overlap with other CodeMirror updates.
+                    setTimeout(() => {
+                        const targetScrollTop = Math.max(measurement.viewportTop + offsetFromViewportTop, 0);
+                        // Force the scroll position in case CodeMirror bails out when it thinks the range is already visible.
+                        if (Math.abs(measureView.scrollDOM.scrollTop - targetScrollTop) > 1) {
+                            measureView.scrollDOM.scrollTop = targetScrollTop;
+                        }
 
-                    measureView.dispatch({
-                        effects: EditorView.scrollIntoView(selection, { y: 'start' }),
-                    });
-                    ensureEditorFocus(measureView, focusEditor);
+                        measureView.dispatch({
+                            effects: EditorView.scrollIntoView(selection, { y: 'start' }),
+                        });
+                        ensureEditorFocus(measureView, focusEditor);
 
-                    if (attempt + 1 < SCROLL_VERIFY_MAX_ATTEMPTS) {
-                        verify(attempt + 1);
-                    }
+                        if (attempt + 1 < SCROLL_VERIFY_MAX_ATTEMPTS) {
+                            verify(attempt + 1);
+                        }
+                    }, 0);
                 },
             });
         });
@@ -394,7 +404,7 @@ export default function headingNavigator(context: ContentScriptContext): Markdow
                 }
             };
 
-            const ensurePanel = (): HeadingPanel => {
+            const ensurePanel = (isMobile: boolean): HeadingPanel => {
                 if (!panel) {
                     panel = new HeadingPanel(
                         view,
@@ -413,21 +423,22 @@ export default function headingNavigator(context: ContentScriptContext): Markdow
                                 void sendCopyRequest(heading);
                             },
                         },
-                        panelDimensions
+                        panelDimensions,
+                        isMobile // Pass isMobile to HeadingPanel
                     );
                 }
 
                 return panel;
             };
 
-            const openPanel = (): void => {
+            const openPanel = (isMobile: boolean): void => {
                 headings = computeHeadings(view.state);
                 const activeHeadingId = findActiveHeadingId(headings, view.state.selection.main.head);
                 const selection = view.state.selection.main;
                 initialSelectionRange = { from: selection.from, to: selection.to };
                 initialScrollSnapshot = view.scrollSnapshot();
 
-                ensurePanel().open(headings, activeHeadingId);
+                ensurePanel(isMobile).open(headings, activeHeadingId);
             };
 
             const updatePanel = (): void => {
@@ -467,8 +478,9 @@ export default function headingNavigator(context: ContentScriptContext): Markdow
                 ensureEditorFocus(view, focusEditor);
             };
 
-            const togglePanel = (dimensions?: PanelDimensions): void => {
+            const togglePanel = (dimensions?: PanelDimensions, isMobile?: boolean): void => {
                 if (dimensions) {
+                    // Update dimensions without re-opening if panel exists
                     panelDimensions = normalizePanelDimensions(dimensions);
                     if (panel) {
                         panel.setOptions(panelDimensions);
@@ -478,7 +490,7 @@ export default function headingNavigator(context: ContentScriptContext): Markdow
                 if (panel?.isOpen()) {
                     closePanel(true);
                 } else {
-                    openPanel();
+                    openPanel(isMobile ?? false);
                 }
             };
 

@@ -216,5 +216,42 @@ export function createPanelCss(dimensions: PanelDimensions): string {
     color: var(--joplin-color-faded, #7c8b9e);
     text-align: center;
 }
+
+/* Mobile Mode Overrides */
+.heading-navigator-panel.is-mobile {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    right: auto;
+    width: 90vw;
+    max-height: 80vh;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.45); /* Backdrop dimming */
+}
+
+/* Larger touch targets on mobile */
+.heading-navigator-panel.is-mobile .heading-navigator-item {
+    padding: 14px 52px 14px 16px;
+    gap: 4px;
+}
+
+.heading-navigator-panel.is-mobile .heading-navigator-input {
+    padding: 12px;
+    font-size: 16px; /* Prevents iOS zoom on focus */
+}
+
+.heading-navigator-panel.is-mobile .heading-navigator-copy-button {
+    display: none;
+}
+
+.heading-navigator-item.is-mobile-copied {
+    animation: heading-navigator-flash 300ms ease-out;
+    background-color: var(--joplin-background-color-hover3, #cbdaf1) !important;
+}
+
+@keyframes heading-navigator-flash {
+    0% { background-color: var(--joplin-background-color-hover3, #cbdaf1); }
+    100% { background-color: transparent; }
+}
 `;
 }
