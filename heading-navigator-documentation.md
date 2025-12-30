@@ -9,9 +9,18 @@
 
 - Registers the CodeMirror content script (`headingNavigator.js`) and the command `headingNavigator.goToHeading`.
 - Registers the plugin settings (`panelWidth`, `panelMaxHeightPercentage`) during startup so panel sizing can be customized by users.
-- Command handler calls `joplin.commands.execute('editor.execCommand', { name: EDITOR_COMMAND_TOGGLE_PANEL })`, delegating all UI logic to the editor-side script.
+- Command handler calls `joplin.commands.execute('editor.execCommand', { name: EDITOR_COMMAND_TOGGLE_PANEL })`, delegating all UI logic to the editor-side script. Passes `isMobile` flag derived from `joplin.versionInfo().platform`.
 - Adds a menu item under Edit so the command appears in Joplin's keyboard shortcut settings.
 - Creates a Markdown editor toolbar button (via `joplin.views.toolbarButtons.create`) for quick access.
+
+### Mobile Support
+
+- **Detection**: `src/index.ts` detects mobile platforms via `joplin.versionInfo().platform === 'mobile'`.
+- **Responsive UI**: On mobile, the panel switches from `position: absolute` (desktop) to `position: fixed` (viewport-centered modal) to prevent scrolling issues.
+- **Touch Interactions**:
+    - **Long Press Copy**: 600ms touch-and-hold triggers copy with haptic feedback and visual flash.
+    - **Touch Targets**: Increased padding and hidden hover buttons for better touch usability.
+    - **Gesture Cancellation**: Scrolling >10px cancels pending long-press actions to prevent accidental copies.
 
 ### Content Script (`src/contentScripts/headingNavigator.ts`)
 
