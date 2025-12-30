@@ -232,7 +232,11 @@ export class HeadingPanel {
         this.initialSelectedHeadingId = selectedId;
         this.previousFilterText = '';
         this.lastPreviewedId = null;
-        this.setHeadings(headings, '', true);
+        this.selectedHeadingId = selectedId;
+        this.initialSelectedHeadingId = selectedId;
+        this.previousFilterText = '';
+        this.lastPreviewedId = null;
+        this.setHeadings(headings, '', false); // Avoid triggering scroll/verification on initial open
         requestAnimationFrame(() => {
             if (this.isOpen()) {
                 this.input.focus();
