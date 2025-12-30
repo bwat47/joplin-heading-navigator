@@ -87,7 +87,12 @@ export class HeadingPanel {
 
     private readonly copyButtonController = new CopyButtonController();
 
-    public constructor(view: EditorView, callbacks: PanelCallbacks, options: PanelDimensions) {
+    public constructor(
+        view: EditorView,
+        callbacks: PanelCallbacks,
+        options: PanelDimensions,
+        private readonly isMobile = false
+    ) {
         this.view = view;
         this.onPreview = callbacks.onPreview;
         this.onSelect = callbacks.onSelect;
@@ -97,6 +102,9 @@ export class HeadingPanel {
 
         this.container = document.createElement('div');
         this.container.className = 'heading-navigator-panel';
+        if (this.isMobile) {
+            this.container.classList.add('is-mobile');
+        }
 
         this.input = document.createElement('input');
         this.input.type = 'search';
