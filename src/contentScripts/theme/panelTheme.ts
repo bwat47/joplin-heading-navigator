@@ -239,5 +239,19 @@ export function createPanelCss(dimensions: PanelDimensions): string {
     padding: 12px;
     font-size: 16px; /* Prevents iOS zoom on focus */
 }
+
+.heading-navigator-panel.is-mobile .heading-navigator-copy-button {
+    display: none;
+}
+
+.heading-navigator-item.is-mobile-copied {
+    animation: heading-navigator-flash 300ms ease-out;
+    background-color: var(--joplin-background-color-hover3, #cbdaf1) !important;
+}
+
+@keyframes heading-navigator-flash {
+    0% { background-color: var(--joplin-background-color-hover3, #cbdaf1); }
+    100% { background-color: transparent; }
+}
 `;
 }
