@@ -169,13 +169,18 @@ function createScrollVerifier(options: {
                             return;
                         }
 
-                        measureView.dispatch({
-                            effects: EditorView.scrollIntoView(selection, { y: 'start' }),
-                        });
+                        // Defer dispatch to avoid "update is in progress" errors on mobile.
+                        // Mobile WebViews can have different event timing that causes the
+                        // write phase to overlap with other CodeMirror updates.
+                        setTimeout(() => {
+                            measureView.dispatch({
+                                effects: EditorView.scrollIntoView(selection, { y: 'start' }),
+                            });
 
-                        ensureEditorFocus(measureView, focusEditor);
+                            ensureEditorFocus(measureView, focusEditor);
 
-                        verify(attempt + 1);
+                            verify(attempt + 1);
+                        }, 0);
                         return;
                     }
 
@@ -195,20 +200,25 @@ function createScrollVerifier(options: {
                         return;
                     }
 
-                    const targetScrollTop = Math.max(measurement.viewportTop + offsetFromViewportTop, 0);
-                    // Force the scroll position in case CodeMirror bails out when it thinks the range is already visible.
-                    if (Math.abs(measureView.scrollDOM.scrollTop - targetScrollTop) > 1) {
-                        measureView.scrollDOM.scrollTop = targetScrollTop;
-                    }
+                    // Defer dispatch to avoid "update is in progress" errors on mobile.
+                    // Mobile WebViews can have different event timing that causes the
+                    // write phase to overlap with other CodeMirror updates.
+                    setTimeout(() => {
+                        const targetScrollTop = Math.max(measurement.viewportTop + offsetFromViewportTop, 0);
+                        // Force the scroll position in case CodeMirror bails out when it thinks the range is already visible.
+                        if (Math.abs(measureView.scrollDOM.scrollTop - targetScrollTop) > 1) {
+                            measureView.scrollDOM.scrollTop = targetScrollTop;
+                        }
 
-                    measureView.dispatch({
-                        effects: EditorView.scrollIntoView(selection, { y: 'start' }),
-                    });
-                    ensureEditorFocus(measureView, focusEditor);
+                        measureView.dispatch({
+                            effects: EditorView.scrollIntoView(selection, { y: 'start' }),
+                        });
+                        ensureEditorFocus(measureView, focusEditor);
 
-                    if (attempt + 1 < SCROLL_VERIFY_MAX_ATTEMPTS) {
-                        verify(attempt + 1);
-                    }
+                        if (attempt + 1 < SCROLL_VERIFY_MAX_ATTEMPTS) {
+                            verify(attempt + 1);
+                        }
+                    }, 0);
                 },
             });
         });
