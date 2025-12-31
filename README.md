@@ -7,7 +7,7 @@ A Joplin plugin that provides a simple overlay panel allowing you to navigate an
 
 <img src="https://github.com/user-attachments/assets/c58e8c22-08fd-4041-acbb-c678d8de76ac" alt="heading-navigator-demo" width="1262" height="918" />
 
-<img src="https://github.com/user-attachments/assets/b6dc9106-8b61-4d51-92d6-c8bc6357b9e1" alt="mobile_example" width="400" height="889" />
+<img src="https://github.com/user-attachments/assets/b6dc9106-8b61-4d51-92d6-c8bc6357b9e1" alt="mobile_example" width="200" height="445" />
 
 > [!important]
 > This plugin only works in the markdown editor (editor view or split view). It does not work in the reading view or in the rich text editor. Codemirror 6 only, legacy editor is not supported.
