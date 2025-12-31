@@ -229,6 +229,11 @@ export function createPanelCss(dimensions: PanelDimensions): string {
     box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.45); /* Backdrop dimming */
 }
 
+/* Prevent scroll chaining to editor behind panel */
+.heading-navigator-panel.is-mobile .heading-navigator-list {
+    overscroll-behavior: contain;
+}
+
 /* Larger touch targets on mobile */
 .heading-navigator-panel.is-mobile .heading-navigator-item {
     padding: 14px 52px 14px 16px;
