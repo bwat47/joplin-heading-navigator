@@ -33,7 +33,7 @@ You can filter the list of headings using the search filter at the top of the pa
 
 ### Settings
 
-The panel appearance can be customized via Settings | Heading Navigator:
+The panel appearance can be customized via Settings | Heading Navigator (desktop only):
 
 - **Panel width**: 240-640px (default: 320px)
     - Useful for longer heading text or smaller screens
@@ -41,3 +41,11 @@ The panel appearance can be customized via Settings | Heading Navigator:
     - Prevents the panel from obscuring too much content
 
 Settings take effect the next time the panel is opened.
+
+### Mobile Support
+
+- The plugin can be accessed via the toolbar icon in the editing toolbar in the markdown editor.
+
+- On mobile, the panel has a responsive design and appears centered with faded background.
+
+- On mobile, the copy link icon is hidden, and instead long-press on a heading will copy link.
