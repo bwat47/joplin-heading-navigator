@@ -85,6 +85,12 @@ export class HeadingPanel {
 
     private readonly handleDocumentMouseDownListener: (event: MouseEvent) => void;
 
+    private readonly handleTouchStartListener: (e: TouchEvent) => void;
+
+    private readonly handleTouchMoveListener: (e: TouchEvent) => void;
+
+    private readonly handleTouchEndListener: (e: TouchEvent) => void;
+
     private readonly copyButtonController = new CopyButtonController();
 
     public constructor(
@@ -135,14 +141,19 @@ export class HeadingPanel {
             }
         };
 
+        // Initialize touch listeners
+        this.handleTouchStartListener = (e: TouchEvent) => this.handleTouchStart(e);
+        this.handleTouchMoveListener = (e: TouchEvent) => this.handleTouchMove(e);
+        this.handleTouchEndListener = (e: TouchEvent) => this.handleTouchEnd(e);
+
         this.input.addEventListener('input', this.handleInputListener);
         this.input.addEventListener('keydown', this.handleKeyDownListener);
         this.list.addEventListener('click', this.handleListClickListener);
 
         if (this.isMobile) {
-            this.list.addEventListener('touchstart', (e) => this.handleTouchStart(e));
-            this.list.addEventListener('touchmove', (e) => this.handleTouchMove(e));
-            this.list.addEventListener('touchend', (e) => this.handleTouchEnd(e));
+            this.list.addEventListener('touchstart', this.handleTouchStartListener);
+            this.list.addEventListener('touchmove', this.handleTouchMoveListener);
+            this.list.addEventListener('touchend', this.handleTouchEndListener);
         }
 
         this.view.dom.ownerDocument!.addEventListener('mousedown', this.handleDocumentMouseDownListener, true);
@@ -269,6 +280,13 @@ export class HeadingPanel {
         this.input.removeEventListener('input', this.handleInputListener);
         this.input.removeEventListener('keydown', this.handleKeyDownListener);
         this.list.removeEventListener('click', this.handleListClickListener);
+
+        if (this.isMobile) {
+            this.list.removeEventListener('touchstart', this.handleTouchStartListener);
+            this.list.removeEventListener('touchmove', this.handleTouchMoveListener);
+            this.list.removeEventListener('touchend', this.handleTouchEndListener);
+        }
+
         this.view.dom.ownerDocument!.removeEventListener('mousedown', this.handleDocumentMouseDownListener, true);
         if (this.previewDebounceTimer !== null) {
             clearTimeout(this.previewDebounceTimer);
