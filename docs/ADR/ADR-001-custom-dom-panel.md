@@ -28,7 +28,7 @@ On mobile, the panel switches to `position: fixed` with centered viewport positi
 
 The panel needs `z-index: 2000` to float above CodeMirror's content layers (selections, cursors, decorations). CodeMirror panels participate in the editor's layout flow and don't provide direct z-index control for overlay behavior.
 
-### 4. Split View Isolation
+### 4. View Isolation
 
 By appending to `view.scrollDOM.parentElement`, the panel stays strictly associated with its editor instance.
 
