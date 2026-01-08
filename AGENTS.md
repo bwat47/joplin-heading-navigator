@@ -1,9 +1,43 @@
-## Project Documentation
+## Project Architecture Documentation
 
-heading-navigator-documentation.md
+docs/Architecture/
 
-- Internal documentation about project architecture, intended for LLMs to reference for context
-- Keep up to date with architecture changes when applicable
+- Internal documentation about project architecture.
+- Keep up to date with significant architecture changes. Keep documentation concise, avoid repeating information.
+
+Architecture overview: docs/Architecture/Overview.md
+
+## Guidelines
+
+- Read AGENTS.md and docs before editing code
+- Stop being agreeable: be direct and honest; no flattery, no validation, no sugar-coating.
+- Challenge weak reasoning; point out missing assumptions and trade-offs.
+- If something is underspecified/contradictory/risky — say so and list what must be clarified.
+
+## Rules
+
+- Never guess or invent. If unsure, say "I don't know" and propose how to verify.
+- Never commit secrets, keys, connection strings
+- Never force push to main
+- Never approve or merge (human decision)
+
+## Key Entry Points
+
+Start here when exploring the codebase:
+
+| File                                     | Responsibility                                                 |
+| ---------------------------------------- | -------------------------------------------------------------- |
+| `src/index.ts`                           | Plugin entry point, command registration, API message handling |
+| `src/contentScripts/headingNavigator.ts` | CodeMirror integration, panel lifecycle, scroll verification   |
+| `src/contentScripts/ui/headingPanel.ts`  | Floating panel DOM, keyboard/mouse interactions, filtering     |
+| `src/contentScripts/ui/fuzzyFilter.ts`   | Fuzzy search ranking and match highlighting                    |
+| `src/contentScripts/theme/panelTheme.ts` | CSS generation using Joplin theme variables                    |
+| `src/headingExtractor.ts`                | Lezer-based heading parsing and anchor generation              |
+| `src/linkFormatting.ts`                  | Markdown link formatting for copy functionality                |
+
+## Common Pitfalls
+
+- **Build command**: Use `npm run dist`, not `npm run build` or `npx tsc`.
 
 ## Build, Test, and Development Commands
 
@@ -17,8 +51,8 @@ heading-navigator-documentation.md
 
 ## Design Principles
 
-- **Simple over complex:** prefer focused, single-responsibility modules.
-- **One clear way**: Single detection/validation path; avoid multiple competing approaches.
+- **Simple over complex:** Prefer focused, single-responsibility modules.
+- **One clear way**: Avoid multiple competing approaches.
 - **Separation of concerns**: Each module handles one aspect.
 - **Fail fast**: Validate inputs early; provide clear error messages to users.
 
@@ -27,16 +61,11 @@ heading-navigator-documentation.md
 - **Language**: TypeScript with strict settings; 4-space indentation; semicolons required.
 - **Filenames**: `camelCase.ts` for modules; tests mirror names: `module.test.ts`.
 - **Exports**: Prefer explicit types and narrow public exports.
-- **Style enforcement**: Run `eslint.config.js`, `.prettierrc.js` before commits.
+- **Style enforcement**: Run `npm run format` before commits or if you encounter formatting errors from prettier.
 - **Documentation**: Use JSDoc for complex functions; document regex patterns with examples.
+- **Constants and configuration**: No magic literals — extract to constants, enums, config objects, or dedicated types.
+- **Structure and Testability**: Pure logic lives in small, focused units when internal behaviour is non-trivial. Global state and hidden side effects are avoided in favour of explicit dependencies.
 
-## Logging
+## Log messages
 
-Use `src\logger.ts` instead of console.log, usage example:
-
-```ts
-import logger from './logger';
-
-logger.warn('Warning message', { context: 'data' });
-logger.error('Error occurred', error);
-```
+- Use `src/logger.ts` wrapper
