@@ -1,17 +1,11 @@
 /**
- * Joplin settings registration and loading for panel dimensions.
+ * Joplin settings registration and loading for heading panel configuration.
  *
- * Integrates panel dimension configuration into Joplin's preferences UI, allowing
- * users to customize panel width and height through Settings > Heading Navigator.
- *
- * Settings are:
- * - Stored by Joplin across sessions (persisted to disk)
- * - Validated on load with fallback to defaults if corrupted/out-of-range
- * - Loaded on-demand when the panel opens (not cached in memory)
+ * Integrates panel configuration into Joplin's preferences UI.
  *
  * See:
  * - panelDimensions.ts - Validation and normalization utilities
- * - index.ts - Calls registerPanelSettings() on plugin startup
+ * - index.ts - Calls registerPanelSettings() on plugin startup and forwards loaded values
  */
 
 import joplin from 'api';
@@ -32,6 +26,20 @@ import {
 const SECTION_ID = 'headingNavigator';
 const SETTING_PANEL_WIDTH = 'headingNavigator.panelWidth';
 const SETTING_PANEL_MAX_HEIGHT = 'headingNavigator.panelMaxHeightPercentage';
+const SETTING_COMPACT_MODE = 'headingNavigator.compactMode';
+
+export interface PanelSettings {
+    dimensions: PanelDimensions;
+    compactMode: boolean;
+}
+
+function normalizeCompactMode(value: unknown): { value: boolean; changed: boolean } {
+    if (typeof value === 'boolean') {
+        return { value, changed: false };
+    }
+
+    return { value: false, changed: true };
+}
 
 export async function registerPanelSettings(): Promise<void> {
     await joplin.settings.registerSection(SECTION_ID, {
@@ -64,11 +72,19 @@ export async function registerPanelSettings(): Promise<void> {
             maximum: MAX_PANEL_HEIGHT_PERCENTAGE,
             step: 5,
         },
+        [SETTING_COMPACT_MODE]: {
+            value: false,
+            type: SettingItemType.Bool,
+            public: true,
+            section: SECTION_ID,
+            label: 'Compact mode',
+            description: '[Desktop Only] Hide heading metadata row and reduce list item height.',
+        },
     });
 }
 
-export async function loadPanelDimensions(): Promise<PanelDimensions> {
-    const values = await joplin.settings.values([SETTING_PANEL_WIDTH, SETTING_PANEL_MAX_HEIGHT]);
+export async function loadPanelSettings(): Promise<PanelSettings> {
+    const values = await joplin.settings.values([SETTING_PANEL_WIDTH, SETTING_PANEL_MAX_HEIGHT, SETTING_COMPACT_MODE]);
 
     const widthResult = normalizePanelWidth(values[SETTING_PANEL_WIDTH]);
     if (widthResult.changed) {
@@ -80,8 +96,16 @@ export async function loadPanelDimensions(): Promise<PanelDimensions> {
         logger.warn(`Invalid panel height setting: ${values[SETTING_PANEL_MAX_HEIGHT]}. Using ${heightResult.value}%.`);
     }
 
+    const compactModeResult = normalizeCompactMode(values[SETTING_COMPACT_MODE]);
+    if (compactModeResult.changed) {
+        logger.warn(`Invalid compact mode setting: ${values[SETTING_COMPACT_MODE]}. Using ${compactModeResult.value}.`);
+    }
+
     return {
-        width: widthResult.value,
-        maxHeightRatio: heightResult.value / 100,
+        dimensions: {
+            width: widthResult.value,
+            maxHeightRatio: heightResult.value / 100,
+        },
+        compactMode: compactModeResult.value,
     };
 }

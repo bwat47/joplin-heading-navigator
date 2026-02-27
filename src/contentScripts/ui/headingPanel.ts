@@ -97,7 +97,8 @@ export class HeadingPanel {
         view: EditorView,
         callbacks: PanelCallbacks,
         options: PanelDimensions,
-        private readonly isMobile = false
+        private readonly isMobile = false,
+        compactMode = false
     ) {
         this.view = view;
         this.onPreview = callbacks.onPreview;
@@ -108,6 +109,10 @@ export class HeadingPanel {
 
         this.container = document.createElement('div');
         this.container.className = 'heading-navigator-panel';
+        const effectiveCompactMode = compactMode && !this.isMobile;
+        if (effectiveCompactMode) {
+            this.container.classList.add('is-compact');
+        }
         if (this.isMobile) {
             this.container.classList.add('is-mobile');
         }
@@ -701,10 +706,15 @@ export class HeadingPanel {
         text.className = 'heading-navigator-item-text';
         text.appendChild(highlightMatch(heading.text, this.previousFilterText));
 
+        const levelBadge = document.createElement('span');
+        levelBadge.className = 'heading-navigator-level-badge';
+        levelBadge.textContent = `H${heading.level}`;
+
         const copyButton = this.copyButtonController.createCopyButton();
 
         item.appendChild(level);
         item.appendChild(text);
+        item.appendChild(levelBadge);
         item.appendChild(copyButton);
 
         return item;
@@ -722,6 +732,13 @@ export class HeadingPanel {
         const newLevelText = `H${heading.level} - line ${heading.line + 1}`;
         if (levelSpan && levelSpan.textContent !== newLevelText) {
             levelSpan.textContent = newLevelText;
+        }
+
+        // Update compact mode right-side heading level badge text
+        const levelBadge = item.querySelector('.heading-navigator-level-badge');
+        const newBadgeText = `H${heading.level}`;
+        if (levelBadge && levelBadge.textContent !== newBadgeText) {
+            levelBadge.textContent = newBadgeText;
         }
 
         // Update heading text with highlighting

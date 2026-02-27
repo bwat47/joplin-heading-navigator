@@ -34,7 +34,8 @@ const panel = new HeadingPanel(
         },
     },
     dimensions,
-    isMobile
+    isMobile,
+    compactMode
 );
 ```
 
@@ -84,6 +85,15 @@ Keyed incremental updates:
 - `position: fixed`, centered in viewport
 - Increased touch target padding
 - 16px input font to prevent iOS auto-zoom
+- Compact mode is ignored on mobile (`isMobile` layout always wins)
+
+## Compact Mode (Desktop)
+
+- Adds `.is-compact` class on panel root when enabled
+- Hides `.heading-navigator-item-level` metadata row
+- Reduces heading item vertical padding to show more items
+- Shows `H#` badge at the right edge of each item
+- On hover/focus, copy icon crossfades in and replaces the `H#` badge
 
 ## Theme Integration
 
