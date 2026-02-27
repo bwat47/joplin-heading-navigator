@@ -97,7 +97,8 @@ export class HeadingPanel {
         view: EditorView,
         callbacks: PanelCallbacks,
         options: PanelDimensions,
-        private readonly isMobile = false
+        private readonly isMobile = false,
+        compactMode = false
     ) {
         this.view = view;
         this.onPreview = callbacks.onPreview;
@@ -108,6 +109,10 @@ export class HeadingPanel {
 
         this.container = document.createElement('div');
         this.container.className = 'heading-navigator-panel';
+        const effectiveCompactMode = compactMode && !this.isMobile;
+        if (effectiveCompactMode) {
+            this.container.classList.add('is-compact');
+        }
         if (this.isMobile) {
             this.container.classList.add('is-mobile');
         }

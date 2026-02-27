@@ -360,6 +360,7 @@ export default function headingNavigator(context: ContentScriptContext): Markdow
             let panel: HeadingPanel | null = null;
             let headings: HeadingItem[] = [];
             let panelDimensions: PanelDimensions = normalizePanelDimensions();
+            let compactMode = false;
             let initialSelectionRange: { from: number; to: number } | null = null;
             let initialScrollSnapshot: ReturnType<EditorView['scrollSnapshot']> | null = null;
             const noteIdFacet = editorControl.joplinExtensions?.noteIdFacet;
@@ -424,7 +425,8 @@ export default function headingNavigator(context: ContentScriptContext): Markdow
                             },
                         },
                         panelDimensions,
-                        isMobile // Pass isMobile to HeadingPanel
+                        isMobile,
+                        compactMode
                     );
                 }
 
@@ -478,13 +480,17 @@ export default function headingNavigator(context: ContentScriptContext): Markdow
                 ensureEditorFocus(view, focusEditor);
             };
 
-            const togglePanel = (dimensions?: PanelDimensions, isMobile?: boolean): void => {
+            const togglePanel = (dimensions?: PanelDimensions, isMobile?: boolean, compact?: boolean): void => {
                 if (dimensions) {
                     // Update dimensions without re-opening if panel exists
                     panelDimensions = normalizePanelDimensions(dimensions);
                     if (panel) {
                         panel.setOptions(panelDimensions);
                     }
+                }
+
+                if (typeof compact === 'boolean') {
+                    compactMode = compact;
                 }
 
                 if (panel?.isOpen()) {

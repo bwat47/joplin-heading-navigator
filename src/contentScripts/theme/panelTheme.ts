@@ -132,6 +132,16 @@ export function createPanelCss(dimensions: PanelDimensions): string {
     opacity: 0.85;
 }
 
+.heading-navigator-panel.is-compact .heading-navigator-item-level {
+    display: none;
+}
+
+.heading-navigator-panel.is-compact .heading-navigator-item {
+    gap: 0;
+    padding-top: 6px;
+    padding-bottom: 6px;
+}
+
 .heading-navigator-item-text {
     white-space: nowrap;
     overflow: hidden;

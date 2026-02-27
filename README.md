@@ -45,6 +45,8 @@ The panel appearance can be customized via Settings | Heading Navigator (desktop
     - Useful for longer heading text or smaller screens
 - **Panel max height**: 40-90% of editor viewport (default: 75%)
     - Prevents the panel from obscuring too much content
+- **Compact mode**: Hide `H# - line #` metadata and reduce heading row height (default: off)
+    - Shows more headings at once in the panel
 
 Settings take effect the next time the panel is opened.
 

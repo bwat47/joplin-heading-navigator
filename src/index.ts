@@ -21,7 +21,7 @@ import joplin from 'api';
 import { ContentScriptType, MenuItemLocation, ToolbarButtonLocation } from 'api/types';
 import { CODEMIRROR_CONTENT_SCRIPT_ID, COMMAND_GO_TO_HEADING, EDITOR_COMMAND_TOGGLE_PANEL } from './constants';
 import logger from './logger';
-import { loadPanelDimensions, registerPanelSettings } from './settings';
+import { loadPanelSettings, registerPanelSettings } from './settings';
 import type { ContentScriptToPluginMessage, CopyHeadingLinkMessage } from './messages';
 import { formatHeadingLink } from './linkFormatting';
 
@@ -78,13 +78,13 @@ async function registerCommands(): Promise<void> {
         iconName: 'fas fa-heading',
         execute: async () => {
             logger.info('Go to Heading command triggered');
-            const panelDimensions = await loadPanelDimensions();
+            const panelSettings = await loadPanelSettings();
             const versionInfo = await joplin.versionInfo();
             const isMobile = versionInfo.platform === 'mobile';
 
             await joplin.commands.execute('editor.execCommand', {
                 name: EDITOR_COMMAND_TOGGLE_PANEL,
-                args: [panelDimensions, isMobile],
+                args: [panelSettings.dimensions, isMobile, panelSettings.compactMode],
             });
         },
     });
