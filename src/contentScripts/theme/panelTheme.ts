@@ -166,7 +166,7 @@ export function createPanelCss(dimensions: PanelDimensions): string {
     width: 22px;
     height: 18px;
     padding: 0;
-    border-radius: 9px;
+    border-radius: 6px;
     background-color: var(--joplin-background-color-hover3, rgba(203, 218, 241, 0.3));
     color: var(--joplin-color, #32373f);
     display: flex;
