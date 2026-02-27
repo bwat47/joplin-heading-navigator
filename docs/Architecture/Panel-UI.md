@@ -92,6 +92,8 @@ Keyed incremental updates:
 - Adds `.is-compact` class on panel root when enabled
 - Hides `.heading-navigator-item-level` metadata row
 - Reduces heading item vertical padding to show more items
+- Shows `H#` badge at the right edge of each item
+- On hover/focus, copy icon crossfades in and replaces the `H#` badge
 
 ## Theme Integration
 

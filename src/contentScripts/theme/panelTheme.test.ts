@@ -14,6 +14,11 @@ describe('createPanelCss', () => {
         expect(css).toContain('.heading-navigator-panel');
         expect(css).toContain('.heading-navigator-panel.is-compact .heading-navigator-item-level');
         expect(css).toContain('.heading-navigator-panel.is-compact .heading-navigator-item');
+        expect(css).toContain('.heading-navigator-level-badge');
+        expect(css).toContain('.heading-navigator-panel.is-compact .heading-navigator-level-badge');
+        expect(css).toContain(
+            '.heading-navigator-panel.is-compact .heading-navigator-item:hover .heading-navigator-level-badge'
+        );
         expect(css).toContain('.heading-navigator-input');
         expect(css).toContain('.heading-navigator-list');
         expect(css).toContain('.heading-navigator-item');

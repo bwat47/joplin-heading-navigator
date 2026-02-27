@@ -706,10 +706,15 @@ export class HeadingPanel {
         text.className = 'heading-navigator-item-text';
         text.appendChild(highlightMatch(heading.text, this.previousFilterText));
 
+        const levelBadge = document.createElement('span');
+        levelBadge.className = 'heading-navigator-level-badge';
+        levelBadge.textContent = `H${heading.level}`;
+
         const copyButton = this.copyButtonController.createCopyButton();
 
         item.appendChild(level);
         item.appendChild(text);
+        item.appendChild(levelBadge);
         item.appendChild(copyButton);
 
         return item;
@@ -727,6 +732,13 @@ export class HeadingPanel {
         const newLevelText = `H${heading.level} - line ${heading.line + 1}`;
         if (levelSpan && levelSpan.textContent !== newLevelText) {
             levelSpan.textContent = newLevelText;
+        }
+
+        // Update compact mode right-side heading level badge text
+        const levelBadge = item.querySelector('.heading-navigator-level-badge');
+        const newBadgeText = `H${heading.level}`;
+        if (levelBadge && levelBadge.textContent !== newBadgeText) {
+            levelBadge.textContent = newBadgeText;
         }
 
         // Update heading text with highlighting

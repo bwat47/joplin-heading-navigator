@@ -154,6 +154,36 @@ export function createPanelCss(dimensions: PanelDimensions): string {
     color: var(--joplin-color-bright, inherit);
 }
 
+.heading-navigator-level-badge {
+    display: none;
+}
+
+.heading-navigator-panel.is-compact .heading-navigator-level-badge {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    right: 11px;
+    width: 22px;
+    height: 18px;
+    padding: 0;
+    border-radius: 9px;
+    background-color: var(--joplin-background-color-hover3, rgba(203, 218, 241, 0.3));
+    color: var(--joplin-color, #32373f);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    opacity: 1;
+    pointer-events: none;
+    transition: opacity 160ms ease-out, background-color 120ms ease-out, color 120ms ease-out;
+}
+
+.heading-navigator-panel.is-compact .heading-navigator-item.is-selected .heading-navigator-level-badge {
+    color: inherit;
+}
+
 .heading-navigator-copy-button {
     position: absolute;
     top: 50%;
@@ -189,6 +219,11 @@ export function createPanelCss(dimensions: PanelDimensions): string {
 .heading-navigator-item:focus-within .heading-navigator-copy-button {
     opacity: 1;
     pointer-events: auto;
+}
+
+.heading-navigator-panel.is-compact .heading-navigator-item:hover .heading-navigator-level-badge,
+.heading-navigator-panel.is-compact .heading-navigator-item:focus-within .heading-navigator-level-badge {
+    opacity: 0;
 }
 
 .heading-navigator-copy-button:hover,
