@@ -5,8 +5,11 @@
         "target": "es2020",
         "jsx": "react",
         "allowJs": true,
-        "baseUrl": ".",
         "esModuleInterop": true,
-        "types": ["node", "jest"]
+        "types": ["node", "jest"],
+        "paths": {
+            "api": ["./api/index.ts"],
+            "api/*": ["./api/*"]
+        }
     }
 }
