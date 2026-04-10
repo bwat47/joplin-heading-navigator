@@ -226,6 +226,19 @@ export function createPanelCss(dimensions: PanelDimensions): string {
     opacity: 0;
 }
 
+.heading-navigator-panel.is-compact .heading-navigator-copy-button {
+    right: 11px;
+    width: 22px;
+    height: 22px;
+    padding: 3px;
+    border-radius: 6px;
+}
+
+.heading-navigator-panel.is-compact .heading-navigator-copy-button svg {
+    width: 14px;
+    height: 14px;
+}
+
 .heading-navigator-copy-button:hover,
 .heading-navigator-copy-button:focus-visible {
     background-color: var(--joplin-background-color-hover3, #cbdaf1);
