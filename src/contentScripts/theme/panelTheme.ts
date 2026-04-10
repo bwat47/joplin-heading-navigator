@@ -117,6 +117,10 @@ export function createPanelCss(dimensions: PanelDimensions): string {
     background-color: transparent;
 }
 
+.heading-navigator-item:hover {
+    background-color: color-mix(in srgb, var(--joplin-selected-color, #e5e5e5) 50%, transparent);
+}
+
 .heading-navigator-item.is-selected {
     background-color: var(--joplin-selected-color, #e5e5e5);
     color: var(--joplin-color, #131313);
