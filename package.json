@@ -1,6 +1,6 @@
 {
     "name": "joplin-plugin-heading-navigator",
-    "version": "0.6.3",
+    "version": "0.6.4",
     "scripts": {
         "dist": "webpack --env joplin-plugin-config=buildMain && webpack --env joplin-plugin-config=buildExtraScripts && webpack --env joplin-plugin-config=createArchive",
         "prepare": "npm run dist",
@@ -30,7 +30,7 @@
         "@typescript-eslint/eslint-plugin": "^8.46.4",
         "@typescript-eslint/parser": "^8.46.4",
         "chalk": "^4.1.0",
-        "copy-webpack-plugin": "^13.0.1",
+        "copy-webpack-plugin": "^14.0.0",
         "eslint": "^9.39.1",
         "eslint-config-prettier": "^10.1.8",
         "eslint-plugin-prettier": "^5.5.4",
