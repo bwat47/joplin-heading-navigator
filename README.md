@@ -5,7 +5,7 @@
 
 A Joplin plugin that provides a simple overlay panel allowing you to navigate and filter headings in the markdown editor, inspired by sublime text's "go to symbol" function.
 
-![heading-navigator-demo](https://github.com/user-attachments/assets/c58e8c22-08fd-4041-acbb-c678d8de76ac)
+![heading-navigator-demo](https://github.com/bwat47/joplin-heading-navigator/blob/main/images/heading_navigator_example_desktop.gif)
 
 &nbsp;
 
