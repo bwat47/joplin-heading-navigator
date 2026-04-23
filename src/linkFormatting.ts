@@ -1,13 +1,17 @@
 /**
  * Utilities for formatting Joplin note links to headings.
  *
- * Creates markdown links in Joplin's internal link format: `[label](:/noteId#anchor)`
+ * Creates markdown links to headings in either Joplin note-link format
+ * or local anchor-link format.
  * Used by the copy-to-clipboard feature to generate shareable heading links.
  *
  * @example
  * ```typescript
- * formatHeadingLink('Introduction', 'My Note', 'abc123', 'introduction')
+ * formatExternalHeadingLink('Introduction', 'My Note', 'abc123', 'introduction')
  * // Returns: "[Introduction @ My Note](:/abc123#introduction)"
+ *
+ * formatInternalHeadingLink('Introduction', 'introduction')
+ * // Returns: "[Introduction](#introduction)"
  * ```
  */
 
@@ -23,7 +27,7 @@ export function escapeLinkText(text: string): string {
         .replace(/\]/g, '\\]');
 }
 
-export function formatHeadingLink(
+export function formatExternalHeadingLink(
     headingText: string,
     noteTitle: string,
     noteId: string,
@@ -33,3 +37,10 @@ export function formatHeadingLink(
     const target = `:/${noteId}#${headingAnchor}`;
     return `[${label}](${target})`;
 }
+
+export function formatInternalHeadingLink(headingText: string, headingAnchor: string): string {
+    const label = escapeLinkText(headingText);
+    return `[${label}](#${headingAnchor})`;
+}
+
+export const formatHeadingLink = formatExternalHeadingLink;

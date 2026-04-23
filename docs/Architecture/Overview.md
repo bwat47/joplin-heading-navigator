@@ -66,7 +66,7 @@ Panel appended to `view.scrollDOM.parentElement` to stay associated with specifi
 2. **Panel Display**: Content script extracts headings via Lezer, opens panel with active heading highlighted
 3. **Navigation**: Filter/navigate updates editor selection and scrolls heading into view
 4. **Selection**: Panel closes, cursor positioned at heading (Escape restores original state)
-5. **Copy**: Request sent to plugin host → formats markdown link → writes to clipboard
+5. **Copy**: Request sent to plugin host → reads copy-link setting → formats markdown link → writes to clipboard
 
 ## State Management
 

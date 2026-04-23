@@ -21,14 +21,22 @@ import joplin from 'api';
 import { ContentScriptType, MenuItemLocation, ToolbarButtonLocation } from 'api/types';
 import { CODEMIRROR_CONTENT_SCRIPT_ID, COMMAND_GO_TO_HEADING, EDITOR_COMMAND_TOGGLE_PANEL } from './constants';
 import logger from './logger';
-import { loadPanelSettings, registerPanelSettings } from './settings';
+import { loadCopyLinkSettings, loadPanelSettings, registerPanelSettings } from './settings';
 import type { ContentScriptToPluginMessage, CopyHeadingLinkMessage } from './messages';
-import { formatHeadingLink } from './linkFormatting';
+import { formatExternalHeadingLink, formatInternalHeadingLink } from './linkFormatting';
 
 async function handleCopyHeadingLink(message: CopyHeadingLinkMessage): Promise<void> {
     const { noteId, headingText, headingAnchor } = message;
 
     try {
+        const copyLinkSettings = await loadCopyLinkSettings();
+        if (copyLinkSettings.copyInternalAnchorLinks) {
+            const markdown = formatInternalHeadingLink(headingText, headingAnchor);
+            await joplin.clipboard.writeText(markdown);
+            logger.info('Copied internal heading link to clipboard', { noteId, headingAnchor });
+            return;
+        }
+
         const note = await joplin.data.get(['notes', noteId], { fields: ['id', 'title'] });
 
         if (!note || typeof note.id !== 'string') {
@@ -37,7 +45,7 @@ async function handleCopyHeadingLink(message: CopyHeadingLinkMessage): Promise<v
         }
 
         const noteTitle = typeof note.title === 'string' && note.title ? note.title : 'Untitled';
-        const markdown = formatHeadingLink(headingText, noteTitle, noteId, headingAnchor);
+        const markdown = formatExternalHeadingLink(headingText, noteTitle, noteId, headingAnchor);
 
         await joplin.clipboard.writeText(markdown);
         logger.info('Copied heading link to clipboard', { noteId, headingAnchor });
