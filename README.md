@@ -39,7 +39,7 @@ You can filter the list of headings using the search filter at the top of the pa
 
 ### Settings
 
-The plugin can be customized via Settings | Heading Navigator:
+The plugin can be customized via Tools | Options | Heading Navigator:
 
 - **Panel width**: 240-640px (default: 320px)
     - Useful for longer heading text or smaller screens
