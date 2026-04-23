@@ -465,10 +465,16 @@ export default function headingNavigator(context: ContentScriptContext): Markdow
                             initialSelectionRange.to
                         );
 
-                        view.dispatch({
-                            selection: selectionToRestore,
-                            effects: initialScrollSnapshot,
-                        });
+                        if (initialScrollSnapshot) {
+                            view.dispatch({
+                                selection: selectionToRestore,
+                                effects: initialScrollSnapshot,
+                            });
+                        } else {
+                            view.dispatch({
+                                selection: selectionToRestore,
+                            });
+                        }
                     } catch (error) {
                         logger.warn('Failed to restore editor selection after closing panel', error);
                     }
