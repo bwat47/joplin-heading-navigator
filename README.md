@@ -39,7 +39,7 @@ You can filter the list of headings using the search filter at the top of the pa
 
 ### Settings
 
-The panel appearance can be customized via Settings | Heading Navigator (desktop only):
+The plugin can be customized via Settings | Heading Navigator:
 
 - **Panel width**: 240-640px (default: 320px)
     - Useful for longer heading text or smaller screens
@@ -47,8 +47,9 @@ The panel appearance can be customized via Settings | Heading Navigator (desktop
     - Prevents the panel from obscuring too much content
 - **Compact mode**: Hide `H# - line #` metadata and reduce heading row height (default: off)
     - Shows more headings at once in the panel
+- **Copy internal anchor links**: Copy `[Heading](#heading-anchor)` instead of `[Heading @ Note](:/noteId#heading-anchor)` (default: off)
 
-Settings take effect the next time the panel is opened.
+Panel appearance settings take effect the next time the panel is opened. The copy link setting applies to the next copied link.
 
 ### Mobile Support
 

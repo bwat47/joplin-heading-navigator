@@ -27,18 +27,23 @@ const SECTION_ID = 'headingNavigator';
 const SETTING_PANEL_WIDTH = 'headingNavigator.panelWidth';
 const SETTING_PANEL_MAX_HEIGHT = 'headingNavigator.panelMaxHeightPercentage';
 const SETTING_COMPACT_MODE = 'headingNavigator.compactMode';
+const SETTING_COPY_INTERNAL_ANCHOR_LINKS = 'headingNavigator.copyInternalAnchorLinks';
 
 export interface PanelSettings {
     dimensions: PanelDimensions;
     compactMode: boolean;
 }
 
-function normalizeCompactMode(value: unknown): { value: boolean; changed: boolean } {
+export interface CopyLinkSettings {
+    copyInternalAnchorLinks: boolean;
+}
+
+function normalizeBooleanSetting(value: unknown, defaultValue: boolean): { value: boolean; changed: boolean } {
     if (typeof value === 'boolean') {
         return { value, changed: false };
     }
 
-    return { value: false, changed: true };
+    return { value: defaultValue, changed: true };
 }
 
 export async function registerPanelSettings(): Promise<void> {
@@ -80,6 +85,14 @@ export async function registerPanelSettings(): Promise<void> {
             label: 'Compact mode',
             description: '[Desktop Only] Hide heading metadata row and reduce list item height.',
         },
+        [SETTING_COPY_INTERNAL_ANCHOR_LINKS]: {
+            value: false,
+            type: SettingItemType.Bool,
+            public: true,
+            section: SECTION_ID,
+            label: 'Copy internal anchor links',
+            description: 'Copy [Heading](#heading-anchor) instead of [Heading @ Note](:/noteId#heading-anchor).',
+        },
     });
 }
 
@@ -96,7 +109,7 @@ export async function loadPanelSettings(): Promise<PanelSettings> {
         logger.warn(`Invalid panel height setting: ${values[SETTING_PANEL_MAX_HEIGHT]}. Using ${heightResult.value}%.`);
     }
 
-    const compactModeResult = normalizeCompactMode(values[SETTING_COMPACT_MODE]);
+    const compactModeResult = normalizeBooleanSetting(values[SETTING_COMPACT_MODE], false);
     if (compactModeResult.changed) {
         logger.warn(`Invalid compact mode setting: ${values[SETTING_COMPACT_MODE]}. Using ${compactModeResult.value}.`);
     }
@@ -107,5 +120,20 @@ export async function loadPanelSettings(): Promise<PanelSettings> {
             maxHeightRatio: heightResult.value / 100,
         },
         compactMode: compactModeResult.value,
+    };
+}
+
+export async function loadCopyLinkSettings(): Promise<CopyLinkSettings> {
+    const value = await joplin.settings.value(SETTING_COPY_INTERNAL_ANCHOR_LINKS);
+    const copyInternalAnchorLinksResult = normalizeBooleanSetting(value, false);
+
+    if (copyInternalAnchorLinksResult.changed) {
+        logger.warn(
+            `Invalid copy internal anchor links setting: ${value}. Using ${copyInternalAnchorLinksResult.value}.`
+        );
+    }
+
+    return {
+        copyInternalAnchorLinks: copyInternalAnchorLinksResult.value,
     };
 }

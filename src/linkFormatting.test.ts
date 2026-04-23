@@ -1,4 +1,9 @@
-import { escapeLinkText, formatHeadingLink } from './linkFormatting';
+import {
+    escapeLinkText,
+    formatExternalHeadingLink,
+    formatHeadingLink,
+    formatInternalHeadingLink,
+} from './linkFormatting';
 
 describe('escapeLinkText', () => {
     it('escapes square brackets', () => {
@@ -51,5 +56,24 @@ describe('formatHeadingLink', () => {
     it('formats link with special anchor characters', () => {
         const result = formatHeadingLink('Hello World', 'My Note', 'xyz', 'hello-world-2');
         expect(result).toBe('[Hello World @ My Note](:/xyz#hello-world-2)');
+    });
+});
+
+describe('formatExternalHeadingLink', () => {
+    it('formats external heading link with note title', () => {
+        const result = formatExternalHeadingLink('Usage', 'Guide', 'abc123', 'usage');
+        expect(result).toBe('[Usage @ Guide](:/abc123#usage)');
+    });
+});
+
+describe('formatInternalHeadingLink', () => {
+    it('formats internal anchor link with heading text only', () => {
+        const result = formatInternalHeadingLink('Usage', 'usage');
+        expect(result).toBe('[Usage](#usage)');
+    });
+
+    it('escapes special characters in heading text', () => {
+        const result = formatInternalHeadingLink('[API] <Guide> & Links', 'api-guide-links');
+        expect(result).toBe('[\\[API\\] \\<Guide\\> \\& Links](#api-guide-links)');
     });
 });
