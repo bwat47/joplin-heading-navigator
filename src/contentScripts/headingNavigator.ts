@@ -108,7 +108,7 @@ function scheduleScrollStabilization(options: {
                     const scrollDOM = measureView.scrollDOM;
                     const scrollRect = scrollDOM.getBoundingClientRect();
                     const start = measureView.coordsAtPos(selection.from);
-                    if (!start || Number.isNaN(scrollRect.top)) {
+                    if (!start) {
                         return {
                             selectionFrom: selection.from,
                             selectionTo: selection.to,
@@ -234,16 +234,13 @@ function setEditorSelection(view: EditorView, heading: HeadingItem, focusEditor:
 
         ensureEditorFocus(view, focusEditor);
 
+        // Catch cases where scrollIntoView bails or a later widget rebuild pushes the heading
+        // away from the viewport edge.
         scheduleScrollStabilization({
             view,
             targetRange: targetSelection.main,
             focusEditor,
         });
-
-        // Trigger one stabilization pass to catch cases where scrollIntoView bails or later layout
-        // shifts from widget rebuilds push the heading away from the viewport edge.
-        // Start alignment is more resilient to content changes above the heading since it
-        // doesn't depend on relative centering math.
     } catch (error) {
         logger.error('Failed to set editor selection', error);
     }
