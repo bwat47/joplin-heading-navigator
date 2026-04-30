@@ -11,13 +11,6 @@ A Joplin plugin providing heading-based document navigation for CodeMirror 6.
 - **Theme Integration**: Uses Joplin CSS variables
 - **Mobile Support**: Modal layout with long-press copy
 
-## Documentation
-
-- [Content-Script](Content-Script.md) - CodeMirror integration
-- [Panel-UI](Panel-UI.md) - Floating panel implementation
-- [Heading-Parsing](Heading-Parsing.md) - Lezer-based heading extraction
-- [Scroll-Stabilization](Scroll-Stabilization.md) - Layout shift compensation
-
 ---
 
 ## Architecture
