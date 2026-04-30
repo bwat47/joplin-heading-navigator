@@ -16,7 +16,7 @@ A Joplin plugin providing heading-based document navigation for CodeMirror 6.
 - [Content-Script](Content-Script.md) - CodeMirror integration
 - [Panel-UI](Panel-UI.md) - Floating panel implementation
 - [Heading-Parsing](Heading-Parsing.md) - Lezer-based heading extraction
-- [Scroll-Verification](Scroll-Verification.md) - Layout shift compensation
+- [Scroll-Stabilization](Scroll-Stabilization.md) - Layout shift compensation
 
 ---
 
@@ -26,15 +26,15 @@ Two-layer architecture: plugin host with Joplin API access and content script in
 
 ### Components
 
-| File                                     | Responsibility                                               |
-| ---------------------------------------- | ------------------------------------------------------------ |
-| `src/index.ts`                           | Plugin entry, command registration, API message handling     |
-| `src/contentScripts/headingNavigator.ts` | CodeMirror integration, panel lifecycle, scroll verification |
-| `src/contentScripts/ui/headingPanel.ts`  | Panel DOM, keyboard/mouse interactions, filtering            |
-| `src/contentScripts/ui/fuzzyFilter.ts`   | Fuzzy search ranking and match highlighting                  |
-| `src/contentScripts/theme/panelTheme.ts` | CSS generation using Joplin theme variables                  |
-| `src/headingExtractor.ts`                | Lezer-based heading parsing and anchor generation            |
-| `src/linkFormatting.ts`                  | Markdown link formatting for copy functionality              |
+| File                                     | Responsibility                                                |
+| ---------------------------------------- | ------------------------------------------------------------- |
+| `src/index.ts`                           | Plugin entry, command registration, API message handling      |
+| `src/contentScripts/headingNavigator.ts` | CodeMirror integration, panel lifecycle, scroll stabilization |
+| `src/contentScripts/ui/headingPanel.ts`  | Panel DOM, keyboard/mouse interactions, filtering             |
+| `src/contentScripts/ui/fuzzyFilter.ts`   | Fuzzy search ranking and match highlighting                   |
+| `src/contentScripts/theme/panelTheme.ts` | CSS generation using Joplin theme variables                   |
+| `src/headingExtractor.ts`                | Lezer-based heading parsing and anchor generation             |
+| `src/linkFormatting.ts`                  | Markdown link formatting for copy functionality               |
 
 ### Plugin Host
 

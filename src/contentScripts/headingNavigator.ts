@@ -6,7 +6,7 @@
  * - Integrates with CodeMirror 6 as a plugin extension
  * - Manages the floating heading panel UI lifecycle
  * - Handles editor state changes (document edits, cursor movement)
- * - Implements scroll verification for reliable heading navigation with dynamic content
+ * - Implements scroll stabilization for reliable heading navigation with dynamic content
  * - Sends messages to the plugin host for privileged operations (clipboard, note data)
  *
  * Architecture:
@@ -15,8 +15,8 @@
  * - Communication: Content script → plugin host via postMessage bridge (see messages.ts)
  *
  * Key challenge: Documents with dynamic content (images, rich markdown) cause layout shifts
- * after initial scroll. The scroll verification system uses retry logic to
- * ensure headings stay pinned to the viewport top despite these shifts.
+ * after initial scroll. The scroll stabilization pass re-measures once after
+ * the initial navigation and lets CodeMirror correct meaningful drift.
  *
  * See:
  * - index.ts - Plugin host that receives messages from this content script
@@ -35,59 +35,45 @@ import { HeadingPanel, type PanelCloseReason } from './ui/headingPanel';
 import { normalizePanelDimensions } from '../panelDimensions';
 import logger from '../logger';
 
-// Track active verification timeouts per editor. WeakMap ensures automatic
+// Track active stabilization timeouts per editor. WeakMap ensures automatic
 // cleanup when editor instances are destroyed (e.g., note close, plugin reload).
-const scrollVerificationTimeouts = new WeakMap<EditorView, number>();
+const scrollStabilizationTimeouts = new WeakMap<EditorView, number>();
 
-function cancelPendingVerification(view: EditorView): void {
-    const timeoutId = scrollVerificationTimeouts.get(view);
+function cancelPendingScrollStabilization(view: EditorView): void {
+    const timeoutId = scrollStabilizationTimeouts.get(view);
     if (typeof timeoutId === 'number') {
         window.clearTimeout(timeoutId);
-        scrollVerificationTimeouts.delete(view);
+        scrollStabilizationTimeouts.delete(view);
     }
 }
 
 /**
- * Scroll Verification Constants
+ * Scroll Stabilization Constants
  *
- * Tuned timing and tolerance values for the scroll verification retry system.
+ * Tuned timing and tolerance values for the single delayed stabilization pass.
  *
- * - SCROLL_VERIFY_DELAY_MS: Initial verification delay (~2 animation frames)
- * - SCROLL_VERIFY_RETRY_DELAY_MS: Second verification delay (guards against late shifts)
- * - SCROLL_VERIFY_TOLERANCE_PX: Acceptable offset below viewport top (12px)
- * - SCROLL_VERIFY_NEGATIVE_TOLERANCE_PX: Stricter tolerance above viewport top (1.5px)
- * - SCROLL_VERIFY_MAX_ATTEMPTS: Maximum retry attempts (2)
+ * - SCROLL_STABILIZE_DELAY_MS: Stabilization delay after initial scroll
+ * - SCROLL_STABILIZE_TOLERANCE_PX: Acceptable offset below viewport top
+ * - SCROLL_STABILIZE_NEGATIVE_TOLERANCE_PX: Stricter tolerance above viewport top
  */
-const SCROLL_VERIFY_DELAY_MS = 160;
-const SCROLL_VERIFY_RETRY_DELAY_MS = 260;
-const SCROLL_VERIFY_TOLERANCE_PX = 12;
-const SCROLL_VERIFY_NEGATIVE_TOLERANCE_PX = 1.5;
-const SCROLL_VERIFY_MAX_ATTEMPTS = 2;
+const SCROLL_STABILIZE_DELAY_MS = 160;
+const SCROLL_STABILIZE_TOLERANCE_PX = 12;
+const SCROLL_STABILIZE_NEGATIVE_TOLERANCE_PX = 1.5;
 
-type ScrollVerificationMeasurement =
-    | {
-          status: 'geometry';
-          selectionFrom: number;
-          selectionTo: number;
-          viewportTop: number;
-          blockTopOffset: number;
-      }
-    | {
-          status: 'retry';
-          selectionFrom: number;
-          selectionTo: number;
-      };
+type ScrollStabilizationMeasurement = {
+    selectionFrom: number;
+    selectionTo: number;
+    offsetFromViewportTop: number | null;
+    needsScroll: boolean;
+};
 
-function planScrollVerification(view: EditorView, attempt: number, run: () => void): void {
-    // attempt is 0-based: 0 for the first verification pass, 1 for the second, etc.
-    const delay = attempt === 0 ? SCROLL_VERIFY_DELAY_MS : SCROLL_VERIFY_RETRY_DELAY_MS;
-
+function planScrollStabilization(view: EditorView, run: () => void): void {
     const timeoutId = window.setTimeout(() => {
-        scrollVerificationTimeouts.delete(view);
+        scrollStabilizationTimeouts.delete(view);
         run();
-    }, delay);
+    }, SCROLL_STABILIZE_DELAY_MS);
 
-    scrollVerificationTimeouts.set(view, timeoutId);
+    scrollStabilizationTimeouts.set(view, timeoutId);
 }
 
 function ensureEditorFocus(view: EditorView, shouldFocus: boolean): void {
@@ -99,139 +85,91 @@ function ensureEditorFocus(view: EditorView, shouldFocus: boolean): void {
 }
 
 /**
- * Creates a scroll verification function that ensures a heading stays pinned to the viewport top.
+ * Schedules one delayed scroll stabilization pass for heading navigation.
  *
- * Why retry logic is needed:
- * - Dynamic content (images, code blocks) may finish rendering after initial scroll
- * - Late layout shifts push the heading out of view despite successful scrollIntoView
- * - Two-phase verification (160ms, 260ms) catches both immediate and deferred shifts
- * - Aborts if user moves cursor or after 2 attempts to prevent infinite loops
+ * Dynamic content (images, code blocks, selection-driven widgets) may shift after
+ * the initial scroll. Re-measuring once after CodeMirror has a chance to update
+ * catches common drift without maintaining a recursive retry system.
  *
- * @param options - Configuration for scroll verification
+ * @param options - Configuration for scroll stabilization
  * @param options.view - CodeMirror editor view instance
- * @param options.targetRange - Target selection range to verify (from/to positions)
- * @param options.focusEditor - Whether to restore editor focus after verification
- * @returns Verification function that accepts attempt number (0-based)
+ * @param options.targetRange - Target selection range to stabilize (from/to positions)
+ * @param options.focusEditor - Whether to restore editor focus after stabilization
  */
-function createScrollVerifier(options: {
+function scheduleScrollStabilization(options: {
     view: EditorView;
     targetRange: { from: number; to: number };
     focusEditor: boolean;
-}): (attempt: number) => void {
+}): void {
     const { view, targetRange, focusEditor } = options;
 
-    const verify = (attempt: number): void => {
-        if (attempt >= SCROLL_VERIFY_MAX_ATTEMPTS) {
-            return;
-        }
+    planScrollStabilization(view, () => {
+        view.requestMeasure({
+            read(measureView): ScrollStabilizationMeasurement | null {
+                const selection = measureView.state.selection.main;
+                if (!isSameSelection(selection, targetRange)) {
+                    return null;
+                }
 
-        planScrollVerification(view, attempt, () => {
-            view.requestMeasure({
-                read(measureView): ScrollVerificationMeasurement | null {
-                    const selection = measureView.state.selection.main;
-                    if (!isSameSelection(selection, targetRange)) {
-                        return null;
-                    }
-
-                    const blockMeasurement = measureSelectionBlock(measureView, selection);
-                    if (!blockMeasurement) {
-                        return {
-                            status: 'retry',
-                            selectionFrom: selection.from,
-                            selectionTo: selection.to,
-                        };
-                    }
-
+                const scrollDOM = measureView.scrollDOM;
+                const scrollRect = scrollDOM.getBoundingClientRect();
+                const start = measureView.coordsAtPos(selection.from);
+                if (!start || Number.isNaN(scrollRect.top)) {
                     return {
-                        status: 'geometry' as const,
-                        selectionFrom: blockMeasurement.selectionFrom,
+                        selectionFrom: selection.from,
                         selectionTo: selection.to,
-                        viewportTop: blockMeasurement.viewportTop,
-                        blockTopOffset: blockMeasurement.blockTopOffset,
+                        offsetFromViewportTop: null,
+                        needsScroll: true,
                     };
-                },
-                write(measurement, measureView) {
-                    if (!measurement) {
+                }
+
+                const offsetFromViewportTop = start.top - scrollRect.top;
+                const needsScroll =
+                    offsetFromViewportTop < 0
+                        ? Math.abs(offsetFromViewportTop) > SCROLL_STABILIZE_NEGATIVE_TOLERANCE_PX
+                        : offsetFromViewportTop > SCROLL_STABILIZE_TOLERANCE_PX;
+
+                return {
+                    selectionFrom: selection.from,
+                    selectionTo: selection.to,
+                    offsetFromViewportTop,
+                    needsScroll,
+                };
+            },
+            write(measurement, measureView) {
+                if (!measurement) {
+                    return;
+                }
+
+                const selection = measureView.state.selection.main;
+                if (!isSameSelection(selection, measurement)) {
+                    return;
+                }
+
+                logger.debug('Scroll stabilization measurement', measurement);
+
+                if (!measurement.needsScroll) {
+                    return;
+                }
+
+                // Defer dispatch to avoid "update is in progress" errors on mobile.
+                // Mobile WebViews can have different event timing that causes the
+                // write phase to overlap with other CodeMirror updates.
+                setTimeout(() => {
+                    const currentSelection = measureView.state.selection.main;
+                    if (!isSameSelection(currentSelection, measurement)) {
                         return;
                     }
 
-                    const selection = measureView.state.selection.main;
-                    if (!isSameSelection(selection, measurement)) {
-                        return;
-                    }
-
-                    if (measurement.status === 'retry') {
-                        if (attempt + 1 >= SCROLL_VERIFY_MAX_ATTEMPTS) {
-                            logger.warn('Scroll verification gave up after measurement failures', {
-                                selection: targetRange,
-                                attempts: attempt + 1,
-                            });
-                            return;
-                        }
-
-                        // Defer dispatch to avoid "update is in progress" errors on mobile.
-                        // Mobile WebViews can have different event timing that causes the
-                        // write phase to overlap with other CodeMirror updates.
-                        setTimeout(() => {
-                            measureView.dispatch({
-                                effects: EditorView.scrollIntoView(selection, { y: 'start' }),
-                            });
-
-                            ensureEditorFocus(measureView, focusEditor);
-
-                            verify(attempt + 1);
-                        }, 0);
-                        return;
-                    }
-
-                    const tolerance = SCROLL_VERIFY_TOLERANCE_PX;
-                    const offsetFromViewportTop = measurement.blockTopOffset;
-                    const needsScroll =
-                        offsetFromViewportTop < 0
-                            ? Math.abs(offsetFromViewportTop) > SCROLL_VERIFY_NEGATIVE_TOLERANCE_PX
-                            : offsetFromViewportTop > tolerance;
-
-                    if (!needsScroll) {
-                        // Stay on guard for late layout shifts (e.g. images loading) that can push the heading
-                        // below the viewport top; extra checks keep it pinned even when content settles.
-                        if (attempt + 1 < SCROLL_VERIFY_MAX_ATTEMPTS) {
-                            verify(attempt + 1);
-                        }
-                        return;
-                    }
-
-                    // Defer dispatch to avoid "update is in progress" errors on mobile.
-                    // Mobile WebViews can have different event timing that causes the
-                    // write phase to overlap with other CodeMirror updates.
-                    setTimeout(() => {
-                        const targetScrollTop = Math.max(measurement.viewportTop + offsetFromViewportTop, 0);
-                        // Force the scroll position in case CodeMirror bails out when it thinks the range is already visible.
-                        if (Math.abs(measureView.scrollDOM.scrollTop - targetScrollTop) > 1) {
-                            measureView.scrollDOM.scrollTop = targetScrollTop;
-                        }
-
-                        measureView.dispatch({
-                            effects: EditorView.scrollIntoView(selection, { y: 'start' }),
-                        });
-                        ensureEditorFocus(measureView, focusEditor);
-
-                        if (attempt + 1 < SCROLL_VERIFY_MAX_ATTEMPTS) {
-                            verify(attempt + 1);
-                        }
-                    }, 0);
-                },
-            });
+                    measureView.dispatch({
+                        effects: EditorView.scrollIntoView(currentSelection, { y: 'start', yMargin: 0 }),
+                    });
+                    ensureEditorFocus(measureView, focusEditor);
+                }, 0);
+            },
         });
-    };
-
-    return verify;
+    });
 }
-
-type SelectionBlockMeasurement = {
-    selectionFrom: number;
-    blockTopOffset: number;
-    viewportTop: number;
-};
 
 type SelectionLike = { from: number; to: number } | { selectionFrom: number; selectionTo: number } | null;
 
@@ -262,31 +200,6 @@ function isSameSelection(a: SelectionLike, b: SelectionLike): boolean {
     return normalizedA.from === normalizedB.from && normalizedA.to === normalizedB.to;
 }
 
-function measureSelectionBlock(
-    view: EditorView,
-    selection: { from: number; to: number }
-): SelectionBlockMeasurement | null {
-    const scrollDOM = view.scrollDOM;
-    const rect = scrollDOM.getBoundingClientRect();
-    if (Number.isNaN(rect.top)) {
-        return null;
-    }
-
-    const start = view.coordsAtPos(selection.from);
-    if (!start) {
-        return null;
-    }
-
-    const blockTopOffset = start.top - rect.top;
-    const viewportTop = scrollDOM.scrollTop;
-
-    return {
-        selectionFrom: selection.from,
-        blockTopOffset,
-        viewportTop,
-    };
-}
-
 function computeHeadings(state: EditorState): HeadingItem[] {
     return extractHeadings(state.doc.toString());
 }
@@ -312,7 +225,7 @@ function setEditorSelection(view: EditorView, heading: HeadingItem, focusEditor:
     try {
         const targetSelection = EditorSelection.single(heading.from);
 
-        cancelPendingVerification(view);
+        cancelPendingScrollStabilization(view);
 
         // Move the real selection so the caret and heading panel stay synchronized.
         // Rich Markdown reacts to this by rebuilding image widgets a moment later,
@@ -324,17 +237,16 @@ function setEditorSelection(view: EditorView, heading: HeadingItem, focusEditor:
 
         ensureEditorFocus(view, focusEditor);
 
-        const runVerification = createScrollVerifier({
+        scheduleScrollStabilization({
             view,
             targetRange: targetSelection.main,
             focusEditor,
         });
 
-        // Trigger visibility checks to catch cases where scrollIntoView bails or later layout
-        // shifts (from those widget rebuilds) push the heading away from the viewport edge.
+        // Trigger one stabilization pass to catch cases where scrollIntoView bails or later layout
+        // shifts from widget rebuilds push the heading away from the viewport edge.
         // Start alignment is more resilient to content changes above the heading since it
         // doesn't depend on relative centering math.
-        runVerification(0);
     } catch (error) {
         logger.error('Failed to set editor selection', error);
     }
@@ -457,7 +369,7 @@ export default function headingNavigator(context: ContentScriptContext): Markdow
                 panel = null;
 
                 if (restoreOriginalPosition && initialSelectionRange) {
-                    cancelPendingVerification(view);
+                    cancelPendingScrollStabilization(view);
 
                     try {
                         const selectionToRestore = EditorSelection.range(
