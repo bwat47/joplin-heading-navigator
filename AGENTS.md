@@ -1,10 +1,5 @@
 ## Project Architecture Documentation
 
-docs/Architecture/
-
-- Internal documentation about project architecture.
-- Keep up to date with significant architecture changes. Keep documentation concise, avoid repeating information.
-
 Architecture overview: docs/Architecture/Overview.md
 
 ## Guidelines
@@ -27,7 +22,7 @@ Start here when exploring the codebase:
 | File                                     | Responsibility                                                 |
 | ---------------------------------------- | -------------------------------------------------------------- |
 | `src/index.ts`                           | Plugin entry point, command registration, API message handling |
-| `src/contentScripts/headingNavigator.ts` | CodeMirror integration, panel lifecycle, scroll verification   |
+| `src/contentScripts/headingNavigator.ts` | CodeMirror integration, panel lifecycle, scroll Stabilization  |
 | `src/contentScripts/ui/headingPanel.ts`  | Floating panel DOM, keyboard/mouse interactions, filtering     |
 | `src/contentScripts/ui/fuzzyFilter.ts`   | Fuzzy search ranking and match highlighting                    |
 | `src/contentScripts/theme/panelTheme.ts` | CSS generation using Joplin theme variables                    |
