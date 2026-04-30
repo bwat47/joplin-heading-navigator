@@ -9,5 +9,6 @@ publish/
 *:Zone.Identifier
 *.patch
 *.diff
+.codex
 gemini/
 prompts/
