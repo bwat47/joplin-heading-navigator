@@ -41,7 +41,7 @@ const scrollStabilizationTimeouts = new WeakMap<EditorView, number>();
 
 function cancelPendingScrollStabilization(view: EditorView): void {
     const timeoutId = scrollStabilizationTimeouts.get(view);
-    if (typeof timeoutId === 'number') {
+    if (timeoutId !== undefined) {
         window.clearTimeout(timeoutId);
         scrollStabilizationTimeouts.delete(view);
     }
@@ -66,15 +66,6 @@ type ScrollStabilizationMeasurement = {
     offsetFromViewportTop: number | null;
     needsScroll: boolean;
 };
-
-function planScrollStabilization(view: EditorView, run: () => void): void {
-    const timeoutId = window.setTimeout(() => {
-        scrollStabilizationTimeouts.delete(view);
-        run();
-    }, SCROLL_STABILIZE_DELAY_MS);
-
-    scrollStabilizationTimeouts.set(view, timeoutId);
-}
 
 function ensureEditorFocus(view: EditorView, shouldFocus: boolean): void {
     if (!shouldFocus) {
@@ -103,72 +94,80 @@ function scheduleScrollStabilization(options: {
 }): void {
     const { view, targetRange, focusEditor } = options;
 
-    planScrollStabilization(view, () => {
-        view.requestMeasure({
-            read(measureView): ScrollStabilizationMeasurement | null {
-                const selection = measureView.state.selection.main;
-                if (!isSameSelection(selection, targetRange)) {
-                    return null;
-                }
+    cancelPendingScrollStabilization(view);
 
-                const scrollDOM = measureView.scrollDOM;
-                const scrollRect = scrollDOM.getBoundingClientRect();
-                const start = measureView.coordsAtPos(selection.from);
-                if (!start || Number.isNaN(scrollRect.top)) {
+    const timeoutId = window.setTimeout(() => {
+        try {
+            view.requestMeasure({
+                read(measureView): ScrollStabilizationMeasurement | null {
+                    const selection = measureView.state.selection.main;
+                    if (!isSameSelection(selection, targetRange)) {
+                        return null;
+                    }
+
+                    const scrollDOM = measureView.scrollDOM;
+                    const scrollRect = scrollDOM.getBoundingClientRect();
+                    const start = measureView.coordsAtPos(selection.from);
+                    if (!start || Number.isNaN(scrollRect.top)) {
+                        return {
+                            selectionFrom: selection.from,
+                            selectionTo: selection.to,
+                            offsetFromViewportTop: null,
+                            needsScroll: true,
+                        };
+                    }
+
+                    const offsetFromViewportTop = start.top - scrollRect.top;
+                    const needsScroll =
+                        offsetFromViewportTop < 0
+                            ? Math.abs(offsetFromViewportTop) > SCROLL_STABILIZE_NEGATIVE_TOLERANCE_PX
+                            : offsetFromViewportTop > SCROLL_STABILIZE_TOLERANCE_PX;
+
                     return {
                         selectionFrom: selection.from,
                         selectionTo: selection.to,
-                        offsetFromViewportTop: null,
-                        needsScroll: true,
+                        offsetFromViewportTop,
+                        needsScroll,
                     };
-                }
-
-                const offsetFromViewportTop = start.top - scrollRect.top;
-                const needsScroll =
-                    offsetFromViewportTop < 0
-                        ? Math.abs(offsetFromViewportTop) > SCROLL_STABILIZE_NEGATIVE_TOLERANCE_PX
-                        : offsetFromViewportTop > SCROLL_STABILIZE_TOLERANCE_PX;
-
-                return {
-                    selectionFrom: selection.from,
-                    selectionTo: selection.to,
-                    offsetFromViewportTop,
-                    needsScroll,
-                };
-            },
-            write(measurement, measureView) {
-                if (!measurement) {
-                    return;
-                }
-
-                const selection = measureView.state.selection.main;
-                if (!isSameSelection(selection, measurement)) {
-                    return;
-                }
-
-                logger.debug('Scroll stabilization measurement', measurement);
-
-                if (!measurement.needsScroll) {
-                    return;
-                }
-
-                // Defer dispatch to avoid "update is in progress" errors on mobile.
-                // Mobile WebViews can have different event timing that causes the
-                // write phase to overlap with other CodeMirror updates.
-                setTimeout(() => {
-                    const currentSelection = measureView.state.selection.main;
-                    if (!isSameSelection(currentSelection, measurement)) {
+                },
+                write(measurement, measureView) {
+                    if (!measurement) {
                         return;
                     }
 
-                    measureView.dispatch({
-                        effects: EditorView.scrollIntoView(currentSelection, { y: 'start', yMargin: 0 }),
-                    });
-                    ensureEditorFocus(measureView, focusEditor);
-                }, 0);
-            },
-        });
-    });
+                    const selection = measureView.state.selection.main;
+                    if (!isSameSelection(selection, measurement)) {
+                        return;
+                    }
+
+                    logger.debug('Scroll stabilization measurement', measurement);
+
+                    if (!measurement.needsScroll) {
+                        return;
+                    }
+
+                    // Defer dispatch to avoid "update is in progress" errors on mobile.
+                    // Mobile WebViews can have different event timing that causes the
+                    // write phase to overlap with other CodeMirror updates.
+                    setTimeout(() => {
+                        const currentSelection = measureView.state.selection.main;
+                        if (!isSameSelection(currentSelection, measurement)) {
+                            return;
+                        }
+
+                        measureView.dispatch({
+                            effects: EditorView.scrollIntoView(currentSelection, { y: 'start', yMargin: 0 }),
+                        });
+                        ensureEditorFocus(measureView, focusEditor);
+                    }, 0);
+                },
+            });
+        } finally {
+            scrollStabilizationTimeouts.delete(view);
+        }
+    }, SCROLL_STABILIZE_DELAY_MS);
+
+    scrollStabilizationTimeouts.set(view, timeoutId);
 }
 
 type SelectionLike = { from: number; to: number } | { selectionFrom: number; selectionTo: number } | null;
@@ -224,8 +223,6 @@ function findActiveHeadingId(headings: HeadingItem[], position: number): string 
 function setEditorSelection(view: EditorView, heading: HeadingItem, focusEditor: boolean): void {
     try {
         const targetSelection = EditorSelection.single(heading.from);
-
-        cancelPendingScrollStabilization(view);
 
         // Move the real selection so the caret and heading panel stay synchronized.
         // Rich Markdown reacts to this by rebuilding image widgets a moment later,
