@@ -1,10 +1,5 @@
 ## Project Architecture Documentation
 
-docs/Architecture/
-
-- Internal documentation about project architecture.
-- Keep up to date with significant architecture changes. Keep documentation concise, avoid repeating information.
-
 Architecture overview: docs/Architecture/Overview.md
 
 ## Guidelines
