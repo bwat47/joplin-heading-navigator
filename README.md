@@ -1,5 +1,5 @@
-> [!important]
-> My coding knowledge is currently very limited. This plugin was created entirely with AI tools, and I may be limited in my ability to fix any issues.
+> [!note]
+> This plugin was created entirely with AI tools.
 
 # Heading Navigator
 
