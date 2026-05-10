@@ -20,8 +20,7 @@ import { Text } from '@codemirror/state';
 import { SyntaxNode } from '@lezer/common';
 import logger from './logger';
 import { HeadingItem } from './types';
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const uslug = require('@joplin/fork-uslug');
+import uslug from '@joplin/fork-uslug';
 
 const UNSUPPORTED_INLINE_FORMATTING_PATTERN = /(==|\+\+)(?=\S)([\s\S]*?\S)\1/g;
 
