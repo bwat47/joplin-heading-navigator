@@ -23,6 +23,8 @@ import { HeadingItem } from './types';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const uslug = require('@joplin/fork-uslug');
 
+const UNSUPPORTED_INLINE_FORMATTING_PATTERN = /(==|\+\+)(?=\S)([\s\S]*?\S)\1/g;
+
 function parseHeadingLevel(nodeName: string): number | null {
     if (nodeName.startsWith('ATXHeading')) {
         const level = Number(nodeName.replace('ATXHeading', ''));
@@ -130,6 +132,17 @@ function extractInlineText(node: SyntaxNode, doc: string): string {
 }
 
 /**
+ * Strips inline formatting that Joplin supports but @lezer/markdown does not parse.
+ *
+ * Examples:
+ * - "==highlight==" -> "highlight"
+ * - "++insert++" -> "insert"
+ */
+function stripUnsupportedInlineFormatting(text: string): string {
+    return text.replace(UNSUPPORTED_INLINE_FORMATTING_PATTERN, '$2');
+}
+
+/**
  * Normalizes heading text using Lezer AST to extract clean text.
  *
  * @param node - Lezer heading node (ATXHeading or SetextHeading)
@@ -137,7 +150,7 @@ function extractInlineText(node: SyntaxNode, doc: string): string {
  * @returns Cleaned heading text without markdown formatting
  */
 function normalizeHeadingText(node: SyntaxNode, doc: string): string {
-    return extractInlineText(node, doc).replace(/\s+/g, ' ').trim();
+    return stripUnsupportedInlineFormatting(extractInlineText(node, doc)).replace(/\s+/g, ' ').trim();
 }
 
 function createUniqueAnchor(text: string, fallback: string, counts: Map<string, number>): string {
