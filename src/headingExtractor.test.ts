@@ -188,6 +188,19 @@ describe('extractHeadings', () => {
         expect(headings[4].text).toBe('Image');
     });
 
+    it('strips mark and insert formatting while preserving text', () => {
+        const content = `# ==Highlighted== Heading
+## ++Inserted++ Text
+### Mixed ==highlight== and ++insert++ syntax
+#### Comparison a == b and c ++ d`;
+        const headings = extractHeadings(content);
+
+        expect(headings[0].text).toBe('Highlighted Heading');
+        expect(headings[1].text).toBe('Inserted Text');
+        expect(headings[2].text).toBe('Mixed highlight and insert syntax');
+        expect(headings[3].text).toBe('Comparison a == b and c ++ d');
+    });
+
     it('handles nested and mixed inline formatting', () => {
         const content = `# **_Bold and Italic_** Text
 ## [**Bold Link**](url)
