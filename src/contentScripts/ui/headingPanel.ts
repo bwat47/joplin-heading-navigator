@@ -9,6 +9,7 @@ const INDENT_BASE_PX = 12;
 const INDENT_PER_LEVEL_PX = 12;
 const FILTER_DEBOUNCE_MS = 100;
 const PREVIEW_DEBOUNCE_MS = 30;
+const PANEL_RIGHT_GAP_PX = 8;
 
 export type PanelCloseReason = 'escape' | 'blur';
 
@@ -92,6 +93,8 @@ export class HeadingPanel {
     private readonly handleTouchEndListener: (e: TouchEvent) => void;
 
     private readonly copyButtonController = new CopyButtonController();
+
+    private scrollerObserver: ResizeObserver | null = null;
 
     public constructor(
         view: EditorView,
@@ -301,6 +304,10 @@ export class HeadingPanel {
             clearTimeout(this.filterDebounceTimer);
             this.filterDebounceTimer = null;
         }
+        if (this.scrollerObserver) {
+            this.scrollerObserver.disconnect();
+            this.scrollerObserver = null;
+        }
         this.copyButtonController.destroy(this.list);
         if (this.container.parentElement) {
             this.container.parentElement.removeChild(this.container);
@@ -336,7 +343,19 @@ export class HeadingPanel {
             const scrollRoot = this.view.scrollDOM.parentElement;
             const fallbackRoot = this.view.dom.parentElement ?? this.view.dom;
             (scrollRoot ?? fallbackRoot).appendChild(this.container);
+
+            if (this.isMobile) return;
+
+            this.updateRightOffset();
+            this.scrollerObserver = new ResizeObserver(() => this.updateRightOffset());
+            this.scrollerObserver.observe(this.view.scrollDOM);
         }
+    }
+
+    private updateRightOffset(): void {
+        const scrollDOM = this.view.scrollDOM;
+        const scrollbarWidth = scrollDOM.offsetWidth - scrollDOM.clientWidth;
+        this.container.style.right = `${scrollbarWidth + PANEL_RIGHT_GAP_PX}px`;
     }
 
     private setHeadings(headings: HeadingItem[], filterText = '', emitPreview = true): void {
