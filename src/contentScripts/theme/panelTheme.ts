@@ -91,11 +91,15 @@ export function createPanelCss(dimensions: PanelDimensions): string {
     overflow-y: auto;
     font-size: 13px;
     background-color: inherit;
-    scrollbar-color: var(--joplin-scrollbar-thumb-color, rgba(50, 55, 63, 0.54)) transparent;
 }
 
 .heading-navigator-list::-webkit-scrollbar {
     width: 8px;
+}
+
+/* Hide the scrollbar up/down arrow buttons (Chromium renders these by default) */
+.heading-navigator-list::-webkit-scrollbar-button {
+    display: none;
 }
 
 .heading-navigator-list::-webkit-scrollbar-thumb {
