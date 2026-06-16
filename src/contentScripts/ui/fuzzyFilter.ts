@@ -18,6 +18,7 @@ const FUZZY_LIMIT = 100;
  *
  * When query is empty, returns headings in original order.
  * When query is provided, returns headings ranked by match relevance.
+ * Equal-scoring matches keep the original document order.
  *
  * @param query - Search query string
  * @param headings - Array of headings to filter
@@ -30,13 +31,16 @@ export function fuzzyFilter(query: string, headings: HeadingItem[]): HeadingItem
         return [...headings];
     }
 
+    const documentOrder = new Map(headings.map((heading, index) => [heading, index]));
     const results = fuzzysort.go(normalized, headings, {
         key: 'text',
         limit: FUZZY_LIMIT,
         threshold: FUZZY_THRESHOLD,
     });
 
-    return results.map((result) => result.obj);
+    return [...results]
+        .sort((a, b) => b.score - a.score || documentOrder.get(a.obj)! - documentOrder.get(b.obj)!)
+        .map((result) => result.obj);
 }
 
 /**

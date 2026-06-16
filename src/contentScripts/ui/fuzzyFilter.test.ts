@@ -43,6 +43,18 @@ describe('fuzzyFilter', () => {
         expect(results[0].text).toBe('Configuration');
     });
 
+    it('orders equal-scoring matches by document order', () => {
+        const equalScoreHeadings = [
+            createHeading('Zeta Alpha', 'h1'),
+            createHeading('Beta Alpha', 'h2'),
+            createHeading('Gamma Alpha', 'h3'),
+        ];
+
+        const results = fuzzyFilter('alpha', equalScoreHeadings);
+
+        expect(results.map((heading) => heading.id)).toEqual(['h1', 'h2', 'h3']);
+    });
+
     it('matches acronyms and sequential characters', () => {
         const results = fuzzyFilter('gs', headings);
         expect(results.length).toBeGreaterThan(0);
