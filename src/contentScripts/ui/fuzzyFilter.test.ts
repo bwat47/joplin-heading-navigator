@@ -43,6 +43,21 @@ describe('fuzzyFilter', () => {
         expect(results[0].text).toBe('Configuration');
     });
 
+    it('orders equal-scoring matches by document order', () => {
+        // Same-length prefixes so all three produce an identical fuzzysort score (a true tie).
+        // fuzzysort returns ties in reverse input order here, so this fails without the
+        // document-order tiebreaker rather than passing on Array.sort stability alone.
+        const equalScoreHeadings = [
+            createHeading('Zeta Alpha', 'h1'),
+            createHeading('Beta Alpha', 'h2'),
+            createHeading('Iota Alpha', 'h3'),
+        ];
+
+        const results = fuzzyFilter('alpha', equalScoreHeadings);
+
+        expect(results.map((heading) => heading.id)).toEqual(['h1', 'h2', 'h3']);
+    });
+
     it('matches acronyms and sequential characters', () => {
         const results = fuzzyFilter('gs', headings);
         expect(results.length).toBeGreaterThan(0);
