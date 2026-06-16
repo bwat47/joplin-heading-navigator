@@ -31,6 +31,9 @@ export function fuzzyFilter(query: string, headings: HeadingItem[]): HeadingItem
         return [...headings];
     }
 
+    // Keyed by object identity: fuzzysort returns the same HeadingItem references we pass in
+    // (as result.obj), so we can look their document position back up here. Assumes each
+    // HeadingItem appears at most once in `headings` (duplicate references would collapse).
     const documentOrder = new Map(headings.map((heading, index) => [heading, index]));
     const results = fuzzysort.go(normalized, headings, {
         key: 'text',
@@ -38,6 +41,10 @@ export function fuzzyFilter(query: string, headings: HeadingItem[]): HeadingItem
         threshold: FUZZY_THRESHOLD,
     });
 
+    // The document-order tiebreaker only reorders within the result set fuzzysort returns.
+    // FUZZY_LIMIT is applied by fuzzysort *before* this sort, so for ties straddling the
+    // limit boundary, which items survive the cap is fuzzysort's decision, not document order.
+    // This only matters with 100+ matching headings, so it's an accepted edge case.
     return [...results]
         .sort((a, b) => b.score - a.score || documentOrder.get(a.obj)! - documentOrder.get(b.obj)!)
         .map((result) => result.obj);

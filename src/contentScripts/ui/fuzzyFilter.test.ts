@@ -44,10 +44,13 @@ describe('fuzzyFilter', () => {
     });
 
     it('orders equal-scoring matches by document order', () => {
+        // Same-length prefixes so all three produce an identical fuzzysort score (a true tie).
+        // fuzzysort returns ties in reverse input order here, so this fails without the
+        // document-order tiebreaker rather than passing on Array.sort stability alone.
         const equalScoreHeadings = [
             createHeading('Zeta Alpha', 'h1'),
             createHeading('Beta Alpha', 'h2'),
-            createHeading('Gamma Alpha', 'h3'),
+            createHeading('Iota Alpha', 'h3'),
         ];
 
         const results = fuzzyFilter('alpha', equalScoreHeadings);
