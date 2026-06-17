@@ -247,6 +247,20 @@ describe('extractHeadings', () => {
         expect(headings[1].text).toBe('Text with bold gaps');
     });
 
+    it('keeps autolink targets and bare URLs as visible heading text', () => {
+        const content = `# Visit <https://example.com>
+## 6. Resources \`test\` mailto:bwat47@gmail.com`;
+        const headings = extractHeadings(content);
+
+        // Angle-bracket autolink: the URL is visible text (only the < > marks are stripped).
+        expect(headings[0].text).toBe('Visit https://example.com');
+        expect(headings[0].anchor).toBe('visit-httpsexamplecom');
+
+        // Bare URL/email: not autolinked by the base parser, kept as plain text.
+        expect(headings[1].text).toBe('6. Resources test mailto:bwat47@gmail.com');
+        expect(headings[1].anchor).toBe('6-resources-test-mailtobwat47gmailcom');
+    });
+
     it('handles reference-style links', () => {
         const content = `# [Reference Link][ref]
 ## [Another][1]`;

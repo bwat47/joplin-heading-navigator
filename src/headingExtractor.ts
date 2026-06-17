@@ -83,14 +83,20 @@ function extractInlineText(node: SyntaxNode, doc: string): string {
             out += doc.slice(lastPos, from);
         }
 
+        // A URL node is a hidden link destination only inside a Link/Image
+        // (e.g. [text](url) / ![alt](url)). An autolink target (<https://...>)
+        // is visible heading text, so it must be kept (matches Joplin's heading IDs).
+        const parentName = cursor.node.parent?.name;
+        const isLinkDestination = name === 'URL' && (parentName === 'Link' || parentName === 'Image');
+
         // --- Skip non-content tokens ---
         if (
             name.endsWith('Mark') || // EmphasisMark, StrongMark, CodeMark, LinkMark, ImageMark...
             name === 'HeaderMark' || // ATX heading # symbols and Setext underlines
             name === 'Image' || // Skip images entirely (no alt text extraction)
-            name === 'URL' ||
             name === 'LinkLabel' ||
-            name === 'LinkTitle'
+            name === 'LinkTitle' ||
+            isLinkDestination
         ) {
             lastPos = to;
             continue;
@@ -110,8 +116,8 @@ function extractInlineText(node: SyntaxNode, doc: string): string {
             continue;
         }
 
-        // --- Leaf text ---
-        if (name === 'Text' || name === 'CodeText') {
+        // --- Leaf text (incl. visible autolink targets, which reach here as URL) ---
+        if (name === 'Text' || name === 'CodeText' || name === 'URL') {
             out += doc.slice(from, to);
             lastPos = to;
             continue;
