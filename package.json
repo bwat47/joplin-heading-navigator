@@ -1,6 +1,6 @@
 {
     "name": "joplin-plugin-heading-navigator",
-    "version": "0.6.7",
+    "version": "0.6.8",
     "scripts": {
         "dist": "webpack --env joplin-plugin-config=buildMain && webpack --env joplin-plugin-config=buildExtraScripts && webpack --env joplin-plugin-config=createArchive",
         "prepare": "npm run dist",
@@ -39,8 +39,8 @@
         "jest": "^30.4.2",
         "jest-environment-jsdom": "^30.4.1",
         "prettier": "^3.8.3",
-        "tar": "^7.5.9",
-        "ts-jest": "^29.4.9",
+        "tar": "^7.5.16",
+        "ts-jest": "^29.4.11",
         "ts-loader": "^9.5.7",
         "typescript": "^6.0.3",
         "webpack": "^5.106.2",
@@ -49,5 +49,8 @@
     "dependencies": {
         "@joplin/fork-uslug": "^2.0.6",
         "fuzzysort": "^3.1.0"
+    },
+    "overrides": {
+        "js-yaml": "^4.2.0"
     }
 }
