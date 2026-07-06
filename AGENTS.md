@@ -41,6 +41,7 @@ Start here when exploring the codebase:
 - `npm run lint` Lint TypeScript with ESLint.
 - `npm run lint:fix` Auto-fix lint issues.
 - `npm run format` Format code with Prettier.
+- `npm run knip` Find unused dependencies, exports and files.
 - `npm run updateVersion` Sync plugin version metadata.
 
 ## Design Principles
