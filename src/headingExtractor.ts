@@ -17,7 +17,7 @@
 
 import { parser } from '@lezer/markdown';
 import { Text } from '@codemirror/state';
-import { SyntaxNode } from '@lezer/common';
+import type { SyntaxNode } from '@lezer/common';
 import logger from './logger';
 import { HeadingItem } from './types';
 import uslug from '@joplin/fork-uslug';

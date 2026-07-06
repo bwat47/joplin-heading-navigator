@@ -42,5 +42,3 @@ export function formatInternalHeadingLink(headingText: string, headingAnchor: st
     const label = escapeLinkText(headingText);
     return `[${label}](#${headingAnchor})`;
 }
-
-export const formatHeadingLink = formatExternalHeadingLink;

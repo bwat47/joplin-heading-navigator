@@ -1,9 +1,4 @@
-import {
-    escapeLinkText,
-    formatExternalHeadingLink,
-    formatHeadingLink,
-    formatInternalHeadingLink,
-} from './linkFormatting';
+import { escapeLinkText, formatExternalHeadingLink, formatInternalHeadingLink } from './linkFormatting';
 
 describe('escapeLinkText', () => {
     it('escapes square brackets', () => {
@@ -32,37 +27,30 @@ describe('escapeLinkText', () => {
     });
 });
 
-describe('formatHeadingLink', () => {
+describe('formatExternalHeadingLink', () => {
     it('formats heading link with note title', () => {
-        const result = formatHeadingLink('Usage', 'Guide', 'abc123', 'usage');
+        const result = formatExternalHeadingLink('Usage', 'Guide', 'abc123', 'usage');
         expect(result).toBe('[Usage @ Guide](:/abc123#usage)');
     });
 
     it('escapes special characters in heading and note title', () => {
-        const result = formatHeadingLink('[API]', '[Docs]', 'abc', 'api');
+        const result = formatExternalHeadingLink('[API]', '[Docs]', 'abc', 'api');
         expect(result).toBe('[\\[API\\] @ \\[Docs\\]](:/abc#api)');
     });
 
     it('escapes HTML tags in heading and note title', () => {
-        const result = formatHeadingLink('<div>', 'Section & Links', 'note', 'div');
+        const result = formatExternalHeadingLink('<div>', 'Section & Links', 'note', 'div');
         expect(result).toBe('[\\<div\\> @ Section \\& Links](:/note#div)');
     });
 
     it('handles headings with backslashes', () => {
-        const result = formatHeadingLink('Path\\to\\file', 'Note\\Title', 'id123', 'path-to-file');
+        const result = formatExternalHeadingLink('Path\\to\\file', 'Note\\Title', 'id123', 'path-to-file');
         expect(result).toBe('[Path\\\\to\\\\file @ Note\\\\Title](:/id123#path-to-file)');
     });
 
     it('formats link with special anchor characters', () => {
-        const result = formatHeadingLink('Hello World', 'My Note', 'xyz', 'hello-world-2');
+        const result = formatExternalHeadingLink('Hello World', 'My Note', 'xyz', 'hello-world-2');
         expect(result).toBe('[Hello World @ My Note](:/xyz#hello-world-2)');
-    });
-});
-
-describe('formatExternalHeadingLink', () => {
-    it('formats external heading link with note title', () => {
-        const result = formatExternalHeadingLink('Usage', 'Guide', 'abc123', 'usage');
-        expect(result).toBe('[Usage @ Guide](:/abc123#usage)');
     });
 });
 
