@@ -7,7 +7,7 @@
         "allowJs": true,
         "esModuleInterop": true,
         "moduleResolution": "bundler",
-        "types": ["node", "jest"],
+        "types": ["node", "vitest/globals"],
         "paths": {
             "api": ["./api/index.ts"],
             "api/*": ["./api/*"]

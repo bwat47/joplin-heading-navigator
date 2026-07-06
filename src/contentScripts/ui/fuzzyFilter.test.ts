@@ -1,7 +1,3 @@
-/**
- * @jest-environment jsdom
- */
-
 import { fuzzyFilter, highlightMatch } from './fuzzyFilter';
 import type { HeadingItem } from '../../types';
 
