@@ -6,7 +6,7 @@ A Joplin plugin providing heading-based document navigation for CodeMirror 6.
 
 - **Fuzzy Filtering**: Fuzzy search with match relevance ranking
 - **Live Preview**: Scroll to headings during navigation without committing
-- **Keyboard Navigation**: Arrow keys, Tab cycling, Escape to cancel
+- **Keyboard Navigation**: Arrow keys and Tab cycle headings; Escape cancels transient navigation or returns focus to the editor when pinned
 - **Pinned Navigation**: Desktop panel can remain visible and follow the editor cursor
 - **Copy Heading Links**: Generate markdown anchor links
 - **Theme Integration**: Uses Joplin CSS variables
@@ -20,15 +20,15 @@ Two-layer architecture: plugin host with Joplin API access and content script in
 
 ### Components
 
-| File                                     | Responsibility                                                |
-| ---------------------------------------- | ------------------------------------------------------------- |
-| `src/index.ts`                           | Plugin entry, command registration, API message handling      |
-| `src/contentScripts/headingNavigator.ts` | CodeMirror integration, panel lifecycle, scroll stabilization |
-| `src/contentScripts/ui/headingPanel.ts`  | Panel DOM, keyboard/mouse interactions, filtering             |
-| `src/contentScripts/ui/fuzzyFilter.ts`   | Fuzzy search ranking and match highlighting                   |
-| `src/contentScripts/theme/panelTheme.ts` | CSS generation using Joplin theme variables                   |
-| `src/headingExtractor.ts`                | Lezer-based heading parsing and anchor generation             |
-| `src/linkFormatting.ts`                  | Markdown link formatting for copy functionality               |
+| File                                     | Responsibility                                                                                                   |
+| ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `src/index.ts`                           | Plugin entry, command registration, API message handling                                                         |
+| `src/contentScripts/headingNavigator.ts` | CodeMirror integration, pinned/transient lifecycle, debounced extraction, cursor following, scroll stabilization |
+| `src/contentScripts/ui/headingPanel.ts`  | Panel DOM, pin and focus state, keyboard/mouse interactions, filtering                                           |
+| `src/contentScripts/ui/fuzzyFilter.ts`   | Fuzzy search ranking and match highlighting                                                                      |
+| `src/contentScripts/theme/panelTheme.ts` | CSS generation using Joplin theme variables                                                                      |
+| `src/headingExtractor.ts`                | Lezer-based heading parsing and anchor generation                                                                |
+| `src/linkFormatting.ts`                  | Markdown link formatting for copy functionality                                                                  |
 
 ### Plugin Host
 
