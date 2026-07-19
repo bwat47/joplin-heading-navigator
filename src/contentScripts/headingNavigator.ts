@@ -29,7 +29,7 @@ import { EditorView, ViewPlugin, ViewUpdate } from '@codemirror/view';
 import type { CodeMirrorControl, ContentScriptContext, MarkdownEditorContentScriptModule } from 'api/types';
 import { EDITOR_COMMAND_TOGGLE_PANEL } from '../constants';
 import type { HeadingItem, PanelDimensions } from '../types';
-import type { ContentScriptToPluginMessage } from '../messages';
+import type { ContentScriptToPluginMessage, PanelRestoreState } from '../messages';
 import { extractHeadings } from '../headingExtractor';
 import { HeadingPanel, type PanelCloseReason } from './ui/headingPanel';
 import { normalizePanelDimensions } from '../panelDimensions';
@@ -270,6 +270,12 @@ export default function headingNavigator(context: ContentScriptContext): Markdow
             let initialSelectionRange: { from: number; to: number } | null = null;
             let initialScrollSnapshot: ReturnType<EditorView['scrollSnapshot']> | null = null;
             let headingReparseTimer: number | null = null;
+            // Suppresses persistence while programmatically re-pinning during startup restore,
+            // so only user-initiated pin toggles write to settings.
+            let suppressPinPersist = false;
+            // Set on editor teardown so the async startup restore cannot mount a panel
+            // (and leak its document-level listeners) against a destroyed view.
+            let editorDestroyed = false;
             const noteIdFacet = editorControl.joplinExtensions?.noteIdFacet;
 
             const resolveNoteId = (): string | null => {
@@ -312,6 +318,19 @@ export default function headingNavigator(context: ContentScriptContext): Markdow
                 }
             };
 
+            const persistPinnedState = async (pinned: boolean): Promise<void> => {
+                const message: ContentScriptToPluginMessage = {
+                    type: 'persistPinnedState',
+                    pinned,
+                };
+
+                try {
+                    await context.postMessage(message);
+                } catch (error) {
+                    logger.error('Failed to persist panel pinned state', error);
+                }
+            };
+
             const ensurePanel = (isMobile: boolean): HeadingPanel => {
                 if (!panel) {
                     panel = new HeadingPanel(
@@ -337,6 +356,9 @@ export default function headingNavigator(context: ContentScriptContext): Markdow
                                     initialSelectionRange = null;
                                     initialScrollSnapshot = null;
                                 }
+                                if (!suppressPinPersist) {
+                                    void persistPinnedState(pinned);
+                                }
                             },
                             onRequestEditorFocus: () => {
                                 ensureEditorFocus(view, true);
@@ -351,14 +373,14 @@ export default function headingNavigator(context: ContentScriptContext): Markdow
                 return panel;
             };
 
-            const openPanel = (isMobile: boolean): void => {
+            const openPanel = (isMobile: boolean, focusInput = true): void => {
                 headings = computeHeadings(view.state);
                 const activeHeadingId = findActiveHeadingId(headings, view.state.selection.main.head);
                 const selection = view.state.selection.main;
                 initialSelectionRange = { from: selection.from, to: selection.to };
                 initialScrollSnapshot = view.scrollSnapshot();
 
-                ensurePanel(isMobile).open(headings, activeHeadingId);
+                ensurePanel(isMobile).open(headings, activeHeadingId, focusInput);
             };
 
             const updatePanelHeadings = (): void => {
@@ -466,14 +488,45 @@ export default function headingNavigator(context: ContentScriptContext): Markdow
             const lifecyclePlugin = ViewPlugin.fromClass(
                 class {
                     public destroy(): void {
+                        editorDestroyed = true;
                         closePanel();
                         cancelPendingScrollStabilization(view);
                     }
                 }
             );
 
+            const restorePinnedPanel = async (): Promise<void> => {
+                const message: ContentScriptToPluginMessage = { type: 'getPanelRestoreState' };
+
+                try {
+                    const state = (await context.postMessage(message)) as PanelRestoreState | null | undefined;
+                    if (editorDestroyed || !state?.pinned || state.isMobile) {
+                        return;
+                    }
+
+                    // The user may have opened the panel before the round-trip finished.
+                    if (panel?.isOpen()) {
+                        return;
+                    }
+
+                    panelDimensions = normalizePanelDimensions(state.dimensions);
+                    compactMode = state.compactMode === true;
+
+                    openPanel(false, false);
+                    suppressPinPersist = true;
+                    try {
+                        panel?.setPinned(true);
+                    } finally {
+                        suppressPinPersist = false;
+                    }
+                } catch (error) {
+                    logger.warn('Failed to restore pinned panel state', error);
+                }
+            };
+
             editorControl.addExtension([updateListener, lifecyclePlugin]);
             editorControl.registerCommand(EDITOR_COMMAND_TOGGLE_PANEL, togglePanel);
+            void restorePinnedPanel();
         },
     };
 }

@@ -7,7 +7,7 @@ A Joplin plugin providing heading-based document navigation for CodeMirror 6.
 - **Fuzzy Filtering**: Fuzzy search with match relevance ranking
 - **Live Preview**: Scroll to headings during navigation without committing
 - **Keyboard Navigation**: Arrow keys and Tab cycle headings; Escape cancels transient navigation or returns focus to the editor when pinned
-- **Pinned Navigation**: Desktop panel can remain visible and follow the editor cursor
+- **Pinned Navigation**: Desktop panel can remain visible and follow the editor cursor; pinned state persists across editor reloads
 - **Copy Heading Links**: Generate markdown anchor links
 - **Theme Integration**: Uses Joplin CSS variables
 - **Mobile Support**: Modal layout with long-press copy
@@ -62,10 +62,12 @@ Panel appended to `view.scrollDOM.parentElement` to stay associated with specifi
 4. **Transient Selection**: Selection closes the panel; Escape restores the original state if the panel was never pinned
 5. **Pinned Selection**: Selection returns focus to the editor while the mounted panel follows cursor movement
 6. **Copy**: Request sent to plugin host → reads copy-link setting → formats markdown link → writes to clipboard
+7. **Pin Persistence**: Pin toggles are persisted to a private Joplin setting via the message bridge; at editor startup the content script requests the restore state (pinned flag plus panel settings) and reopens the panel pinned without stealing editor focus
 
 ## State Management
 
 - **Panel State**: `HeadingPanel` class (pin state, filtered list, active heading, debounce timers)
+- **Pinned Persistence**: Private `headingNavigator.panelPinned` setting written by the plugin host on user pin/unpin; read back on editor creation to restore a pinned panel (desktop only)
 - **Editor State**: Selection/scroll snapshots support transient cancellation and are discarded when pinning
 - **Heading Cache**: Recomputed 150 ms after document changes stop while the panel is open
 - **Cursor Following**: Selection-only updates change the active DOM marker without refiltering or reconciling the list

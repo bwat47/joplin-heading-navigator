@@ -21,8 +21,14 @@ import joplin from 'api';
 import { ContentScriptType, MenuItemLocation, ToolbarButtonLocation } from 'api/types';
 import { CODEMIRROR_CONTENT_SCRIPT_ID, COMMAND_GO_TO_HEADING, EDITOR_COMMAND_TOGGLE_PANEL } from './constants';
 import logger from './logger';
-import { loadCopyLinkSettings, loadPanelSettings, registerPanelSettings } from './settings';
-import type { ContentScriptToPluginMessage, CopyHeadingLinkMessage } from './messages';
+import {
+    loadCopyLinkSettings,
+    loadPanelSettings,
+    loadPinnedState,
+    registerPanelSettings,
+    savePinnedState,
+} from './settings';
+import type { ContentScriptToPluginMessage, CopyHeadingLinkMessage, PanelRestoreState } from './messages';
 import { formatExternalHeadingLink, formatInternalHeadingLink } from './linkFormatting';
 
 async function handleCopyHeadingLink(message: CopyHeadingLinkMessage): Promise<void> {
@@ -54,6 +60,21 @@ async function handleCopyHeadingLink(message: CopyHeadingLinkMessage): Promise<v
     }
 }
 
+async function handleGetPanelRestoreState(): Promise<PanelRestoreState> {
+    const [pinned, panelSettings, versionInfo] = await Promise.all([
+        loadPinnedState(),
+        loadPanelSettings(),
+        joplin.versionInfo(),
+    ]);
+
+    return {
+        pinned,
+        dimensions: panelSettings.dimensions,
+        compactMode: panelSettings.compactMode,
+        isMobile: versionInfo.platform === 'mobile',
+    };
+}
+
 async function registerContentScripts(): Promise<void> {
     await joplin.contentScripts.register(
         ContentScriptType.CodeMirrorPlugin,
@@ -63,7 +84,7 @@ async function registerContentScripts(): Promise<void> {
 
     await joplin.contentScripts.onMessage(
         CODEMIRROR_CONTENT_SCRIPT_ID,
-        async (message: ContentScriptToPluginMessage): Promise<void> => {
+        async (message: ContentScriptToPluginMessage): Promise<PanelRestoreState | void> => {
             if (!message || typeof message !== 'object') {
                 return;
             }
@@ -72,6 +93,11 @@ async function registerContentScripts(): Promise<void> {
                 case 'copyHeadingLink':
                     await handleCopyHeadingLink(message);
                     return;
+                case 'persistPinnedState':
+                    await savePinnedState(message.pinned);
+                    return;
+                case 'getPanelRestoreState':
+                    return handleGetPanelRestoreState();
                 default:
                     logger.warn('Received unsupported message from content script', message);
             }

@@ -28,6 +28,7 @@ const SETTING_PANEL_WIDTH = 'headingNavigator.panelWidth';
 const SETTING_PANEL_MAX_HEIGHT = 'headingNavigator.panelMaxHeightPercentage';
 const SETTING_COMPACT_MODE = 'headingNavigator.compactMode';
 const SETTING_COPY_INTERNAL_ANCHOR_LINKS = 'headingNavigator.copyInternalAnchorLinks';
+const SETTING_PANEL_PINNED = 'headingNavigator.panelPinned';
 
 export interface PanelSettings {
     dimensions: PanelDimensions;
@@ -93,6 +94,15 @@ export async function registerPanelSettings(): Promise<void> {
             label: 'Copy internal anchor links',
             description: 'Copy [Heading](#heading-anchor) instead of [Heading @ Note](:/noteId#heading-anchor).',
         },
+        // UI state, not a user preference: tracks whether the panel was pinned so it
+        // can be restored after an editor reload. Hidden from the options screen.
+        [SETTING_PANEL_PINNED]: {
+            value: false,
+            type: SettingItemType.Bool,
+            public: false,
+            section: SECTION_ID,
+            label: 'Panel pinned',
+        },
     });
 }
 
@@ -121,6 +131,21 @@ export async function loadPanelSettings(): Promise<PanelSettings> {
         },
         compactMode: compactModeResult.value,
     };
+}
+
+export async function loadPinnedState(): Promise<boolean> {
+    const values = await joplin.settings.values([SETTING_PANEL_PINNED]);
+    const pinnedResult = normalizeBooleanSetting(values[SETTING_PANEL_PINNED], false);
+
+    if (pinnedResult.changed) {
+        logger.warn(`Invalid panel pinned setting: ${values[SETTING_PANEL_PINNED]}. Using ${pinnedResult.value}.`);
+    }
+
+    return pinnedResult.value;
+}
+
+export async function savePinnedState(pinned: boolean): Promise<void> {
+    await joplin.settings.setValue(SETTING_PANEL_PINNED, pinned);
 }
 
 export async function loadCopyLinkSettings(): Promise<CopyLinkSettings> {

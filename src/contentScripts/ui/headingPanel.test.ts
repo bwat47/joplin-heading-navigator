@@ -116,6 +116,15 @@ describe('HeadingPanel pinned mode', () => {
         expect(itemsAfter[1].classList.contains('is-selected')).toBe(true);
     });
 
+    it('does not focus the filter input when opened with focusInput disabled', () => {
+        panel.destroy();
+        panel = new HeadingPanel(view, callbacks, { width: 320, maxHeightRatio: 0.75 });
+        panel.open(headings, headings[0].id, false);
+
+        expect(panel.isOpen()).toBe(true);
+        expect(document.activeElement).not.toBe(document.querySelector('.heading-navigator-input'));
+    });
+
     it('does not render pin controls on mobile', () => {
         panel.destroy();
         panel = new HeadingPanel(view, callbacks, { width: 320, maxHeightRatio: 0.75 }, true);

@@ -4,6 +4,7 @@ import { parser } from '@lezer/markdown';
 import type { CodeMirrorControl, ContentScriptContext } from 'api/types';
 import { EDITOR_COMMAND_TOGGLE_PANEL } from '../constants';
 import type { PanelDimensions } from '../types';
+import type { PanelRestoreState } from '../messages';
 import headingNavigator from './headingNavigator';
 
 const panelDimensions: PanelDimensions = { width: 320, maxHeightRatio: 0.75 };
@@ -17,6 +18,7 @@ class ResizeObserverMock {
 describe('heading navigator panel lifecycle', () => {
     let view: EditorView;
     let togglePanel: (dimensions?: PanelDimensions, isMobile?: boolean, compact?: boolean) => void;
+    let postMessage: ReturnType<typeof vi.fn>;
 
     beforeEach(() => {
         vi.useFakeTimers();
@@ -44,7 +46,8 @@ describe('heading navigator panel lifecycle', () => {
                 }
             },
         } as unknown as CodeMirrorControl;
-        const context = { postMessage: vi.fn() } as unknown as ContentScriptContext;
+        postMessage = vi.fn();
+        const context = { postMessage } as unknown as ContentScriptContext;
 
         headingNavigator(context).plugin(editorControl);
     });
@@ -156,6 +159,17 @@ describe('heading navigator panel lifecycle', () => {
         expect(document.querySelector('.heading-navigator-panel')).toBeNull();
     });
 
+    it('persists pinned state when the user toggles the pin button', () => {
+        togglePanel(panelDimensions, false, false);
+        const pinButton = document.querySelector<HTMLButtonElement>('.heading-navigator-pin-button')!;
+
+        pinButton.click();
+        expect(postMessage).toHaveBeenCalledWith({ type: 'persistPinnedState', pinned: true });
+
+        pinButton.click();
+        expect(postMessage).toHaveBeenCalledWith({ type: 'persistPinnedState', pinned: false });
+    });
+
     it('keeps pinned selections mounted and closes after unpinning and clicking outside', () => {
         togglePanel(panelDimensions, false, false);
         const pinButton = document.querySelector<HTMLButtonElement>('.heading-navigator-pin-button')!;
@@ -178,5 +192,132 @@ describe('heading navigator panel lifecycle', () => {
         document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
         expect(document.querySelector('.heading-navigator-panel')).toBeNull();
         expect(document.activeElement).toBe(view.contentDOM);
+    });
+});
+
+describe('pinned panel restoration', () => {
+    let view: EditorView;
+
+    const flushRestore = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+    function createEditor(
+        restoreState: PanelRestoreState | undefined,
+        respondAfter?: Promise<void>
+    ): ReturnType<typeof vi.fn> {
+        const parent = document.createElement('div');
+        document.body.appendChild(parent);
+        view = new EditorView({
+            state: EditorState.create({ doc: '# One\n\n## Two' }),
+            parent,
+        });
+
+        const editorControl = {
+            editor: view,
+            addExtension: (extension: Extension) => {
+                view.dispatch({ effects: StateEffect.appendConfig.of(extension) });
+            },
+            registerCommand: () => {},
+        } as unknown as CodeMirrorControl;
+        const postMessage = vi.fn(async (message: { type: string }) => {
+            if (respondAfter) {
+                await respondAfter;
+            }
+            return message.type === 'getPanelRestoreState' ? restoreState : undefined;
+        });
+
+        headingNavigator({ postMessage } as unknown as ContentScriptContext).plugin(editorControl);
+        return postMessage;
+    }
+
+    beforeEach(() => {
+        vi.stubGlobal('ResizeObserver', ResizeObserverMock);
+        vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
+            callback(0);
+            return 1;
+        });
+    });
+
+    afterEach(() => {
+        view.destroy();
+        document.body.textContent = '';
+        vi.restoreAllMocks();
+        vi.unstubAllGlobals();
+    });
+
+    it('reopens the panel pinned without stealing focus when the host reports a pinned state', async () => {
+        const postMessage = createEditor({
+            pinned: true,
+            dimensions: panelDimensions,
+            compactMode: false,
+            isMobile: false,
+        });
+
+        await flushRestore();
+
+        const panelElement = document.querySelector('.heading-navigator-panel');
+        expect(panelElement).not.toBeNull();
+        expect(panelElement!.classList.contains('is-pinned')).toBe(true);
+        expect(document.activeElement).not.toBe(document.querySelector('.heading-navigator-input'));
+        expect(postMessage).not.toHaveBeenCalledWith({ type: 'persistPinnedState', pinned: true });
+    });
+
+    it('does not reopen the panel when the persisted state is unpinned', async () => {
+        createEditor({
+            pinned: false,
+            dimensions: panelDimensions,
+            compactMode: false,
+            isMobile: false,
+        });
+
+        await flushRestore();
+
+        expect(document.querySelector('.heading-navigator-panel')).toBeNull();
+    });
+
+    it('does not reopen the panel on mobile', async () => {
+        createEditor({
+            pinned: true,
+            dimensions: panelDimensions,
+            compactMode: false,
+            isMobile: true,
+        });
+
+        await flushRestore();
+
+        expect(document.querySelector('.heading-navigator-panel')).toBeNull();
+    });
+
+    it('does nothing when the host provides no restore state', async () => {
+        createEditor(undefined);
+
+        await flushRestore();
+
+        expect(document.querySelector('.heading-navigator-panel')).toBeNull();
+    });
+
+    it('does not reopen the panel when the editor is destroyed before restore completes', async () => {
+        let respond!: () => void;
+        const gate = new Promise<void>((resolve) => {
+            respond = resolve;
+        });
+        createEditor(
+            {
+                pinned: true,
+                dimensions: panelDimensions,
+                compactMode: false,
+                isMobile: false,
+            },
+            gate
+        );
+
+        view.destroy();
+        // Any mousedown listener registered from here on would come from a zombie
+        // panel constructed against the destroyed view.
+        const addListenerSpy = vi.spyOn(document, 'addEventListener');
+        respond();
+        await flushRestore();
+
+        expect(view.dom.querySelector('.heading-navigator-panel')).toBeNull();
+        expect(addListenerSpy).not.toHaveBeenCalledWith('mousedown', expect.any(Function), true);
     });
 });
