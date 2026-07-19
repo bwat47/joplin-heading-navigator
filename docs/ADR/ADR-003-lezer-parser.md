@@ -69,10 +69,8 @@ Lezer's tree structure naturally excludes headings inside fenced code blocks. Th
 
 ## When CodeMirror Syntax Tree Would Be Better
 
-- **Permanently open panel with live updates**: If the panel stayed open during typing and updated continuously, the incremental tree would be more efficient
+- **Permanently open panel with live updates**: In pinned mode (where the panel remains open during edits), the incremental tree may be more efficient.
 - **Syntax configuration conflicts**: If Joplin's editor used custom Lezer extensions that affected heading parsing (unlikely for headings)
-
-Neither applies to this plugin's design.
 
 ## Alternatives Considered
 
@@ -101,5 +99,4 @@ Neither applies to this plugin's design.
 
 ### Negative
 
-- Full document parse (acceptable given infrequent parsing)
-- Must import Lezer separately (already bundled with Joplin)
+- Full document parse (acceptable with debouncing)
