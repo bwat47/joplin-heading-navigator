@@ -752,7 +752,7 @@ export class HeadingPanel {
 
         const heading = this.headings.find((item) => item.id === headingId);
         if (heading) {
-            this.selectedHeadingId = heading.id;
+            this.setActiveHeading(heading.id);
             this.confirmSelection();
         }
     }

@@ -164,6 +164,14 @@ describe('heading navigator panel lifecycle', () => {
         expect(view.state.selection.main.head).toBe(7);
         expect(document.querySelector('.heading-navigator-panel')).not.toBeNull();
         expect(document.activeElement).toBe(view.contentDOM);
+        let selectedItems = document.querySelectorAll<HTMLLIElement>('.heading-navigator-item.is-selected');
+        expect(selectedItems).toHaveLength(1);
+        expect(selectedItems[0]).toBe(document.querySelectorAll<HTMLLIElement>('.heading-navigator-item')[1]);
+
+        view.dispatch({ selection: EditorSelection.cursor(0) });
+        selectedItems = document.querySelectorAll<HTMLLIElement>('.heading-navigator-item.is-selected');
+        expect(selectedItems).toHaveLength(1);
+        expect(selectedItems[0]).toBe(document.querySelectorAll<HTMLLIElement>('.heading-navigator-item')[0]);
 
         document.querySelector<HTMLButtonElement>('.heading-navigator-close-button')?.click();
         expect(document.querySelector('.heading-navigator-panel')).toBeNull();

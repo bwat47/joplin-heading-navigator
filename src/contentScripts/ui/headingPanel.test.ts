@@ -102,6 +102,9 @@ describe('HeadingPanel pinned mode', () => {
         document.querySelectorAll<HTMLLIElement>('.heading-navigator-item')[1].click();
         expect(callbacks.onSelect).toHaveBeenCalledWith(headings[1]);
         expect(panel.isOpen()).toBe(true);
+        const selectedItems = document.querySelectorAll<HTMLLIElement>('.heading-navigator-item.is-selected');
+        expect(selectedItems).toHaveLength(1);
+        expect(selectedItems[0]).toBe(document.querySelectorAll<HTMLLIElement>('.heading-navigator-item')[1]);
     });
 
     it('closes explicitly and updates the active marker without replacing list nodes', () => {
