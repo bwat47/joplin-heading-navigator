@@ -7,6 +7,7 @@ A Joplin plugin providing heading-based document navigation for CodeMirror 6.
 - **Fuzzy Filtering**: Fuzzy search with match relevance ranking
 - **Live Preview**: Scroll to headings during navigation without committing
 - **Keyboard Navigation**: Arrow keys, Tab cycling, Escape to cancel
+- **Pinned Navigation**: Desktop panel can remain visible and follow the editor cursor
 - **Copy Heading Links**: Generate markdown anchor links
 - **Theme Integration**: Uses Joplin CSS variables
 - **Mobile Support**: Modal layout with long-press copy
@@ -56,16 +57,18 @@ Panel appended to `view.scrollDOM.parentElement` to stay associated with specifi
 ## Data Flow
 
 1. **Command Trigger**: User invokes "Go to Heading" → plugin host loads settings and forwards to content script
-2. **Panel Display**: Content script extracts headings via Lezer, opens panel with active heading highlighted
-3. **Navigation**: Filter/navigate updates editor selection and scrolls heading into view
-4. **Selection**: Panel closes, cursor positioned at heading (Escape restores original state)
-5. **Copy**: Request sent to plugin host → reads copy-link setting → formats markdown link → writes to clipboard
+2. **Panel Display**: Content script extracts headings via Lezer, opens an unpinned panel with the active heading highlighted
+3. **Navigation**: Filter/navigate updates editor selection and scrolls the heading into view
+4. **Transient Selection**: Selection closes the panel; Escape restores the original state if the panel was never pinned
+5. **Pinned Selection**: Selection returns focus to the editor while the mounted panel follows cursor movement
+6. **Copy**: Request sent to plugin host → reads copy-link setting → formats markdown link → writes to clipboard
 
 ## State Management
 
-- **Panel State**: `HeadingPanel` class (filtered list, selection index, debounce timers)
-- **Editor State**: Selection/scroll position snapshots for restoration on cancel
-- **Heading Cache**: Recomputed on document changes while panel open
+- **Panel State**: `HeadingPanel` class (pin state, filtered list, active heading, debounce timers)
+- **Editor State**: Selection/scroll snapshots support transient cancellation and are discarded when pinning
+- **Heading Cache**: Recomputed 150 ms after document changes stop while the panel is open
+- **Cursor Following**: Selection-only updates change the active DOM marker without refiltering or reconciling the list
 
 ## Build System
 
