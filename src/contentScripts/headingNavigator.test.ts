@@ -156,9 +156,10 @@ describe('heading navigator panel lifecycle', () => {
         expect(document.querySelector('.heading-navigator-panel')).toBeNull();
     });
 
-    it('keeps pinned selections mounted and supports explicit close', () => {
+    it('keeps pinned selections mounted and closes after unpinning and clicking outside', () => {
         togglePanel(panelDimensions, false, false);
-        document.querySelector<HTMLButtonElement>('.heading-navigator-pin-button')?.click();
+        const pinButton = document.querySelector<HTMLButtonElement>('.heading-navigator-pin-button')!;
+        pinButton.click();
 
         document.querySelectorAll<HTMLLIElement>('.heading-navigator-item')[1].click();
         expect(view.state.selection.main.head).toBe(7);
@@ -173,7 +174,8 @@ describe('heading navigator panel lifecycle', () => {
         expect(selectedItems).toHaveLength(1);
         expect(selectedItems[0]).toBe(document.querySelectorAll<HTMLLIElement>('.heading-navigator-item')[0]);
 
-        document.querySelector<HTMLButtonElement>('.heading-navigator-close-button')?.click();
+        pinButton.click();
+        document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
         expect(document.querySelector('.heading-navigator-panel')).toBeNull();
         expect(document.activeElement).toBe(view.contentDOM);
     });

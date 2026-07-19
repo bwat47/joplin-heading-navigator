@@ -79,10 +79,6 @@ export function createPanelCss(dimensions: PanelDimensions): string {
     opacity: 0.7;
 }
 
-.heading-navigator-header-button[hidden] {
-    display: none;
-}
-
 .heading-navigator-header-button:hover,
 .heading-navigator-header-button:focus-visible,
 .heading-navigator-pin-button[aria-pressed='true'] {

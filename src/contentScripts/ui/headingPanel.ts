@@ -11,7 +11,7 @@ const FILTER_DEBOUNCE_MS = 100;
 const PREVIEW_DEBOUNCE_MS = 30;
 const PANEL_RIGHT_GAP_PX = 8;
 
-export type PanelCloseReason = 'escape' | 'blur' | 'explicit';
+export type PanelCloseReason = 'escape' | 'blur';
 
 export interface PanelCallbacks {
     onPreview: (heading: HeadingItem) => void;
@@ -54,8 +54,6 @@ export class HeadingPanel {
 
     private readonly pinButton: HTMLButtonElement | null;
 
-    private readonly closeButton: HTMLButtonElement | null;
-
     private readonly list: HTMLUListElement;
 
     private headings: HeadingItem[] = [];
@@ -95,8 +93,6 @@ export class HeadingPanel {
     private readonly handleListClickListener: (event: MouseEvent) => void;
 
     private readonly handlePinClickListener: () => void;
-
-    private readonly handleCloseClickListener: () => void;
 
     private readonly handleDocumentMouseDownListener: (event: MouseEvent) => void;
 
@@ -145,7 +141,6 @@ export class HeadingPanel {
 
         if (this.isMobile) {
             this.pinButton = null;
-            this.closeButton = null;
             this.container.appendChild(this.input);
         } else {
             const header = document.createElement('div');
@@ -156,11 +151,6 @@ export class HeadingPanel {
             this.pinButton.setAttribute('aria-pressed', 'false');
             this.pinButton.appendChild(this.createPinIcon());
             header.appendChild(this.pinButton);
-
-            this.closeButton = this.createHeaderButton('heading-navigator-close-button', 'Close headings panel');
-            this.closeButton.hidden = true;
-            this.closeButton.appendChild(this.createCloseIcon());
-            header.appendChild(this.closeButton);
 
             this.container.appendChild(header);
         }
@@ -186,10 +176,6 @@ export class HeadingPanel {
             this.focusFilter();
         };
 
-        this.handleCloseClickListener = () => {
-            this.onClose('explicit');
-        };
-
         this.handleDocumentMouseDownListener = (event: MouseEvent) => {
             const target = event.target as Node | null;
             if (target && !this.container.contains(target)) {
@@ -210,7 +196,6 @@ export class HeadingPanel {
         this.input.addEventListener('keydown', this.handleKeyDownListener);
         this.list.addEventListener('click', this.handleListClickListener);
         this.pinButton?.addEventListener('click', this.handlePinClickListener);
-        this.closeButton?.addEventListener('click', this.handleCloseClickListener);
 
         if (this.isMobile) {
             this.list.addEventListener('touchstart', this.handleTouchStartListener);
@@ -245,17 +230,6 @@ export class HeadingPanel {
             path.setAttribute('d', d);
             svg.appendChild(path);
         }
-        return svg;
-    }
-
-    private createCloseIcon(): SVGElement {
-        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        svg.setAttribute('viewBox', '0 0 24 24');
-        svg.setAttribute('aria-hidden', 'true');
-
-        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        path.setAttribute('d', 'M6 6l12 12M18 6L6 18');
-        svg.appendChild(path);
         return svg;
     }
 
@@ -403,10 +377,6 @@ export class HeadingPanel {
             this.pinButton.setAttribute('aria-label', label);
             this.pinButton.setAttribute('aria-pressed', String(pinned));
         }
-        if (this.closeButton) {
-            this.closeButton.hidden = !pinned;
-        }
-
         this.onPinChange(pinned);
     }
 
@@ -431,7 +401,6 @@ export class HeadingPanel {
         this.input.removeEventListener('keydown', this.handleKeyDownListener);
         this.list.removeEventListener('click', this.handleListClickListener);
         this.pinButton?.removeEventListener('click', this.handlePinClickListener);
-        this.closeButton?.removeEventListener('click', this.handleCloseClickListener);
 
         if (this.isMobile) {
             this.list.removeEventListener('touchstart', this.handleTouchStartListener);

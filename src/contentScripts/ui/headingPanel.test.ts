@@ -55,18 +55,15 @@ describe('HeadingPanel pinned mode', () => {
 
     it('renders accessible desktop pin controls and toggles pinned state', () => {
         const pinButton = document.querySelector<HTMLButtonElement>('.heading-navigator-pin-button');
-        const closeButton = document.querySelector<HTMLButtonElement>('.heading-navigator-close-button');
 
         expect(pinButton?.getAttribute('aria-label')).toBe('Pin headings panel');
         expect(pinButton?.getAttribute('aria-pressed')).toBe('false');
-        expect(closeButton?.hidden).toBe(true);
 
         pinButton?.click();
 
         expect(panel.isPinned()).toBe(true);
         expect(pinButton?.getAttribute('aria-label')).toBe('Unpin headings panel');
         expect(pinButton?.getAttribute('aria-pressed')).toBe('true');
-        expect(closeButton?.hidden).toBe(false);
         expect(callbacks.onPinChange).toHaveBeenCalledWith(true);
         expect(document.activeElement).toBe(document.querySelector('.heading-navigator-input'));
     });
@@ -107,7 +104,7 @@ describe('HeadingPanel pinned mode', () => {
         expect(selectedItems[0]).toBe(document.querySelectorAll<HTMLLIElement>('.heading-navigator-item')[1]);
     });
 
-    it('closes explicitly and updates the active marker without replacing list nodes', () => {
+    it('updates the active marker without replacing list nodes', () => {
         document.querySelector<HTMLButtonElement>('.heading-navigator-pin-button')?.click();
         const itemsBefore = Array.from(document.querySelectorAll<HTMLLIElement>('.heading-navigator-item'));
 
@@ -117,9 +114,6 @@ describe('HeadingPanel pinned mode', () => {
         expect(itemsAfter).toEqual(itemsBefore);
         expect(itemsAfter[0].classList.contains('is-selected')).toBe(false);
         expect(itemsAfter[1].classList.contains('is-selected')).toBe(true);
-
-        document.querySelector<HTMLButtonElement>('.heading-navigator-close-button')?.click();
-        expect(callbacks.onClose).toHaveBeenCalledWith('explicit');
     });
 
     it('does not render pin controls on mobile', () => {
@@ -128,7 +122,6 @@ describe('HeadingPanel pinned mode', () => {
         panel.open(headings, headings[0].id);
 
         expect(document.querySelector('.heading-navigator-pin-button')).toBeNull();
-        expect(document.querySelector('.heading-navigator-close-button')).toBeNull();
         panel.setPinned(true);
         expect(panel.isPinned()).toBe(false);
     });
