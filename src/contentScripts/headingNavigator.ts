@@ -273,6 +273,9 @@ export default function headingNavigator(context: ContentScriptContext): Markdow
             // Suppresses persistence while programmatically re-pinning during startup restore,
             // so only user-initiated pin toggles write to settings.
             let suppressPinPersist = false;
+            // Set on editor teardown so the async startup restore cannot mount a panel
+            // (and leak its document-level listeners) against a destroyed view.
+            let editorDestroyed = false;
             const noteIdFacet = editorControl.joplinExtensions?.noteIdFacet;
 
             const resolveNoteId = (): string | null => {
@@ -485,6 +488,7 @@ export default function headingNavigator(context: ContentScriptContext): Markdow
             const lifecyclePlugin = ViewPlugin.fromClass(
                 class {
                     public destroy(): void {
+                        editorDestroyed = true;
                         closePanel();
                         cancelPendingScrollStabilization(view);
                     }
@@ -496,7 +500,7 @@ export default function headingNavigator(context: ContentScriptContext): Markdow
 
                 try {
                     const state = (await context.postMessage(message)) as PanelRestoreState | null | undefined;
-                    if (!state?.pinned || state.isMobile) {
+                    if (editorDestroyed || !state?.pinned || state.isMobile) {
                         return;
                     }
 

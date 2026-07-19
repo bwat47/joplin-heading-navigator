@@ -200,7 +200,10 @@ describe('pinned panel restoration', () => {
 
     const flushRestore = () => new Promise((resolve) => setTimeout(resolve, 0));
 
-    function createEditor(restoreState: PanelRestoreState | undefined): ReturnType<typeof vi.fn> {
+    function createEditor(
+        restoreState: PanelRestoreState | undefined,
+        respondAfter?: Promise<void>
+    ): ReturnType<typeof vi.fn> {
         const parent = document.createElement('div');
         document.body.appendChild(parent);
         view = new EditorView({
@@ -216,6 +219,9 @@ describe('pinned panel restoration', () => {
             registerCommand: () => {},
         } as unknown as CodeMirrorControl;
         const postMessage = vi.fn(async (message: { type: string }) => {
+            if (respondAfter) {
+                await respondAfter;
+            }
             return message.type === 'getPanelRestoreState' ? restoreState : undefined;
         });
 
@@ -287,5 +293,31 @@ describe('pinned panel restoration', () => {
         await flushRestore();
 
         expect(document.querySelector('.heading-navigator-panel')).toBeNull();
+    });
+
+    it('does not reopen the panel when the editor is destroyed before restore completes', async () => {
+        let respond!: () => void;
+        const gate = new Promise<void>((resolve) => {
+            respond = resolve;
+        });
+        createEditor(
+            {
+                pinned: true,
+                dimensions: panelDimensions,
+                compactMode: false,
+                isMobile: false,
+            },
+            gate
+        );
+
+        view.destroy();
+        // Any mousedown listener registered from here on would come from a zombie
+        // panel constructed against the destroyed view.
+        const addListenerSpy = vi.spyOn(document, 'addEventListener');
+        respond();
+        await flushRestore();
+
+        expect(view.dom.querySelector('.heading-navigator-panel')).toBeNull();
+        expect(addListenerSpy).not.toHaveBeenCalledWith('mousedown', expect.any(Function), true);
     });
 });
