@@ -15,14 +15,16 @@ Use direct `@lezer/markdown` parsing instead of CodeMirror's syntax tree API.
 
 ## Rationale
 
-### 1. Infrequent Parsing
+### 1. Bounded Parsing Frequency
 
-The panel only parses the document in two cases:
+The document is parsed:
 
-- When the panel first opens
-- On document changes while the panel is open (rare—editing while panel is open auto-closes it)
+- Synchronously when the panel first opens
+- 150 ms after document changes stop while the panel remains open
 
-Full document parsing is acceptable for these infrequent operations. CodeMirror's incremental syntax tree is optimized for continuous parsing during typing, which isn't needed here.
+Pinned desktop panels can remain open during continuous editing, debouncing prevents a full parse on every transaction and keeps the implementation synchronous and complete.
+
+Direct parsing remains acceptable for now, but large-document typing performance should be monitored. If profiling shows noticeable latency, extraction should move to CodeMirror's incremental syntax tree.
 
 ### 2. Avoids Syntax Tree Complexity
 
