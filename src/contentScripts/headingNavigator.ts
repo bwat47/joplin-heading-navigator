@@ -25,7 +25,7 @@
  */
 
 import { EditorSelection, EditorState } from '@codemirror/state';
-import { EditorView, ViewUpdate } from '@codemirror/view';
+import { EditorView, ViewPlugin, ViewUpdate } from '@codemirror/view';
 import type { CodeMirrorControl, ContentScriptContext, MarkdownEditorContentScriptModule } from 'api/types';
 import { EDITOR_COMMAND_TOGGLE_PANEL } from '../constants';
 import type { HeadingItem, PanelDimensions } from '../types';
@@ -59,6 +59,7 @@ function cancelPendingScrollStabilization(view: EditorView): void {
 const SCROLL_STABILIZE_DELAY_MS = 160;
 const SCROLL_STABILIZE_TOLERANCE_PX = 12;
 const SCROLL_STABILIZE_NEGATIVE_TOLERANCE_PX = 1.5;
+const HEADING_REPARSE_DEBOUNCE_MS = 150;
 
 type ScrollStabilizationMeasurement = {
     selectionFrom: number;
@@ -259,9 +260,8 @@ function setEditorSelection(view: EditorView, heading: HeadingItem, focusEditor:
 export default function headingNavigator(context: ContentScriptContext): MarkdownEditorContentScriptModule {
     return {
         plugin: (editorControl: CodeMirrorControl) => {
-            // Note: Extensions and listeners are scoped to this EditorView instance.
-            // When Joplin destroys the editor (note close, plugin disable),
-            // all resources are automatically cleaned up. No explicit disposal needed.
+            // Extensions are scoped to this EditorView instance. Panel-owned DOM listeners
+            // and timers are explicitly cleaned up by the lifecycle plugin below.
             const view = editorControl.editor as EditorView;
             let panel: HeadingPanel | null = null;
             let headings: HeadingItem[] = [];
@@ -269,6 +269,7 @@ export default function headingNavigator(context: ContentScriptContext): Markdow
             let compactMode = false;
             let initialSelectionRange: { from: number; to: number } | null = null;
             let initialScrollSnapshot: ReturnType<EditorView['scrollSnapshot']> | null = null;
+            let headingReparseTimer: number | null = null;
             const noteIdFacet = editorControl.joplinExtensions?.noteIdFacet;
 
             const resolveNoteId = (): string | null => {
@@ -321,13 +322,24 @@ export default function headingNavigator(context: ContentScriptContext): Markdow
                             },
                             onSelect: (heading) => {
                                 setEditorSelection(view, heading, true);
-                                closePanel(true);
+                                if (!panel?.isPinned()) {
+                                    closePanel(true);
+                                }
                             },
                             onClose: (reason: PanelCloseReason) => {
                                 closePanel(true, reason === 'escape');
                             },
                             onCopy: (heading) => {
                                 void sendCopyRequest(heading);
+                            },
+                            onPinChange: (pinned) => {
+                                if (pinned) {
+                                    initialSelectionRange = null;
+                                    initialScrollSnapshot = null;
+                                }
+                            },
+                            onRequestEditorFocus: () => {
+                                ensureEditorFocus(view, true);
                             },
                         },
                         panelDimensions,
@@ -349,16 +361,37 @@ export default function headingNavigator(context: ContentScriptContext): Markdow
                 ensurePanel(isMobile).open(headings, activeHeadingId);
             };
 
-            const updatePanel = (): void => {
+            const updatePanelHeadings = (): void => {
                 if (!panel || !panel.isOpen()) {
                     return;
                 }
 
                 const activeHeadingId = findActiveHeadingId(headings, view.state.selection.main.head);
-                panel.update(headings, activeHeadingId);
+                panel.updateHeadings(headings, activeHeadingId);
+            };
+
+            const cancelPendingHeadingReparse = (): void => {
+                if (headingReparseTimer !== null) {
+                    window.clearTimeout(headingReparseTimer);
+                    headingReparseTimer = null;
+                }
+            };
+
+            const scheduleHeadingReparse = (): void => {
+                cancelPendingHeadingReparse();
+                headingReparseTimer = window.setTimeout(() => {
+                    headingReparseTimer = null;
+                    if (!panel || !panel.isOpen()) {
+                        return;
+                    }
+
+                    headings = computeHeadings(view.state);
+                    updatePanelHeadings();
+                }, HEADING_REPARSE_DEBOUNCE_MS);
             };
 
             const closePanel = (focusEditor = false, restoreOriginalPosition = false): void => {
+                cancelPendingHeadingReparse();
                 panel?.destroy();
                 panel = null;
 
@@ -406,7 +439,11 @@ export default function headingNavigator(context: ContentScriptContext): Markdow
                 }
 
                 if (panel?.isOpen()) {
-                    closePanel(true);
+                    if (panel.isPinned()) {
+                        panel.focusFilter();
+                    } else {
+                        closePanel(true);
+                    }
                 } else {
                     openPanel(isMobile ?? false);
                 }
@@ -419,14 +456,23 @@ export default function headingNavigator(context: ContentScriptContext): Markdow
                 }
 
                 if (update.docChanged) {
-                    headings = computeHeadings(update.state);
-                    updatePanel();
+                    scheduleHeadingReparse();
                 } else if (update.selectionSet) {
-                    updatePanel();
+                    const activeHeadingId = findActiveHeadingId(headings, update.state.selection.main.head);
+                    panel.setActiveHeading(activeHeadingId);
                 }
             });
 
-            editorControl.addExtension(updateListener);
+            const lifecyclePlugin = ViewPlugin.fromClass(
+                class {
+                    public destroy(): void {
+                        closePanel();
+                        cancelPendingScrollStabilization(view);
+                    }
+                }
+            );
+
+            editorControl.addExtension([updateListener, lifecyclePlugin]);
             editorControl.registerCommand(EDITOR_COMMAND_TOGGLE_PANEL, togglePanel);
         },
     };

@@ -43,14 +43,58 @@ export function createPanelCss(dimensions: PanelDimensions): string {
     overflow: hidden;
 }
 
+.heading-navigator-header {
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid var(--joplin-divider-color, #dddddd);
+    background-color: inherit;
+}
+
 .heading-navigator-input {
+    flex: 1 1 auto;
+    min-width: 0;
     padding: 8px;
     border: none;
-    border-bottom: 1px solid var(--joplin-divider-color, #dddddd);
     background-color: inherit;
     color: inherit;
     font-size: 14px;
     outline: none;
+}
+
+.heading-navigator-panel > .heading-navigator-input {
+    border-bottom: 1px solid var(--joplin-divider-color, #dddddd);
+}
+
+.heading-navigator-header-button {
+    flex: 0 0 auto;
+    width: 30px;
+    height: 30px;
+    margin-right: 2px;
+    padding: 6px;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--joplin-color, #32373f);
+    cursor: pointer;
+    opacity: 0.7;
+}
+
+.heading-navigator-header-button:hover,
+.heading-navigator-header-button:focus-visible,
+.heading-navigator-pin-button[aria-pressed='true'] {
+    background-color: var(--joplin-background-color-hover3, rgba(0, 0, 0, 0.08));
+    opacity: 1;
+    outline: none;
+}
+
+.heading-navigator-header-button svg {
+    width: 100%;
+    height: 100%;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
 }
 
 .heading-navigator-input::placeholder {
@@ -151,9 +195,8 @@ export function createPanelCss(dimensions: PanelDimensions): string {
 }
 
 .heading-navigator-item-text {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: normal;
+    overflow-wrap: break-word;
     font-weight: 400;
 }
 

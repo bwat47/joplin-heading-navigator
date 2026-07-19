@@ -20,6 +20,9 @@ describe('createPanelCss', () => {
             '.heading-navigator-panel.is-compact .heading-navigator-item:hover .heading-navigator-level-badge'
         );
         expect(css).toContain('.heading-navigator-input');
+        expect(css).toContain('.heading-navigator-header');
+        expect(css).toContain('.heading-navigator-header-button');
+        expect(css).toContain('.heading-navigator-pin-button');
         expect(css).toContain('.heading-navigator-list');
         expect(css).toContain('.heading-navigator-item');
         expect(css).toContain('.heading-navigator-item-level');

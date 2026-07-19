@@ -18,6 +18,8 @@ export interface PanelCallbacks {
     onSelect: (heading: HeadingItem) => void;
     onClose: (reason: PanelCloseReason) => void;
     onCopy: (heading: HeadingItem) => void;
+    onPinChange: (pinned: boolean) => void;
+    onRequestEditorFocus: () => void;
 }
 
 /**
@@ -37,7 +39,9 @@ export interface PanelCallbacks {
  *   onPreview: (heading) => scrollToHeading(heading),
  *   onSelect: (heading) => { scrollToHeading(heading); panel.destroy(); },
  *   onClose: (reason) => { restoreState(); panel.destroy(); },
- *   onCopy: (heading) => copyHeadingLink(heading)
+ *   onCopy: (heading) => copyHeadingLink(heading),
+ *   onPinChange: (pinned) => { if (pinned) forgetRestoreState(); },
+ *   onRequestEditorFocus: () => editorView.focus()
  * }, dimensions);
  *
  * panel.open(headings, currentHeadingId);
@@ -49,6 +53,8 @@ export class HeadingPanel {
     private readonly container: HTMLDivElement;
 
     private readonly input: HTMLInputElement;
+
+    private readonly pinButton: HTMLButtonElement | null;
 
     private readonly list: HTMLUListElement;
 
@@ -78,11 +84,17 @@ export class HeadingPanel {
 
     private readonly onCopy: (heading: HeadingItem) => void;
 
+    private readonly onPinChange: (pinned: boolean) => void;
+
+    private readonly onRequestEditorFocus: () => void;
+
     private readonly handleInputListener: () => void;
 
     private readonly handleKeyDownListener: (event: KeyboardEvent) => void;
 
     private readonly handleListClickListener: (event: MouseEvent) => void;
+
+    private readonly handlePinClickListener: () => void;
 
     private readonly handleDocumentMouseDownListener: (event: MouseEvent) => void;
 
@@ -96,6 +108,8 @@ export class HeadingPanel {
 
     private scrollerObserver: ResizeObserver | null = null;
 
+    private pinned = false;
+
     public constructor(
         view: EditorView,
         callbacks: PanelCallbacks,
@@ -108,6 +122,8 @@ export class HeadingPanel {
         this.onSelect = callbacks.onSelect;
         this.onClose = callbacks.onClose;
         this.onCopy = callbacks.onCopy;
+        this.onPinChange = callbacks.onPinChange;
+        this.onRequestEditorFocus = callbacks.onRequestEditorFocus;
         this.options = options;
 
         this.container = document.createElement('div');
@@ -124,7 +140,22 @@ export class HeadingPanel {
         this.input.type = 'search';
         this.input.placeholder = 'Filter headings';
         this.input.className = 'heading-navigator-input';
-        this.container.appendChild(this.input);
+
+        if (this.isMobile) {
+            this.pinButton = null;
+            this.container.appendChild(this.input);
+        } else {
+            const header = document.createElement('div');
+            header.className = 'heading-navigator-header';
+            header.appendChild(this.input);
+
+            this.pinButton = this.createHeaderButton('heading-navigator-pin-button', 'Pin headings panel');
+            this.pinButton.setAttribute('aria-pressed', 'false');
+            this.pinButton.appendChild(this.createPinIcon());
+            header.appendChild(this.pinButton);
+
+            this.container.appendChild(header);
+        }
 
         this.list = document.createElement('ul');
         this.list.className = 'heading-navigator-list';
@@ -142,10 +173,19 @@ export class HeadingPanel {
             this.handleListClick(event);
         };
 
+        this.handlePinClickListener = () => {
+            this.setPinned(!this.pinned);
+            this.focusFilter();
+        };
+
         this.handleDocumentMouseDownListener = (event: MouseEvent) => {
             const target = event.target as Node | null;
             if (target && !this.container.contains(target)) {
-                this.onClose('blur');
+                if (this.pinned) {
+                    this.resetFilter();
+                } else {
+                    this.onClose('blur');
+                }
             }
         };
 
@@ -157,6 +197,7 @@ export class HeadingPanel {
         this.input.addEventListener('input', this.handleInputListener);
         this.input.addEventListener('keydown', this.handleKeyDownListener);
         this.list.addEventListener('click', this.handleListClickListener);
+        this.pinButton?.addEventListener('click', this.handlePinClickListener);
 
         if (this.isMobile) {
             this.list.addEventListener('touchstart', this.handleTouchStartListener);
@@ -165,6 +206,33 @@ export class HeadingPanel {
         }
 
         this.view.dom.ownerDocument!.addEventListener('mousedown', this.handleDocumentMouseDownListener, true);
+    }
+
+    private createHeaderButton(className: string, label: string): HTMLButtonElement {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = `heading-navigator-header-button ${className}`;
+        button.title = label;
+        button.setAttribute('aria-label', label);
+        return button;
+    }
+
+    private createPinIcon(): SVGElement {
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('viewBox', '0 0 24 24');
+        svg.setAttribute('aria-hidden', 'true');
+
+        const pinPathData = [
+            'M15 4.5l-4 4l-4 1.5l-1.5 1.5l7 7l1.5 -1.5l1.5 -4l4 -4',
+            'M9 15l-4.5 4.5',
+            'M14.5 4l5.5 5.5',
+        ];
+        for (const d of pinPathData) {
+            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            path.setAttribute('d', d);
+            svg.appendChild(path);
+        }
+        return svg;
     }
 
     private longPressTimer: number | null = null;
@@ -269,13 +337,59 @@ export class HeadingPanel {
      * @param selectedId - ID of the heading that should be selected (null to preserve current selection)
      * @param preserveFilter - Whether to keep the current filter text (default: true)
      */
-    public update(headings: HeadingItem[], selectedId: string | null, preserveFilter = true): void {
+    public updateHeadings(headings: HeadingItem[], selectedId: string | null, preserveFilter = true): void {
         const filterText = preserveFilter ? this.input.value : '';
         if (!preserveFilter) {
             this.input.value = '';
         }
         this.selectedHeadingId = selectedId ?? this.selectedHeadingId;
         this.setHeadings(headings, filterText, false);
+    }
+
+    /**
+     * Updates only the active heading marker without filtering or reconciling the heading list.
+     */
+    public setActiveHeading(selectedId: string | null): void {
+        if (this.selectedHeadingId === selectedId) {
+            return;
+        }
+
+        const previousId = this.selectedHeadingId;
+        this.selectedHeadingId = selectedId;
+        this.findHeadingElement(previousId)?.classList.remove('is-selected');
+        this.findHeadingElement(selectedId)?.classList.add('is-selected');
+        this.scrollActiveItemIntoView();
+        this.updatePreviewMarker();
+    }
+
+    /**
+     * Changes whether the desktop panel remains visible while focus is outside it.
+     */
+    public setPinned(pinned: boolean): void {
+        if (this.isMobile || this.pinned === pinned) {
+            return;
+        }
+
+        this.pinned = pinned;
+        this.container.classList.toggle('is-pinned', pinned);
+
+        if (this.pinButton) {
+            const label = pinned ? 'Unpin headings panel' : 'Pin headings panel';
+            this.pinButton.title = label;
+            this.pinButton.setAttribute('aria-label', label);
+            this.pinButton.setAttribute('aria-pressed', String(pinned));
+        }
+        this.onPinChange(pinned);
+    }
+
+    public isPinned(): boolean {
+        return this.pinned;
+    }
+
+    public focusFilter(): void {
+        if (this.isOpen()) {
+            this.input.focus();
+        }
     }
 
     /**
@@ -288,6 +402,7 @@ export class HeadingPanel {
         this.input.removeEventListener('input', this.handleInputListener);
         this.input.removeEventListener('keydown', this.handleKeyDownListener);
         this.list.removeEventListener('click', this.handleListClickListener);
+        this.pinButton?.removeEventListener('click', this.handlePinClickListener);
 
         if (this.isMobile) {
             this.list.removeEventListener('touchstart', this.handleTouchStartListener);
@@ -366,6 +481,21 @@ export class HeadingPanel {
         } else {
             this.updatePreviewMarker();
         }
+    }
+
+    private resetFilter(): void {
+        if (this.filterDebounceTimer !== null) {
+            clearTimeout(this.filterDebounceTimer);
+            this.filterDebounceTimer = null;
+        }
+
+        if (!this.input.value && !this.previousFilterText) {
+            return;
+        }
+
+        this.input.value = '';
+        this.applyFilter('');
+        this.updatePreviewMarker();
     }
 
     private applyFilter(filterText: string, restoreInitialWhenCleared = false): void {
@@ -505,7 +635,12 @@ export class HeadingPanel {
                 break;
             case 'Escape':
                 event.preventDefault();
-                this.onClose('escape');
+                if (this.pinned) {
+                    this.resetFilter();
+                    this.onRequestEditorFocus();
+                } else {
+                    this.onClose('escape');
+                }
                 break;
             default:
                 break;
@@ -535,6 +670,9 @@ export class HeadingPanel {
 
         const heading = this.headings.find((item) => item.id === this.selectedHeadingId);
         if (heading) {
+            if (this.pinned) {
+                this.resetFilter();
+            }
             this.onSelect(heading);
         }
     }
@@ -585,7 +723,7 @@ export class HeadingPanel {
 
         const heading = this.headings.find((item) => item.id === headingId);
         if (heading) {
-            this.selectedHeadingId = heading.id;
+            this.setActiveHeading(heading.id);
             this.confirmSelection();
         }
     }
@@ -778,6 +916,14 @@ export class HeadingPanel {
                 item.classList.remove('is-selected');
             }
         });
+    }
+
+    private findHeadingElement(headingId: string | null): HTMLLIElement | null {
+        if (!headingId) {
+            return null;
+        }
+
+        return this.list.querySelector<HTMLLIElement>(`.heading-navigator-item[data-heading-id="${headingId}"]`);
     }
 
     /**

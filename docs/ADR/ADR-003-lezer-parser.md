@@ -15,14 +15,16 @@ Use direct `@lezer/markdown` parsing instead of CodeMirror's syntax tree API.
 
 ## Rationale
 
-### 1. Infrequent Parsing
+### 1. Bounded Parsing Frequency
 
-The panel only parses the document in two cases:
+The document is parsed:
 
-- When the panel first opens
-- On document changes while the panel is open (rare—editing while panel is open auto-closes it)
+- Synchronously when the panel first opens
+- 150 ms after document changes stop while the panel remains open
 
-Full document parsing is acceptable for these infrequent operations. CodeMirror's incremental syntax tree is optimized for continuous parsing during typing, which isn't needed here.
+Pinned desktop panels can remain open during continuous editing, debouncing prevents a full parse on every transaction and keeps the implementation synchronous and complete.
+
+Direct parsing remains acceptable for now, but large-document typing performance should be monitored. If profiling shows noticeable latency, extraction should move to CodeMirror's incremental syntax tree.
 
 ### 2. Avoids Syntax Tree Complexity
 
@@ -67,10 +69,8 @@ Lezer's tree structure naturally excludes headings inside fenced code blocks. Th
 
 ## When CodeMirror Syntax Tree Would Be Better
 
-- **Permanently open panel with live updates**: If the panel stayed open during typing and updated continuously, the incremental tree would be more efficient
+- **Permanently open panel with live updates**: In pinned mode (where the panel remains open during edits), the incremental tree may be more efficient.
 - **Syntax configuration conflicts**: If Joplin's editor used custom Lezer extensions that affected heading parsing (unlikely for headings)
-
-Neither applies to this plugin's design.
 
 ## Alternatives Considered
 
@@ -99,5 +99,4 @@ Neither applies to this plugin's design.
 
 ### Negative
 
-- Full document parse (acceptable given infrequent parsing)
-- Must import Lezer separately (already bundled with Joplin)
+- Full document parse (acceptable with debouncing)
