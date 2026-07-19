@@ -39,7 +39,9 @@ export interface PanelCallbacks {
  *   onPreview: (heading) => scrollToHeading(heading),
  *   onSelect: (heading) => { scrollToHeading(heading); panel.destroy(); },
  *   onClose: (reason) => { restoreState(); panel.destroy(); },
- *   onCopy: (heading) => copyHeadingLink(heading)
+ *   onCopy: (heading) => copyHeadingLink(heading),
+ *   onPinChange: (pinned) => { if (pinned) forgetRestoreState(); },
+ *   onRequestEditorFocus: () => editorView.focus()
  * }, dimensions);
  *
  * panel.open(headings, currentHeadingId);
