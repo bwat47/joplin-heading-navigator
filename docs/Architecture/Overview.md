@@ -64,7 +64,7 @@ Panel appended to `view.scrollDOM.parentElement` to stay associated with specifi
 6. **Pinned Selection**: Selection returns focus to the editor while the mounted panel follows cursor movement
 7. **Copy**: Request sent to plugin host → reads copy-link setting → formats markdown link → writes to clipboard
 8. **Pin Persistence**: Pin toggles are persisted to a private Joplin setting; at editor startup the content script independently requests the pinned/platform restore state and reopens the panel without stealing focus
-9. **Live Settings**: Joplin setting changes are pushed to the active editor, reconfigure the settings facet, and update any mounted panel in place
+9. **Live Settings**: Joplin setting changes are pushed to the active CodeMirror editor, reconfigure the settings facet, and update any mounted panel in place. The push is best-effort because rich-text and viewer-only layouts do not expose the editor command; a later CodeMirror instance fetches current settings during initialization.
 
 ## State Management
 

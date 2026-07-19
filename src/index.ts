@@ -126,6 +126,11 @@ async function registerCommands(): Promise<void> {
     });
 }
 
+/**
+ * Best-effort update for the active CodeMirror editor. Other editor layouts do not
+ * register this command, so execution can reject normally; newly created CodeMirror
+ * editors still fetch the latest settings during their initial synchronization.
+ */
 async function pushContentScriptSettings(): Promise<void> {
     try {
         const settings = await loadContentScriptSettings();
@@ -134,7 +139,7 @@ async function pushContentScriptSettings(): Promise<void> {
             args: [settings],
         });
     } catch (error) {
-        logger.warn('Failed to push updated content script settings', error);
+        logger.debug('Skipped content script settings push because no CodeMirror editor may be active', error);
     }
 }
 
