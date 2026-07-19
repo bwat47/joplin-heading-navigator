@@ -235,9 +235,16 @@ export class HeadingPanel {
         svg.setAttribute('viewBox', '0 0 24 24');
         svg.setAttribute('aria-hidden', 'true');
 
-        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        path.setAttribute('d', 'M14 4l6 6-3 1-4 4-1 5-2-2 1-5 4-4 1-3-2-2zM9 15l-5 5');
-        svg.appendChild(path);
+        const pinPathData = [
+            'M15 4.5l-4 4l-4 1.5l-1.5 1.5l7 7l1.5 -1.5l1.5 -4l4 -4',
+            'M9 15l-4.5 4.5',
+            'M14.5 4l5.5 5.5',
+        ];
+        for (const d of pinPathData) {
+            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            path.setAttribute('d', d);
+            svg.appendChild(path);
+        }
         return svg;
     }
 
