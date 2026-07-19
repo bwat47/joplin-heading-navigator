@@ -20,13 +20,13 @@ export interface CopyHeadingLinkMessage {
 }
 
 /** Fire-and-forget: persists the panel pinned state so it survives editor reloads. */
-export interface PersistPinnedStateMessage {
+interface PersistPinnedStateMessage {
     type: 'persistPinnedState';
     pinned: boolean;
 }
 
 /** Request/response: fetches the state needed to restore a pinned panel at editor startup. */
-export interface GetPanelRestoreStateMessage {
+interface GetPanelRestoreStateMessage {
     type: 'getPanelRestoreState';
 }
 
