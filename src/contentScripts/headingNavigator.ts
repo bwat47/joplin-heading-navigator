@@ -27,13 +27,18 @@
 import { EditorSelection, EditorState } from '@codemirror/state';
 import { EditorView, ViewPlugin, ViewUpdate } from '@codemirror/view';
 import type { CodeMirrorControl, ContentScriptContext, MarkdownEditorContentScriptModule } from 'api/types';
-import { EDITOR_COMMAND_TOGGLE_PANEL } from '../constants';
-import type { HeadingItem, PanelDimensions } from '../types';
+import { EDITOR_COMMAND_TOGGLE_PANEL, EDITOR_COMMAND_UPDATE_SETTINGS } from '../constants';
+import type { HeadingItem } from '../types';
 import type { ContentScriptToPluginMessage, PanelRestoreState } from '../messages';
 import { extractHeadings } from '../headingExtractor';
 import { HeadingPanel, type PanelCloseReason } from './ui/headingPanel';
-import { normalizePanelDimensions } from '../panelDimensions';
 import logger from '../logger';
+import {
+    applyContentScriptSettings,
+    createSettingsExtension,
+    getContentScriptSettings,
+    syncInitialContentScriptSettings,
+} from './pluginSettings';
 
 // Track active stabilization timeouts per editor. WeakMap ensures automatic
 // cleanup when editor instances are destroyed (e.g., note close, plugin reload).
@@ -265,8 +270,6 @@ export default function headingNavigator(context: ContentScriptContext): Markdow
             const view = editorControl.editor as EditorView;
             let panel: HeadingPanel | null = null;
             let headings: HeadingItem[] = [];
-            let panelDimensions: PanelDimensions = normalizePanelDimensions();
-            let compactMode = false;
             let initialSelectionRange: { from: number; to: number } | null = null;
             let initialScrollSnapshot: ReturnType<EditorView['scrollSnapshot']> | null = null;
             let headingReparseTimer: number | null = null;
@@ -276,6 +279,7 @@ export default function headingNavigator(context: ContentScriptContext): Markdow
             // Set on editor teardown so the async startup restore cannot mount a panel
             // (and leak its document-level listeners) against a destroyed view.
             let editorDestroyed = false;
+            let settingsUpdateVersion = 0;
             const noteIdFacet = editorControl.joplinExtensions?.noteIdFacet;
 
             const resolveNoteId = (): string | null => {
@@ -364,9 +368,8 @@ export default function headingNavigator(context: ContentScriptContext): Markdow
                                 ensureEditorFocus(view, true);
                             },
                         },
-                        panelDimensions,
-                        isMobile,
-                        compactMode
+                        getContentScriptSettings(view.state),
+                        isMobile
                     );
                 }
 
@@ -447,19 +450,7 @@ export default function headingNavigator(context: ContentScriptContext): Markdow
                 ensureEditorFocus(view, focusEditor);
             };
 
-            const togglePanel = (dimensions?: PanelDimensions, isMobile?: boolean, compact?: boolean): void => {
-                if (dimensions) {
-                    // Update dimensions without re-opening if panel exists
-                    panelDimensions = normalizePanelDimensions(dimensions);
-                    if (panel) {
-                        panel.setOptions(panelDimensions);
-                    }
-                }
-
-                if (typeof compact === 'boolean') {
-                    compactMode = compact;
-                }
-
+            const togglePanel = (isMobile?: boolean): void => {
                 if (panel?.isOpen()) {
                     if (panel.isPinned()) {
                         panel.focusFilter();
@@ -469,6 +460,12 @@ export default function headingNavigator(context: ContentScriptContext): Markdow
                 } else {
                     openPanel(isMobile ?? false);
                 }
+            };
+
+            const applySettingsUpdate = (settings: unknown): void => {
+                settingsUpdateVersion += 1;
+                const nextSettings = applyContentScriptSettings(view, settings);
+                panel?.setSettings(nextSettings);
             };
 
             const updateListener = EditorView.updateListener.of((update: ViewUpdate) => {
@@ -509,9 +506,6 @@ export default function headingNavigator(context: ContentScriptContext): Markdow
                         return;
                     }
 
-                    panelDimensions = normalizePanelDimensions(state.dimensions);
-                    compactMode = state.compactMode === true;
-
                     openPanel(false, false);
                     suppressPinPersist = true;
                     try {
@@ -524,8 +518,19 @@ export default function headingNavigator(context: ContentScriptContext): Markdow
                 }
             };
 
-            editorControl.addExtension([updateListener, lifecyclePlugin]);
+            editorControl.addExtension([createSettingsExtension(), updateListener, lifecyclePlugin]);
+            editorControl.registerCommand(EDITOR_COMMAND_UPDATE_SETTINGS, applySettingsUpdate);
             editorControl.registerCommand(EDITOR_COMMAND_TOGGLE_PANEL, togglePanel);
+            const initialSettingsVersion = settingsUpdateVersion;
+            void syncInitialContentScriptSettings(
+                context,
+                view,
+                () => !editorDestroyed && settingsUpdateVersion === initialSettingsVersion
+            ).then((settings) => {
+                if (settings) {
+                    panel?.setSettings(settings);
+                }
+            });
             void restorePinnedPanel();
         },
     };

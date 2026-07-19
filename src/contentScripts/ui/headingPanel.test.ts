@@ -41,7 +41,10 @@ describe('HeadingPanel pinned mode', () => {
         document.body.appendChild(parent);
         view = new EditorView({ state: EditorState.create({ doc: '# One\n## Two' }), parent });
         callbacks = createCallbacks();
-        panel = new HeadingPanel(view, callbacks, { width: 320, maxHeightRatio: 0.75 });
+        panel = new HeadingPanel(view, callbacks, {
+            dimensions: { width: 320, maxHeightRatio: 0.75 },
+            compactMode: false,
+        });
         panel.open(headings, headings[0].id);
     });
 
@@ -118,7 +121,10 @@ describe('HeadingPanel pinned mode', () => {
 
     it('does not focus the filter input when opened with focusInput disabled', () => {
         panel.destroy();
-        panel = new HeadingPanel(view, callbacks, { width: 320, maxHeightRatio: 0.75 });
+        panel = new HeadingPanel(view, callbacks, {
+            dimensions: { width: 320, maxHeightRatio: 0.75 },
+            compactMode: false,
+        });
         panel.open(headings, headings[0].id, false);
 
         expect(panel.isOpen()).toBe(true);
@@ -127,10 +133,16 @@ describe('HeadingPanel pinned mode', () => {
 
     it('does not render pin controls on mobile', () => {
         panel.destroy();
-        panel = new HeadingPanel(view, callbacks, { width: 320, maxHeightRatio: 0.75 }, true);
+        panel = new HeadingPanel(
+            view,
+            callbacks,
+            { dimensions: { width: 320, maxHeightRatio: 0.75 }, compactMode: true },
+            true
+        );
         panel.open(headings, headings[0].id);
 
         expect(document.querySelector('.heading-navigator-pin-button')).toBeNull();
+        expect(document.querySelector('.heading-navigator-panel')?.classList.contains('is-compact')).toBe(false);
         panel.setPinned(true);
         expect(panel.isPinned()).toBe(false);
     });

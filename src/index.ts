@@ -19,17 +19,24 @@
 
 import joplin from 'api';
 import { ContentScriptType, MenuItemLocation, ToolbarButtonLocation } from 'api/types';
-import { CODEMIRROR_CONTENT_SCRIPT_ID, COMMAND_GO_TO_HEADING, EDITOR_COMMAND_TOGGLE_PANEL } from './constants';
+import {
+    CODEMIRROR_CONTENT_SCRIPT_ID,
+    COMMAND_GO_TO_HEADING,
+    EDITOR_COMMAND_TOGGLE_PANEL,
+    EDITOR_COMMAND_UPDATE_SETTINGS,
+} from './constants';
 import logger from './logger';
 import {
+    isEditorAffectingSettingChanged,
+    loadContentScriptSettings,
     loadCopyLinkSettings,
-    loadPanelSettings,
     loadPinnedState,
     registerPanelSettings,
     savePinnedState,
 } from './settings';
 import type { ContentScriptToPluginMessage, CopyHeadingLinkMessage, PanelRestoreState } from './messages';
 import { formatExternalHeadingLink, formatInternalHeadingLink } from './linkFormatting';
+import type { ContentScriptSettings } from './types';
 
 async function handleCopyHeadingLink(message: CopyHeadingLinkMessage): Promise<void> {
     const { noteId, headingText, headingAnchor } = message;
@@ -61,16 +68,10 @@ async function handleCopyHeadingLink(message: CopyHeadingLinkMessage): Promise<v
 }
 
 async function handleGetPanelRestoreState(): Promise<PanelRestoreState> {
-    const [pinned, panelSettings, versionInfo] = await Promise.all([
-        loadPinnedState(),
-        loadPanelSettings(),
-        joplin.versionInfo(),
-    ]);
+    const [pinned, versionInfo] = await Promise.all([loadPinnedState(), joplin.versionInfo()]);
 
     return {
         pinned,
-        dimensions: panelSettings.dimensions,
-        compactMode: panelSettings.compactMode,
         isMobile: versionInfo.platform === 'mobile',
     };
 }
@@ -84,7 +85,7 @@ async function registerContentScripts(): Promise<void> {
 
     await joplin.contentScripts.onMessage(
         CODEMIRROR_CONTENT_SCRIPT_ID,
-        async (message: ContentScriptToPluginMessage): Promise<PanelRestoreState | void> => {
+        async (message: ContentScriptToPluginMessage): Promise<ContentScriptSettings | PanelRestoreState | void> => {
             if (!message || typeof message !== 'object') {
                 return;
             }
@@ -98,6 +99,8 @@ async function registerContentScripts(): Promise<void> {
                     return;
                 case 'getPanelRestoreState':
                     return handleGetPanelRestoreState();
+                case 'getContentScriptSettings':
+                    return loadContentScriptSettings();
                 default:
                     logger.warn('Received unsupported message from content script', message);
             }
@@ -112,16 +115,27 @@ async function registerCommands(): Promise<void> {
         iconName: 'fas fa-heading',
         execute: async () => {
             logger.info('Go to Heading command triggered');
-            const panelSettings = await loadPanelSettings();
             const versionInfo = await joplin.versionInfo();
             const isMobile = versionInfo.platform === 'mobile';
 
             await joplin.commands.execute('editor.execCommand', {
                 name: EDITOR_COMMAND_TOGGLE_PANEL,
-                args: [panelSettings.dimensions, isMobile, panelSettings.compactMode],
+                args: [isMobile],
             });
         },
     });
+}
+
+async function pushContentScriptSettings(): Promise<void> {
+    try {
+        const settings = await loadContentScriptSettings();
+        await joplin.commands.execute('editor.execCommand', {
+            name: EDITOR_COMMAND_UPDATE_SETTINGS,
+            args: [settings],
+        });
+    } catch (error) {
+        logger.warn('Failed to push updated content script settings', error);
+    }
 }
 
 async function registerMenuItems(): Promise<void> {
@@ -140,6 +154,11 @@ joplin.plugins.register({
     onStart: async () => {
         logger.info('Heading Navigator plugin starting');
         await registerPanelSettings();
+        await joplin.settings.onChange(async ({ keys }) => {
+            if (isEditorAffectingSettingChanged(keys)) {
+                await pushContentScriptSettings();
+            }
+        });
         await registerContentScripts();
         await registerCommands();
         await registerMenuItems();
