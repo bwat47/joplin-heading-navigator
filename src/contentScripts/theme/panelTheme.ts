@@ -199,9 +199,8 @@ export function createPanelCss(dimensions: PanelDimensions): string {
 }
 
 .heading-navigator-item-text {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: normal;
+    overflow-wrap: break-word;
     font-weight: 400;
 }
 
