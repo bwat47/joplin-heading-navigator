@@ -311,8 +311,10 @@ export class HeadingPanel {
      *
      * @param headings - Array of headings to display
      * @param selectedId - ID of the heading to initially select (null for first heading)
+     * @param focusInput - Whether to focus the filter input (false when restoring a pinned
+     *   panel at startup, so editor focus is not stolen)
      */
-    public open(headings: HeadingItem[], selectedId: string | null): void {
+    public open(headings: HeadingItem[], selectedId: string | null, focusInput = true): void {
         this.mount();
         this.input.value = '';
         this.selectedHeadingId = selectedId;
@@ -320,11 +322,13 @@ export class HeadingPanel {
         this.previousFilterText = '';
         this.lastPreviewedId = null;
         this.setHeadings(headings, '', false); // Avoid triggering scroll on initial open
-        requestAnimationFrame(() => {
-            if (this.isOpen()) {
-                this.input.focus();
-            }
-        });
+        if (focusInput) {
+            requestAnimationFrame(() => {
+                if (this.isOpen()) {
+                    this.input.focus();
+                }
+            });
+        }
     }
 
     /**
