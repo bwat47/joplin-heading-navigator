@@ -56,9 +56,10 @@ export async function syncInitialContentScriptSettings(
     shouldApply: () => boolean = () => true
 ): Promise<ContentScriptSettings | null> {
     try {
-        const response = await context.postMessage({
+        const message = {
             type: 'getContentScriptSettings',
-        } as ContentScriptToPluginMessage);
+        } satisfies ContentScriptToPluginMessage;
+        const response = await context.postMessage(message);
         if (!shouldApply()) {
             return null;
         }
