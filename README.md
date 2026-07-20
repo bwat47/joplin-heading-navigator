@@ -33,7 +33,7 @@ When selecting a heading with the keyboard, the editor will immediately scroll t
 
 ### Features
 
-- Navigate through headings with the keyboard (desktop only)
+- Navigate through headings with the keyboard
 - Search filter to filter list of headings
 - Copy link to heading
 - Panel adapts to your Joplin theme
