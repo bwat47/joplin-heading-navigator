@@ -20,22 +20,25 @@ A Joplin plugin that provides a simple overlay panel allowing you to navigate an
 
 In the markdown editor, click the Heading Navigator toolbar button, or use the assigned keyboard shortcut.
 
-> [!note]
-> There isn't a default keyboard shortcut, you can assign one under Tools | Options | Keyboard Shortcuts | "Go to Heading" command.
+There isn't a default keyboard shortcut, you can assign one under Tools | Options | Keyboard Shortcuts | "Go to Heading" command.
 
 You can navigate through headings using tab key (goes to next heading), shift tab key (goes to previous heading), arrow keys, or by scrolling and selecting a heading.
 
-When selecting a heading with the keyboard, the editor will immediately scroll to the selected heading. Hitting enter in the dialogue (or clicking somewhere else) will close the dialogue. Hitting escape will close the dialogue & return to your original scroll/cursor position.
-
 You can filter the list of headings using the search filter at the top of the panel.
+
+When selecting a heading with the keyboard, the editor will immediately scroll to the selected heading. Hitting enter in the panel (or clicking somewhere else) will close the panel. Hitting escape will close the panel & return to your original scroll/cursor position.
+
+> [!note]
+> When the panel is pinned, clicking outside of the panel will not close the panel, and hitting escape will move focus to the editor without closing the panel or restoring previous scroll position.
 
 ### Features
 
-- Navigate through headings with the keyboard
+- Navigate through headings with the keyboard (desktop only)
 - Search filter to filter list of headings
 - Copy link to heading
 - Panel adapts to your Joplin theme
-- Adjustable panel size
+- Adjustable panel size (desktop only)
+- Ability to pin panel so it stays open until you unpin it (desktop only)
 
 ### Settings
 
@@ -46,7 +49,7 @@ The plugin can be customized via Tools | Options | Heading Navigator:
 - **Panel max height**: 40-90% of editor viewport (default: 75%)
     - Prevents the panel from obscuring too much content
 - **Compact mode**: Hide `H# - line #` metadata and reduce heading row height (default: off)
-    - Shows more headings at once in the panel
+    - Shows more headings at once in the panel (desktop only)
 - **Copy internal anchor links**: Copy `[Heading](#heading-anchor)` instead of `[Heading @ Note](:/noteId#heading-anchor)` (default: off)
 
 Panel appearance settings take effect the next time the panel is opened. The copy link setting applies to the next copied link.
