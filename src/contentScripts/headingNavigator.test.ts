@@ -5,6 +5,7 @@ import { EDITOR_COMMAND_TOGGLE_PANEL } from '../constants';
 import type { ContentScriptSettings } from '../types';
 import type { PanelRestoreState } from '../messages';
 import * as headingExtractor from '../headingExtractor';
+import logger from '../logger';
 import { markdownEditorExtension } from '../testing/markdownState';
 import headingNavigator from './headingNavigator';
 
@@ -458,4 +459,66 @@ describe('progressive heading fill-in on large documents', () => {
         await new Promise((resolve) => setTimeout(resolve, 500));
         expect(computeHeadingStateSpy.mock.calls.length).toBe(callsAfterClose);
     }, 20_000);
+});
+
+describe('parse completion without a markdown parser', () => {
+    let view: EditorView;
+    let togglePanel: (isMobile?: boolean) => void;
+
+    beforeEach(() => {
+        computeHeadingStateSpy.mockClear();
+        vi.useFakeTimers();
+        vi.stubGlobal('ResizeObserver', ResizeObserverMock);
+        vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
+            callback(0);
+            return 1;
+        });
+
+        const parent = document.createElement('div');
+        document.body.appendChild(parent);
+        // No markdown language extension: the syntax tree stays empty and can never grow.
+        view = new EditorView({
+            state: EditorState.create({ doc: '# One\n\n## Two' }),
+            parent,
+        });
+
+        const editorControl = {
+            editor: view,
+            addExtension: (extension: Extension) => {
+                view.dispatch({ effects: StateEffect.appendConfig.of(extension) });
+            },
+            registerCommand: (name: string, callback: typeof togglePanel) => {
+                if (name === EDITOR_COMMAND_TOGGLE_PANEL) {
+                    togglePanel = callback;
+                }
+            },
+        } as unknown as CodeMirrorControl;
+        headingNavigator({ postMessage: vi.fn() } as unknown as ContentScriptContext).plugin(editorControl);
+    });
+
+    afterEach(() => {
+        view.destroy();
+        document.body.textContent = '';
+        vi.clearAllTimers();
+        vi.useRealTimers();
+        vi.restoreAllMocks();
+        vi.unstubAllGlobals();
+    });
+
+    it('stops the completion loop after one no-progress attempt instead of polling forever', () => {
+        const warnSpy = vi.spyOn(logger, 'warn');
+
+        togglePanel(false);
+        expect(computeHeadingStateSpy).toHaveBeenCalledTimes(1);
+        expect(document.querySelectorAll('.heading-navigator-item')).toHaveLength(0);
+
+        // Run the scheduled forceParsing slice; without a parser it cannot make progress.
+        vi.advanceTimersByTime(1);
+        expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('made no progress'));
+
+        warnSpy.mockClear();
+        vi.advanceTimersByTime(5000);
+        expect(warnSpy).not.toHaveBeenCalled();
+        expect(computeHeadingStateSpy).toHaveBeenCalledTimes(1);
+    });
 });

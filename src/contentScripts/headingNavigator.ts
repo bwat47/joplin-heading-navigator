@@ -395,11 +395,21 @@ export default function headingNavigator(context: ContentScriptContext): Markdow
                         return;
                     }
 
+                    const treeLengthBefore = syntaxTree(view.state).length;
                     const reachedEnd = forceParsing(view, view.state.doc.length, FORCE_PARSE_SLICE_MS);
+                    if (reachedEnd) {
+                        return;
+                    }
+
                     // Progress dispatches an update, and the update listener re-schedules from
-                    // there. If nothing observable happened, keep the loop alive after a pause.
-                    if (!reachedEnd) {
+                    // there; this retry only covers a missed update. When the tree did not grow
+                    // at all (e.g. no markdown parser is installed), retrying cannot help, so
+                    // stop instead of polling forever. A later tree change revives the loop
+                    // through refreshHeadings.
+                    if (syntaxTree(view.state).length > treeLengthBefore) {
                         scheduleParseCompletion(FORCE_PARSE_RETRY_DELAY_MS);
+                    } else {
+                        logger.warn('Stopping heading parse completion loop: the parser made no progress');
                     }
                 }, delayMs);
             };

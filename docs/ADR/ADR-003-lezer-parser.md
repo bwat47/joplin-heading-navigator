@@ -17,6 +17,8 @@ reads the editor's incrementally-maintained tree via `@codemirror/language`:
   until the tree covers the whole document. There is no UI indicator while the list fills in.
 - There is deliberately **no fallback** to a standalone string parse. If the tree is empty
   for a non-empty document (markdown language missing), a warning is logged — one code path.
+  The completion loop is bounded by observable progress: a `forceParsing` slice that neither
+  reaches the end nor grows the tree stops the loop instead of polling forever.
 - `@codemirror/language` resolves to Joplin's own instance through the content-script
   webpack externals, so the tree read is the same one the editor maintains.
 
