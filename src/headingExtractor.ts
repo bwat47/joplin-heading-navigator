@@ -1,28 +1,42 @@
 /**
- * Markdown heading extraction using the Lezer parser.
+ * Markdown heading extraction from a Lezer syntax tree.
  *
- * Parses ATX (`# Heading`) and Setext (underlined) headings from markdown documents,
- * strips inline formatting (bold, italic, links, code), and generates stable IDs and
- * GitHub-compatible anchor slugs.
+ * Reads ATX (`# Heading`) and Setext (underlined) headings from the editor's live
+ * syntax tree, strips inline formatting (bold, italic, links, code), and generates
+ * stable IDs and GitHub-compatible anchor slugs.
  *
  * Implementation details:
- * - Uses Lezer AST parser for reliable heading detection and inline text extraction
+ * - Consumes the incrementally-maintained tree from @codemirror/language instead of
+ *   re-parsing the document, with a bounded ensureSyntaxTree pass for completeness
  * - Stable IDs based on byte position (`heading-{from}`)
  * - Anchor deduplication (e.g., "intro" → "intro-2" → "intro-3")
- * - CodeMirror Text class for efficient position → line number conversion
+ * - CodeMirror Text class for position → line number conversion and slicing
  * - Preserves snake_case in headings (doesn't break on underscores)
  *
  * @see extractInlineText - Recursive tree walker for extracting clean text
  */
 
-import { parser } from '@lezer/markdown';
-import { Text } from '@codemirror/state';
-import type { SyntaxNode } from '@lezer/common';
+import { EditorState, Text } from '@codemirror/state';
+import { ensureSyntaxTree, syntaxTree } from '@codemirror/language';
+import type { SyntaxNode, Tree } from '@lezer/common';
 import logger from './logger';
 import { HeadingItem } from './types';
 import uslug from '@joplin/fork-uslug';
 
 const UNSUPPORTED_INLINE_FORMATTING_PATTERN = /(==|\+\+)(?=\S)([\s\S]*?\S)\1/g;
+
+/**
+ * Time budget for the synchronous ensureSyntaxTree pass in computeHeadingState.
+ * Large enough to finish any normal document in one shot; exceeded only by very
+ * large documents, which then fall back to the partial tree.
+ */
+const HEADING_PARSE_BUDGET_MS = 75;
+
+export interface HeadingComputation {
+    headings: HeadingItem[];
+    /** False when the syntax tree did not yet cover the whole document. */
+    complete: boolean;
+}
 
 function parseHeadingLevel(nodeName: string): number | null {
     if (nodeName.startsWith('ATXHeading')) {
@@ -57,14 +71,14 @@ function parseHeadingLevel(nodeName: string): number | null {
  * // Returns: "bold and code"
  * ```
  */
-function extractInlineText(node: SyntaxNode, doc: string): string {
+function extractInlineText(node: SyntaxNode, doc: Text): string {
     let out = '';
     const cursor = node.cursor();
 
     if (!cursor.firstChild()) {
         // Leaf node case — include only text-bearing nodes
-        if (cursor.name === 'Text' || cursor.name === 'CodeText') {
-            return doc.slice(cursor.from, cursor.to);
+        if (cursor.name === 'Text' || cursor.name === 'CodeText' || cursor.name === 'Emoji') {
+            return doc.sliceString(cursor.from, cursor.to);
         }
         return '';
     }
@@ -80,7 +94,7 @@ function extractInlineText(node: SyntaxNode, doc: string): string {
 
         // --- Handle gaps (plain unformatted text between inline elements) ---
         if (from > lastPos) {
-            out += doc.slice(lastPos, from);
+            out += doc.sliceString(lastPos, from);
         }
 
         // A URL node is a hidden link destination only inside a Link/Image
@@ -105,7 +119,7 @@ function extractInlineText(node: SyntaxNode, doc: string): string {
         // --- Handle escaped characters (e.g., \* → *) ---
         if (name === 'Escape') {
             // Escape node contains both backslash and character, extract just the character
-            out += doc.slice(from + 1, to);
+            out += doc.sliceString(from + 1, to);
             lastPos = to;
             continue;
         }
@@ -116,9 +130,10 @@ function extractInlineText(node: SyntaxNode, doc: string): string {
             continue;
         }
 
-        // --- Leaf text (incl. visible autolink targets, which reach here as URL) ---
-        if (name === 'Text' || name === 'CodeText' || name === 'URL') {
-            out += doc.slice(from, to);
+        // --- Leaf text (incl. visible autolink targets, which reach here as URL, and
+        // emoji shortcodes like :fire:, which stay visible text for anchor stability) ---
+        if (name === 'Text' || name === 'CodeText' || name === 'URL' || name === 'Emoji') {
+            out += doc.sliceString(from, to);
             lastPos = to;
             continue;
         }
@@ -130,14 +145,14 @@ function extractInlineText(node: SyntaxNode, doc: string): string {
 
     // Include any trailing gap. Whitespace is normalized by trim() in normalizeHeadingText.
     if (lastPos < node.to) {
-        out += doc.slice(lastPos, node.to);
+        out += doc.sliceString(lastPos, node.to);
     }
 
     return out;
 }
 
 /**
- * Strips inline formatting that Joplin supports but @lezer/markdown does not parse.
+ * Strips inline formatting that Joplin supports but the markdown grammar may not parse.
  *
  * Examples:
  * - "==highlight==" -> "highlight"
@@ -154,7 +169,7 @@ function stripUnsupportedInlineFormatting(text: string): string {
  * @param doc - Source markdown document
  * @returns Cleaned heading text without markdown formatting
  */
-function normalizeHeadingText(node: SyntaxNode, doc: string): string {
+function normalizeHeadingText(node: SyntaxNode, doc: Text): string {
     return stripUnsupportedInlineFormatting(extractInlineText(node, doc)).replace(/\s+/g, ' ').trim();
 }
 
@@ -170,25 +185,14 @@ function createUniqueAnchor(text: string, fallback: string, counts: Map<string, 
 }
 
 /**
- * Extracts all headings from markdown content with normalized text and metadata.
+ * Extracts all headings from a markdown syntax tree with normalized text and metadata.
  *
- * @param content - Raw markdown document to parse
- * @returns Array of headings in document order, or empty array if parsing fails
- *
- * @example
- * ```typescript
- * const headings = extractHeadings('# Introduction\n## **Bold** Section\n## Bold Section');
- * // [
- * //   { id: 'heading-0', text: 'Introduction', level: 1, anchor: 'introduction', ... },
- * //   { id: 'heading-16', text: 'Bold Section', level: 2, anchor: 'bold-section', ... },
- * //   { id: 'heading-37', text: 'Bold Section', level: 2, anchor: 'bold-section-2', ... }
- * // ]
- * ```
+ * @param tree - Lezer tree covering (a prefix of) the document
+ * @param doc - Document the tree was parsed from
+ * @returns Array of headings in document order, or empty array if extraction fails
  */
-export function extractHeadings(content: string): HeadingItem[] {
+export function extractHeadingsFromTree(tree: Tree, doc: Text): HeadingItem[] {
     try {
-        const tree = parser.parse(content);
-        const doc = Text.of(content.split('\n'));
         const headings: HeadingItem[] = [];
         const anchorCounts = new Map<string, number>();
 
@@ -201,7 +205,7 @@ export function extractHeadings(content: string): HeadingItem[] {
 
                 const from = node.from;
                 const to = node.to;
-                const text = normalizeHeadingText(node.node, content);
+                const text = normalizeHeadingText(node.node, doc);
 
                 if (!text) {
                     return;
@@ -226,4 +230,32 @@ export function extractHeadings(content: string): HeadingItem[] {
         logger.error('Failed to extract headings', error);
         return [];
     }
+}
+
+/**
+ * Computes the heading list from the editor's live syntax tree.
+ *
+ * Attempts to parse the full document within a small synchronous budget so normal
+ * documents always produce a complete list in one shot. When the budget is exceeded
+ * (very large documents), returns whatever prefix of the document the tree covers
+ * and reports `complete: false` so the caller can drive parsing forward and refresh.
+ *
+ * @param state - Editor state carrying the markdown language's syntax tree
+ * @param budgetMs - Synchronous parse budget for ensureSyntaxTree
+ */
+export function computeHeadingState(
+    state: EditorState,
+    budgetMs: number = HEADING_PARSE_BUDGET_MS
+): HeadingComputation {
+    const full = ensureSyntaxTree(state, state.doc.length, budgetMs);
+    const tree = full ?? syntaxTree(state);
+
+    if (tree.length === 0 && state.doc.length > 0) {
+        logger.warn('Syntax tree is empty for a non-empty document; is the markdown language extension missing?');
+    }
+
+    return {
+        headings: extractHeadingsFromTree(tree, state.doc),
+        complete: full !== null || tree.length >= state.doc.length,
+    };
 }

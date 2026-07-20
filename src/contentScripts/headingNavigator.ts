@@ -24,13 +24,14 @@
  * - ui/headingPanel.ts - Floating panel UI implementation
  */
 
-import { EditorSelection, EditorState } from '@codemirror/state';
+import { EditorSelection } from '@codemirror/state';
 import { EditorView, ViewPlugin, ViewUpdate } from '@codemirror/view';
+import { forceParsing, syntaxTree } from '@codemirror/language';
 import type { CodeMirrorControl, ContentScriptContext, MarkdownEditorContentScriptModule } from 'api/types';
 import { EDITOR_COMMAND_TOGGLE_PANEL } from '../constants';
 import type { HeadingItem } from '../types';
 import type { ContentScriptToPluginMessage, PanelRestoreState } from '../messages';
-import { extractHeadings } from '../headingExtractor';
+import { computeHeadingState } from '../headingExtractor';
 import { HeadingPanel, type PanelCloseReason } from './ui/headingPanel';
 import logger from '../logger';
 import { createSettingsExtension, getContentScriptSettings, syncInitialContentScriptSettings } from './pluginSettings';
@@ -60,6 +61,10 @@ const SCROLL_STABILIZE_DELAY_MS = 160;
 const SCROLL_STABILIZE_TOLERANCE_PX = 12;
 const SCROLL_STABILIZE_NEGATIVE_TOLERANCE_PX = 1.5;
 const HEADING_REPARSE_DEBOUNCE_MS = 150;
+// Per-slice budget for driving the parser forward while the heading list is incomplete,
+// and the pause before retrying a slice that made no observable progress.
+const FORCE_PARSE_SLICE_MS = 100;
+const FORCE_PARSE_RETRY_DELAY_MS = 150;
 
 type ScrollStabilizationMeasurement = {
     selectionFrom: number;
@@ -200,10 +205,6 @@ function isSameSelection(a: SelectionLike, b: SelectionLike): boolean {
     return normalizedA.from === normalizedB.from && normalizedA.to === normalizedB.to;
 }
 
-function computeHeadings(state: EditorState): HeadingItem[] {
-    return extractHeadings(state.doc.toString());
-}
-
 function findActiveHeadingId(headings: HeadingItem[], position: number): string | null {
     if (!headings.length) {
         return null;
@@ -265,9 +266,13 @@ export default function headingNavigator(context: ContentScriptContext): Markdow
             const view = editorControl.editor as EditorView;
             let panel: HeadingPanel | null = null;
             let headings: HeadingItem[] = [];
+            // False while the syntax tree covers only a prefix of a very large document;
+            // drives the forceParsing completion loop until the heading list is full.
+            let headingsComplete = true;
             let initialSelectionRange: { from: number; to: number } | null = null;
             let initialScrollSnapshot: ReturnType<EditorView['scrollSnapshot']> | null = null;
             let headingReparseTimer: number | null = null;
+            let parseCompletionTimer: number | null = null;
             // Suppresses persistence while programmatically re-pinning during startup restore,
             // so only user-initiated pin toggles write to settings.
             let suppressPinPersist = false;
@@ -370,8 +375,47 @@ export default function headingNavigator(context: ContentScriptContext): Markdow
                 return panel;
             };
 
+            const cancelPendingParseCompletion = (): void => {
+                if (parseCompletionTimer !== null) {
+                    window.clearTimeout(parseCompletionTimer);
+                    parseCompletionTimer = null;
+                }
+            };
+
+            // forceParsing dispatches a transaction, so it must never run synchronously
+            // inside an update listener or another dispatch — always via this timeout.
+            const scheduleParseCompletion = (delayMs = 0): void => {
+                if (parseCompletionTimer !== null) {
+                    return;
+                }
+
+                parseCompletionTimer = window.setTimeout(() => {
+                    parseCompletionTimer = null;
+                    if (!panel || !panel.isOpen() || headingsComplete) {
+                        return;
+                    }
+
+                    const reachedEnd = forceParsing(view, view.state.doc.length, FORCE_PARSE_SLICE_MS);
+                    // Progress dispatches an update, and the update listener re-schedules from
+                    // there. If nothing observable happened, keep the loop alive after a pause.
+                    if (!reachedEnd) {
+                        scheduleParseCompletion(FORCE_PARSE_RETRY_DELAY_MS);
+                    }
+                }, delayMs);
+            };
+
+            const refreshHeadings = (): void => {
+                const computation = computeHeadingState(view.state);
+                headings = computation.headings;
+                headingsComplete = computation.complete;
+
+                if (!headingsComplete) {
+                    scheduleParseCompletion();
+                }
+            };
+
             const openPanel = (isMobile: boolean, focusInput = true): void => {
-                headings = computeHeadings(view.state);
+                refreshHeadings();
                 const activeHeadingId = findActiveHeadingId(headings, view.state.selection.main.head);
                 const selection = view.state.selection.main;
                 initialSelectionRange = { from: selection.from, to: selection.to };
@@ -404,13 +448,14 @@ export default function headingNavigator(context: ContentScriptContext): Markdow
                         return;
                     }
 
-                    headings = computeHeadings(view.state);
+                    refreshHeadings();
                     updatePanelHeadings();
                 }, HEADING_REPARSE_DEBOUNCE_MS);
             };
 
             const closePanel = (focusEditor = false, restoreOriginalPosition = false): void => {
                 cancelPendingHeadingReparse();
+                cancelPendingParseCompletion();
                 panel?.destroy();
                 panel = null;
 
@@ -463,6 +508,10 @@ export default function headingNavigator(context: ContentScriptContext): Markdow
                 }
 
                 if (update.docChanged) {
+                    scheduleHeadingReparse();
+                } else if (!headingsComplete && syntaxTree(update.state) !== syntaxTree(update.startState)) {
+                    // Background parsing extended the tree without a document change;
+                    // fold the newly covered headings into the list.
                     scheduleHeadingReparse();
                 } else if (update.selectionSet) {
                     const activeHeadingId = findActiveHeadingId(headings, update.state.selection.main.head);

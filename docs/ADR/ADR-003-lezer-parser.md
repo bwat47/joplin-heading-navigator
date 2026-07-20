@@ -1,6 +1,32 @@
 # ADR-003: Lezer Parser for Heading Extraction
 
-**Status**: Accepted
+**Status**: Amended (2026-07) — extraction now reads the editor's live syntax tree; see Addendum
+
+## Addendum (2026-07): Migrated to the live CodeMirror syntax tree
+
+The original decision below (standalone `@lezer/markdown` parse of the full document string)
+was revisited once profiling showed blocking parses on very large documents. Extraction now
+reads the editor's incrementally-maintained tree via `@codemirror/language`:
+
+- `computeHeadingState(state)` calls `ensureSyntaxTree(state, doc.length, 75ms)`. Normal
+  documents finish inside the budget, producing a complete heading list in one shot with no
+  full-string materialization and no redundant reparse.
+- When the budget is exceeded (very large documents), the partial tree's headings render
+  immediately and `headingNavigator.ts` drives a completion loop: `forceParsing()` slices
+  (100 ms) advance the parser, each resulting update recomputes the list (150 ms debounce)
+  until the tree covers the whole document. There is no UI indicator while the list fills in.
+- There is deliberately **no fallback** to a standalone string parse. If the tree is empty
+  for a non-empty document (markdown language missing), a warning is logged — one code path.
+- `@codemirror/language` resolves to Joplin's own instance through the content-script
+  webpack externals, so the tree read is the same one the editor maintains.
+
+Testing note: Joplin's exact editor grammar (`@joplin/editor`) is not published to npm.
+Tests build trees with `markdownLanguage` from `@codemirror/lang-markdown` (GFM + subscript/
+superscript/emoji) as a best-effort mirror; `src/testing/markdownState.ts` is the single
+place that divergence lives. The original "easier testing" rationale (§3) is retired —
+tests now go through headless `EditorState` trees on the production code path.
+
+The original ADR text is preserved below for historical context.
 
 ## Context
 

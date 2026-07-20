@@ -1,11 +1,18 @@
 import { EditorSelection, EditorState, StateEffect, type Extension } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
-import { parser } from '@lezer/markdown';
 import type { CodeMirrorControl, ContentScriptContext } from 'api/types';
 import { EDITOR_COMMAND_TOGGLE_PANEL } from '../constants';
 import type { ContentScriptSettings } from '../types';
 import type { PanelRestoreState } from '../messages';
+import * as headingExtractor from '../headingExtractor';
+import { markdownEditorExtension } from '../testing/markdownState';
 import headingNavigator from './headingNavigator';
+
+// Auto-spy the extractor module so tests can count heading recomputations while
+// keeping the real implementations.
+vi.mock('../headingExtractor', { spy: true });
+
+const computeHeadingStateSpy = vi.mocked(headingExtractor.computeHeadingState);
 
 class ResizeObserverMock {
     public observe(): void {}
@@ -19,6 +26,7 @@ describe('heading navigator panel lifecycle', () => {
     let postMessage: ReturnType<typeof vi.fn>;
 
     beforeEach(() => {
+        computeHeadingStateSpy.mockClear();
         vi.useFakeTimers();
         vi.stubGlobal('ResizeObserver', ResizeObserverMock);
         vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
@@ -29,7 +37,7 @@ describe('heading navigator panel lifecycle', () => {
         const parent = document.createElement('div');
         document.body.appendChild(parent);
         view = new EditorView({
-            state: EditorState.create({ doc: '# One\n\n## Two' }),
+            state: EditorState.create({ doc: '# One\n\n## Two', extensions: [markdownEditorExtension()] }),
             parent,
         });
 
@@ -60,44 +68,41 @@ describe('heading navigator panel lifecycle', () => {
     });
 
     it('debounces reparsing until 150ms after the latest document change', () => {
-        const parseSpy = vi.spyOn(parser, 'parse');
         togglePanel(false);
-        expect(parseSpy).toHaveBeenCalledTimes(1);
+        expect(computeHeadingStateSpy).toHaveBeenCalledTimes(1);
 
         view.dispatch({ changes: { from: view.state.doc.length, insert: '\n### Three' } });
         vi.advanceTimersByTime(149);
-        expect(parseSpy).toHaveBeenCalledTimes(1);
+        expect(computeHeadingStateSpy).toHaveBeenCalledTimes(1);
 
         view.dispatch({ changes: { from: view.state.doc.length, insert: '\n#### Four' } });
         vi.advanceTimersByTime(149);
-        expect(parseSpy).toHaveBeenCalledTimes(1);
+        expect(computeHeadingStateSpy).toHaveBeenCalledTimes(1);
 
         vi.advanceTimersByTime(1);
-        expect(parseSpy).toHaveBeenCalledTimes(2);
+        expect(computeHeadingStateSpy).toHaveBeenCalledTimes(2);
         expect(document.querySelectorAll('.heading-navigator-item')).toHaveLength(4);
     });
 
     it('cancels a pending reparse when an unpinned panel closes', () => {
-        const parseSpy = vi.spyOn(parser, 'parse');
         togglePanel(false);
         view.dispatch({ changes: { from: view.state.doc.length, insert: '\n### Three' } });
 
         togglePanel(false);
         vi.advanceTimersByTime(150);
 
-        expect(parseSpy).toHaveBeenCalledTimes(1);
+        expect(computeHeadingStateSpy).toHaveBeenCalledTimes(1);
         expect(document.querySelector('.heading-navigator-panel')).toBeNull();
     });
 
     it('updates cursor-follow selection without reparsing or replacing list items', () => {
-        const parseSpy = vi.spyOn(parser, 'parse');
         togglePanel(false);
         const itemsBefore = Array.from(document.querySelectorAll<HTMLLIElement>('.heading-navigator-item'));
 
         view.dispatch({ selection: EditorSelection.cursor(8) });
 
         const itemsAfter = Array.from(document.querySelectorAll<HTMLLIElement>('.heading-navigator-item'));
-        expect(parseSpy).toHaveBeenCalledTimes(1);
+        expect(computeHeadingStateSpy).toHaveBeenCalledTimes(1);
         expect(itemsAfter).toEqual(itemsBefore);
         expect(itemsAfter[1].classList.contains('is-selected')).toBe(true);
     });
@@ -207,7 +212,7 @@ describe('pinned panel restoration', () => {
         const parent = document.createElement('div');
         document.body.appendChild(parent);
         view = new EditorView({
-            state: EditorState.create({ doc: '# One\n\n## Two' }),
+            state: EditorState.create({ doc: '# One\n\n## Two', extensions: [markdownEditorExtension()] }),
             parent,
         });
 
@@ -367,4 +372,90 @@ describe('pinned panel restoration', () => {
         expect(view.dom.querySelector('.heading-navigator-panel')).toBeNull();
         expect(addListenerSpy).not.toHaveBeenCalledWith('mousedown', expect.any(Function), true);
     });
+});
+
+describe('progressive heading fill-in on large documents', () => {
+    // These tests exercise real parse budgets and the forceParsing completion loop,
+    // so they run with real timers: fake timers freeze the clock CodeMirror's parse
+    // budget measures against, making every parse appear to finish instantly and
+    // the partial path unreachable.
+    // Large enough that parsing takes multiple completion-loop slices, small enough
+    // to keep jsdom list rendering fast; the zero-budget opening computation below is
+    // what guarantees the partial path, independent of fixture size.
+    const SECTION_COUNT = 6000;
+    const monsterDoc = Array.from(
+        { length: SECTION_COUNT },
+        (_, index) => `## Section ${index}\n\n${'Body text for padding the document. '.repeat(5)}\n`
+    ).join('\n');
+
+    let view: EditorView;
+    let togglePanel: (isMobile?: boolean) => void;
+
+    beforeEach(async () => {
+        computeHeadingStateSpy.mockClear();
+        vi.stubGlobal('ResizeObserver', ResizeObserverMock);
+        vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
+            callback(0);
+            return 1;
+        });
+
+        const parent = document.createElement('div');
+        document.body.appendChild(parent);
+        view = new EditorView({
+            state: EditorState.create({ doc: monsterDoc, extensions: [markdownEditorExtension()] }),
+            parent,
+        });
+
+        const editorControl = {
+            editor: view,
+            addExtension: (extension: Extension) => {
+                view.dispatch({ effects: StateEffect.appendConfig.of(extension) });
+            },
+            registerCommand: (name: string, callback: typeof togglePanel) => {
+                if (name === EDITOR_COMMAND_TOGGLE_PANEL) {
+                    togglePanel = callback;
+                }
+            },
+        } as unknown as CodeMirrorControl;
+        headingNavigator({ postMessage: vi.fn() } as unknown as ContentScriptContext).plugin(editorControl);
+
+        // Force the opening computation to a zero parse budget so the partial path
+        // is taken deterministically regardless of machine speed.
+        const actual = await vi.importActual<typeof import('../headingExtractor')>('../headingExtractor');
+        computeHeadingStateSpy.mockImplementationOnce((state) => actual.computeHeadingState(state, 0));
+    });
+
+    afterEach(() => {
+        view.destroy();
+        document.body.textContent = '';
+        vi.restoreAllMocks();
+        vi.unstubAllGlobals();
+    });
+
+    it('opens with a partial list and fills in to completion', async () => {
+        togglePanel(false);
+
+        const initialCount = document.querySelectorAll('.heading-navigator-item').length;
+        expect(initialCount).toBeGreaterThan(0);
+        expect(initialCount).toBeLessThan(SECTION_COUNT);
+
+        await vi.waitFor(
+            () => {
+                expect(document.querySelectorAll('.heading-navigator-item')).toHaveLength(SECTION_COUNT);
+            },
+            { timeout: 30_000, interval: 100 }
+        );
+    }, 40_000);
+
+    it('stops the completion loop when the panel closes while incomplete', async () => {
+        togglePanel(false);
+        expect(document.querySelectorAll('.heading-navigator-item').length).toBeLessThan(SECTION_COUNT);
+
+        togglePanel(false);
+        expect(document.querySelector('.heading-navigator-panel')).toBeNull();
+
+        const callsAfterClose = computeHeadingStateSpy.mock.calls.length;
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        expect(computeHeadingStateSpy.mock.calls.length).toBe(callsAfterClose);
+    }, 20_000);
 });

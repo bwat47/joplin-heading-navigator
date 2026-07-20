@@ -27,7 +27,7 @@ Two-layer architecture: plugin host with Joplin API access and content script in
 | `src/contentScripts/ui/headingPanel.ts`  | Panel DOM, pin and focus state, keyboard/mouse interactions, filtering                                           |
 | `src/contentScripts/ui/fuzzyFilter.ts`   | Fuzzy search ranking and match highlighting                                                                      |
 | `src/contentScripts/theme/panelTheme.ts` | CSS generation using Joplin theme variables                                                                      |
-| `src/headingExtractor.ts`                | Lezer-based heading parsing and anchor generation                                                                |
+| `src/headingExtractor.ts`                | Heading extraction from the editor's live Lezer syntax tree and anchor generation                                |
 | `src/linkFormatting.ts`                  | Markdown link formatting for copy functionality                                                                  |
 
 ### Plugin Host
@@ -58,7 +58,7 @@ Panel appended to `view.scrollDOM.parentElement` to stay associated with specifi
 
 1. **Settings Sync**: Each editor installs a settings facet with safe defaults, then requests normalized panel settings from the plugin host
 2. **Command Trigger**: User invokes "Go to Heading" → plugin host forwards the platform flag to the content script
-3. **Panel Display**: Content script reads settings from the facet, extracts headings via Lezer, and opens an unpinned panel with the active heading highlighted
+3. **Panel Display**: Content script reads settings from the facet, extracts headings from the editor's live syntax tree (bounded `ensureSyntaxTree` pass; very large documents open with a partial list that fills in as a `forceParsing` loop completes the tree), and opens an unpinned panel with the active heading highlighted
 4. **Navigation**: Filter/navigate updates editor selection and scrolls the heading into view
 5. **Transient Selection**: Selection closes the panel; Escape restores the original state if the panel was never pinned
 6. **Pinned Selection**: Selection returns focus to the editor while the mounted panel follows cursor movement
