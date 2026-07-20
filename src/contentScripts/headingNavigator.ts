@@ -31,7 +31,7 @@ import type { CodeMirrorControl, ContentScriptContext, MarkdownEditorContentScri
 import { EDITOR_COMMAND_TOGGLE_PANEL } from '../constants';
 import type { HeadingItem } from '../types';
 import type { ContentScriptToPluginMessage, PanelRestoreState } from '../messages';
-import { computeHeadingState } from '../headingExtractor';
+import { computeHeadingState } from './headingExtractor';
 import { HeadingPanel, type PanelCloseReason } from './ui/headingPanel';
 import logger from '../logger';
 import { createSettingsExtension, getContentScriptSettings, syncInitialContentScriptSettings } from './pluginSettings';

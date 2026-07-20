@@ -12,7 +12,7 @@
 import { EditorState, type Extension } from '@codemirror/state';
 import { ensureSyntaxTree } from '@codemirror/language';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
-import { extractHeadingsFromTree } from '../headingExtractor';
+import { extractHeadingsFromTree } from '../contentScripts/headingExtractor';
 import type { HeadingItem } from '../types';
 
 /** Generous budget so helper-driven full parses never come back partial in tests. */

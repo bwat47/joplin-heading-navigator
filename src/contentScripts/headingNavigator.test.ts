@@ -4,14 +4,14 @@ import type { CodeMirrorControl, ContentScriptContext } from 'api/types';
 import { EDITOR_COMMAND_TOGGLE_PANEL } from '../constants';
 import type { ContentScriptSettings } from '../types';
 import type { PanelRestoreState } from '../messages';
-import * as headingExtractor from '../headingExtractor';
+import * as headingExtractor from './headingExtractor';
 import logger from '../logger';
 import { markdownEditorExtension } from '../testing/markdownState';
 import headingNavigator from './headingNavigator';
 
 // Auto-spy the extractor module so tests can count heading recomputations while
 // keeping the real implementations.
-vi.mock('../headingExtractor', { spy: true });
+vi.mock('./headingExtractor', { spy: true });
 
 const computeHeadingStateSpy = vi.mocked(headingExtractor.computeHeadingState);
 
@@ -422,7 +422,7 @@ describe('heading fill-in on large documents', () => {
 
         // Force the opening computation to a zero parse budget so the partial path
         // is taken deterministically regardless of machine speed.
-        const actual = await vi.importActual<typeof import('../headingExtractor')>('../headingExtractor');
+        const actual = await vi.importActual<typeof import('./headingExtractor')>('./headingExtractor');
         computeHeadingStateSpy.mockImplementationOnce((state) => actual.computeHeadingState(state, 0));
     });
 

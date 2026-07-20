@@ -27,7 +27,7 @@ Two-layer architecture: plugin host with Joplin API access and content script in
 | `src/contentScripts/ui/headingPanel.ts`  | Panel DOM, pin and focus state, keyboard/mouse interactions, filtering                                           |
 | `src/contentScripts/ui/fuzzyFilter.ts`   | Fuzzy search ranking and match highlighting                                                                      |
 | `src/contentScripts/theme/panelTheme.ts` | CSS generation using Joplin theme variables                                                                      |
-| `src/headingExtractor.ts`                | Heading extraction from the editor's live Lezer syntax tree and anchor generation                                |
+| `src/contentScripts/headingExtractor.ts` | Heading extraction from the editor's live Lezer syntax tree and anchor generation                                |
 | `src/linkFormatting.ts`                  | Markdown link formatting for copy functionality                                                                  |
 
 ### Plugin Host
