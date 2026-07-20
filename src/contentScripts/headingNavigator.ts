@@ -26,7 +26,7 @@
 
 import { EditorSelection } from '@codemirror/state';
 import { EditorView, ViewPlugin, ViewUpdate } from '@codemirror/view';
-import { forceParsing, syntaxTree } from '@codemirror/language';
+import { forceParsing, language, syntaxTree } from '@codemirror/language';
 import type { CodeMirrorControl, ContentScriptContext, MarkdownEditorContentScriptModule } from 'api/types';
 import { EDITOR_COMMAND_TOGGLE_PANEL } from '../constants';
 import type { HeadingItem } from '../types';
@@ -395,22 +395,20 @@ export default function headingNavigator(context: ContentScriptContext): Markdow
                         return;
                     }
 
-                    const treeLengthBefore = syntaxTree(view.state).length;
+                    if (view.state.facet(language) === null) {
+                        logger.warn('Stopping heading parse completion loop: no language parser is installed');
+                        return;
+                    }
+
                     const reachedEnd = forceParsing(view, view.state.doc.length, FORCE_PARSE_SLICE_MS);
                     if (reachedEnd) {
                         return;
                     }
 
                     // Progress dispatches an update, and the update listener re-schedules from
-                    // there; this retry only covers a missed update. When the tree did not grow
-                    // at all (e.g. no markdown parser is installed), retrying cannot help, so
-                    // stop instead of polling forever. A later tree change revives the loop
-                    // through refreshHeadings.
-                    if (syntaxTree(view.state).length > treeLengthBefore) {
-                        scheduleParseCompletion(FORCE_PARSE_RETRY_DELAY_MS);
-                    } else {
-                        logger.warn('Stopping heading parse completion loop: the parser made no progress');
-                    }
+                    // there. If no observable update was published, retry after a pause because
+                    // CodeMirror may still have advanced its internal parse context.
+                    scheduleParseCompletion(FORCE_PARSE_RETRY_DELAY_MS);
                 }, delayMs);
             };
 

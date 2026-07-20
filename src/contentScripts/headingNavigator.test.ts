@@ -505,16 +505,17 @@ describe('parse completion without a markdown parser', () => {
         vi.unstubAllGlobals();
     });
 
-    it('stops the completion loop after one no-progress attempt instead of polling forever', () => {
+    it('does not start the completion loop when no language parser is installed', () => {
         const warnSpy = vi.spyOn(logger, 'warn');
 
         togglePanel(false);
         expect(computeHeadingStateSpy).toHaveBeenCalledTimes(1);
         expect(document.querySelectorAll('.heading-navigator-item')).toHaveLength(0);
 
-        // Run the scheduled forceParsing slice; without a parser it cannot make progress.
+        // Run the scheduled completion callback; it should detect the missing parser
+        // before attempting a forceParsing slice or scheduling a retry.
         vi.advanceTimersByTime(1);
-        expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('made no progress'));
+        expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('no language parser'));
 
         warnSpy.mockClear();
         vi.advanceTimersByTime(5000);
