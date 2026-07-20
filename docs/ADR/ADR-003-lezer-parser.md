@@ -13,13 +13,17 @@ reads the editor's incrementally-maintained tree via `@codemirror/language`:
   full-string materialization and no redundant reparse.
 - When the budget is exceeded (very large documents), the partial tree's headings render
   immediately and `headingNavigator.ts` drives a completion loop: `forceParsing()` slices
-  (100 ms) advance the parser, each resulting update recomputes the list (150 ms debounce)
-  until the tree covers the whole document. There is no UI indicator while the list fills in.
+  (100 ms) advance the parser toward chunked targets (current tree length + 250k chars —
+  `forceParsing` only publishes a new tree when it reaches its target, so bounded targets
+  are what make each chunk observable). Each published chunk recomputes the list (150 ms
+  debounce) until the tree covers the whole document. There is no UI indicator while the
+  list fills in.
 - There is deliberately **no fallback** to a standalone string parse. If the tree is empty
   for a non-empty document (markdown language missing), a warning is logged — one code path.
   The completion loop checks CodeMirror's language facet before starting; when no parser is
-  installed it stops instead of polling forever. With a parser present, an incomplete
-  `forceParsing` slice is retried because internal parse progress may precede a tree update.
+  installed it stops instead of polling forever. With a parser present, a slice that ran out
+  of budget before reaching its target is retried — parse progress persists in CodeMirror's
+  parse context between slices, so repeated slices converge on the target.
 - `@codemirror/language` resolves to Joplin's own instance through the content-script
   webpack externals, so the tree read is the same one the editor maintains.
 

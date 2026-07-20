@@ -62,9 +62,13 @@ const SCROLL_STABILIZE_TOLERANCE_PX = 12;
 const SCROLL_STABILIZE_NEGATIVE_TOLERANCE_PX = 1.5;
 const HEADING_REPARSE_DEBOUNCE_MS = 150;
 // Per-slice budget for driving the parser forward while the heading list is incomplete,
-// and the pause before retrying a slice that made no observable progress.
+// and the pause between slices that keeps the editor responsive.
 const FORCE_PARSE_SLICE_MS = 100;
 const FORCE_PARSE_RETRY_DELAY_MS = 150;
+// How far each slice advances the parse target. forceParsing only publishes a new
+// syntax tree when it reaches its target, so bounded targets are what make the heading
+// list fill in progressively instead of jumping from the opening snapshot to complete.
+const FORCE_PARSE_CHUNK_CHARS = 250_000;
 
 type ScrollStabilizationMeasurement = {
     selectionFrom: number;
@@ -400,14 +404,21 @@ export default function headingNavigator(context: ContentScriptContext): Markdow
                         return;
                     }
 
-                    const reachedEnd = forceParsing(view, view.state.doc.length, FORCE_PARSE_SLICE_MS);
-                    if (reachedEnd) {
+                    // Advance the target in bounded chunks: forceParsing only publishes a
+                    // new tree when it reaches its target, so targeting doc.length directly
+                    // would keep the panel frozen on the opening snapshot until the entire
+                    // document finished parsing. Each published chunk reaches the update
+                    // listener, which folds the newly covered headings into the list.
+                    const docLength = view.state.doc.length;
+                    const target = Math.min(syntaxTree(view.state).length + FORCE_PARSE_CHUNK_CHARS, docLength);
+                    const reachedTarget = forceParsing(view, target, FORCE_PARSE_SLICE_MS);
+                    if (reachedTarget && target === docLength) {
                         return;
                     }
 
-                    // Progress dispatches an update, and the update listener re-schedules from
-                    // there. If no observable update was published, retry after a pause because
-                    // CodeMirror may still have advanced its internal parse context.
+                    // Continue with the next chunk, or retry one that exhausted its slice
+                    // budget — progress persists in CodeMirror's parse context between
+                    // slices, so repeated slices always converge on the target.
                     scheduleParseCompletion(FORCE_PARSE_RETRY_DELAY_MS);
                 }, delayMs);
             };

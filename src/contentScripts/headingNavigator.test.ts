@@ -380,9 +380,10 @@ describe('progressive heading fill-in on large documents', () => {
     // so they run with real timers: fake timers freeze the clock CodeMirror's parse
     // budget measures against, making every parse appear to finish instantly and
     // the partial path unreachable.
-    // Large enough that parsing takes multiple completion-loop slices, small enough
-    // to keep jsdom list rendering fast; the zero-budget opening computation below is
-    // what guarantees the partial path, independent of fixture size.
+    // Large enough (~1.2 MB) to span several FORCE_PARSE_CHUNK_CHARS parse chunks —
+    // which makes intermediate list updates deterministic, not timing-dependent —
+    // while small enough to keep jsdom list rendering fast; the zero-budget opening
+    // computation below is what guarantees the partial path, independent of fixture size.
     const SECTION_COUNT = 6000;
     const monsterDoc = Array.from(
         { length: SECTION_COUNT },
@@ -433,19 +434,35 @@ describe('progressive heading fill-in on large documents', () => {
         vi.unstubAllGlobals();
     });
 
-    it('opens with a partial list and fills in to completion', async () => {
+    it('opens with a partial list and progressively fills in to completion', async () => {
         togglePanel(false);
 
         const initialCount = document.querySelectorAll('.heading-navigator-item').length;
         expect(initialCount).toBeGreaterThan(0);
         expect(initialCount).toBeLessThan(SECTION_COUNT);
 
-        await vi.waitFor(
-            () => {
-                expect(document.querySelectorAll('.heading-navigator-item')).toHaveLength(SECTION_COUNT);
-            },
-            { timeout: 30_000, interval: 100 }
-        );
+        // Record every list size the panel renders so we can assert the fill-in is
+        // progressive — at least one update strictly between the opening snapshot and
+        // completion — rather than a single jump when the whole document finishes parsing.
+        const observedCounts = new Set<number>();
+        const listObserver = new MutationObserver(() => {
+            observedCounts.add(document.querySelectorAll('.heading-navigator-item').length);
+        });
+        listObserver.observe(document.body, { childList: true, subtree: true });
+
+        try {
+            await vi.waitFor(
+                () => {
+                    expect(document.querySelectorAll('.heading-navigator-item')).toHaveLength(SECTION_COUNT);
+                },
+                { timeout: 30_000, interval: 100 }
+            );
+        } finally {
+            listObserver.disconnect();
+        }
+
+        const intermediateCounts = [...observedCounts].filter((count) => count > initialCount && count < SECTION_COUNT);
+        expect(intermediateCounts.length).toBeGreaterThan(0);
     }, 40_000);
 
     it('stops the completion loop when the panel closes while incomplete', async () => {
