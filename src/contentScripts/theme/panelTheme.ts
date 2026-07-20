@@ -6,7 +6,11 @@
  * @see createPanelCss - Generates panel styles using CSS variables
  */
 
+import { DEFAULT_PANEL_TOP_OFFSET } from '../../panelDimensions';
 import type { PanelDimensions } from '../../types';
+
+/** Inline CSS custom property carrying the panel's distance from the top of the editor. */
+export const PANEL_TOP_OFFSET_VAR = '--heading-navigator-top-offset';
 
 const SEARCH_CANCEL_MASK_DATA_URI =
     "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2 2l8 8m0-8L2 10' fill='none' stroke='white' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E";
@@ -27,7 +31,7 @@ export function createPanelCss(dimensions: PanelDimensions): string {
     return `
 .heading-navigator-panel {
     position: absolute;
-    top: 12px;
+    top: var(${PANEL_TOP_OFFSET_VAR}, ${DEFAULT_PANEL_TOP_OFFSET}px);
     right: 12px;
     width: ${panelWidth};
     max-height: ${maxHeight};

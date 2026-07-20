@@ -44,6 +44,7 @@ describe('HeadingPanel pinned mode', () => {
         panel = new HeadingPanel(view, callbacks, {
             dimensions: { width: 320, maxHeightRatio: 0.75 },
             compactMode: false,
+            topOffset: 40,
         });
         panel.open(headings, headings[0].id);
     });
@@ -124,6 +125,7 @@ describe('HeadingPanel pinned mode', () => {
         panel = new HeadingPanel(view, callbacks, {
             dimensions: { width: 320, maxHeightRatio: 0.75 },
             compactMode: false,
+            topOffset: 40,
         });
         panel.open(headings, headings[0].id, false);
 
@@ -131,12 +133,25 @@ describe('HeadingPanel pinned mode', () => {
         expect(document.activeElement).not.toBe(document.querySelector('.heading-navigator-input'));
     });
 
+    it('applies the configured top offset as a CSS custom property and updates it live', () => {
+        const container = document.querySelector<HTMLDivElement>('.heading-navigator-panel')!;
+        expect(container.style.getPropertyValue('--heading-navigator-top-offset')).toBe('40px');
+
+        panel.setSettings({
+            dimensions: { width: 320, maxHeightRatio: 0.75 },
+            compactMode: false,
+            topOffset: 88,
+        });
+
+        expect(container.style.getPropertyValue('--heading-navigator-top-offset')).toBe('88px');
+    });
+
     it('does not render pin controls on mobile', () => {
         panel.destroy();
         panel = new HeadingPanel(
             view,
             callbacks,
-            { dimensions: { width: 320, maxHeightRatio: 0.75 }, compactMode: true },
+            { dimensions: { width: 320, maxHeightRatio: 0.75 }, compactMode: true, topOffset: 40 },
             true
         );
         panel.open(headings, headings[0].id);

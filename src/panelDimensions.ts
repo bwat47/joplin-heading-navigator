@@ -4,6 +4,8 @@
  * Enforces min/max constraints on panel dimensions to ensure usability:
  * - Width: 240-640px (too narrow = unusable, too wide = blocks editor)
  * - Height: 40-90% of viewport (too short = not enough headings visible, too tall = blocks content)
+ * - Top offset: 0-200px (distance from the top of the editor, used to clear other top-right
+ *   editor decorations such as a backlinks indicator)
  *
  * User settings from plugin configuration are untrusted and must be validated
  * before being applied to the UI. Invalid values fall back to defaults (320px × 75%).
@@ -16,9 +18,13 @@ export const MIN_PANEL_WIDTH = 240;
 export const MAX_PANEL_WIDTH = 640;
 export const MIN_PANEL_HEIGHT_PERCENTAGE = 40;
 export const MAX_PANEL_HEIGHT_PERCENTAGE = 90;
+export const MIN_PANEL_TOP_OFFSET = 0;
+export const MAX_PANEL_TOP_OFFSET = 200;
 
 export const DEFAULT_PANEL_WIDTH = DEFAULT_PANEL_DIMENSIONS.width;
 export const DEFAULT_PANEL_HEIGHT_PERCENTAGE = Math.round(DEFAULT_PANEL_DIMENSIONS.maxHeightRatio * 100);
+// Matches the panel's historical `top: 12px`, so the default preserves existing behavior.
+export const DEFAULT_PANEL_TOP_OFFSET = 12;
 
 const MIN_PANEL_HEIGHT_RATIO = MIN_PANEL_HEIGHT_PERCENTAGE / 100;
 const MAX_PANEL_HEIGHT_RATIO = MAX_PANEL_HEIGHT_PERCENTAGE / 100;
@@ -42,6 +48,15 @@ export function normalizePanelHeightPercentage(raw: unknown): { value: number; c
         return { value: fallback, changed: true };
     }
     const clamped = clamp(Math.round(raw), MIN_PANEL_HEIGHT_PERCENTAGE, MAX_PANEL_HEIGHT_PERCENTAGE);
+    return { value: clamped, changed: clamped !== raw };
+}
+
+export function normalizePanelTopOffset(raw: unknown): { value: number; changed: boolean } {
+    const fallback = DEFAULT_PANEL_TOP_OFFSET;
+    if (typeof raw !== 'number' || Number.isNaN(raw)) {
+        return { value: fallback, changed: true };
+    }
+    const clamped = clamp(Math.round(raw), MIN_PANEL_TOP_OFFSET, MAX_PANEL_TOP_OFFSET);
     return { value: clamped, changed: clamped !== raw };
 }
 

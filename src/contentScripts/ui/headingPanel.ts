@@ -1,6 +1,6 @@
 import { EditorView } from '@codemirror/view';
 import type { ContentScriptSettings, HeadingItem, PanelDimensions } from '../../types';
-import { createPanelCss } from '../theme/panelTheme';
+import { createPanelCss, PANEL_TOP_OFFSET_VAR } from '../theme/panelTheme';
 import { CopyButtonController } from './copyButtonController';
 import { fuzzyFilter, highlightMatch } from './fuzzyFilter';
 
@@ -450,6 +450,17 @@ export class HeadingPanel {
         this.settings = settings;
         ensurePanelStyles(this.view, this.settings.dimensions);
         this.container.classList.toggle('is-compact', this.settings.compactMode && !this.isMobile);
+        this.applyTopOffset();
+    }
+
+    /**
+     * Applies the configured top offset via an inline CSS custom property.
+     *
+     * Kept off the {@link createPanelCss} signature so changing the offset never invalidates the
+     * dimension-keyed stylesheet cache. Harmless on mobile, where `.is-mobile` overrides `top`.
+     */
+    private applyTopOffset(): void {
+        this.container.style.setProperty(PANEL_TOP_OFFSET_VAR, `${this.settings.topOffset}px`);
     }
 
     private mount(): void {
@@ -459,6 +470,8 @@ export class HeadingPanel {
             const scrollRoot = this.view.scrollDOM.parentElement;
             const fallbackRoot = this.view.dom.parentElement ?? this.view.dom;
             (scrollRoot ?? fallbackRoot).appendChild(this.container);
+
+            this.applyTopOffset();
 
             if (this.isMobile) return;
 

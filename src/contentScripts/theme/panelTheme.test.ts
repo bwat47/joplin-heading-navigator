@@ -31,6 +31,12 @@ describe('createPanelCss', () => {
         expect(css).toContain('.heading-navigator-empty');
     });
 
+    it('positions the panel top via a CSS custom property so the offset can change without a restyle', () => {
+        const css = createPanelCss({ width: 400, maxHeightRatio: 0.7 });
+
+        expect(css).toContain('top: var(--heading-navigator-top-offset, 12px);');
+    });
+
     it('rounds dimensions appropriately', () => {
         const css = createPanelCss({ width: 450.7, maxHeightRatio: 0.6543 });
 

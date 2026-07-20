@@ -269,6 +269,7 @@ describe('pinned panel restoration', () => {
             {
                 dimensions: { width: 480, maxHeightRatio: 0.6 },
                 compactMode: true,
+                topOffset: 12,
             }
         );
 
@@ -321,7 +322,7 @@ describe('pinned panel restoration', () => {
         createEditor(
             { pinned: true, isMobile: false },
             undefined,
-            { dimensions: { width: 500, maxHeightRatio: 0.65 }, compactMode: true },
+            { dimensions: { width: 500, maxHeightRatio: 0.65 }, compactMode: true, topOffset: 12 },
             settingsGate
         );
 

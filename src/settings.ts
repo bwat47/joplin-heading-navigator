@@ -14,18 +14,23 @@ import logger from './logger';
 import type { ContentScriptSettings } from './types';
 import {
     DEFAULT_PANEL_HEIGHT_PERCENTAGE,
+    DEFAULT_PANEL_TOP_OFFSET,
     DEFAULT_PANEL_WIDTH,
     MAX_PANEL_HEIGHT_PERCENTAGE,
+    MAX_PANEL_TOP_OFFSET,
     MAX_PANEL_WIDTH,
     MIN_PANEL_HEIGHT_PERCENTAGE,
+    MIN_PANEL_TOP_OFFSET,
     MIN_PANEL_WIDTH,
     normalizePanelHeightPercentage,
+    normalizePanelTopOffset,
     normalizePanelWidth,
 } from './panelDimensions';
 
 const SECTION_ID = 'headingNavigator';
 const SETTING_PANEL_WIDTH = 'headingNavigator.panelWidth';
 const SETTING_PANEL_MAX_HEIGHT = 'headingNavigator.panelMaxHeightPercentage';
+const SETTING_PANEL_TOP_OFFSET = 'headingNavigator.panelTopOffset';
 const SETTING_COMPACT_MODE = 'headingNavigator.compactMode';
 const SETTING_COPY_INTERNAL_ANCHOR_LINKS = 'headingNavigator.copyInternalAnchorLinks';
 const SETTING_PANEL_PINNED = 'headingNavigator.panelPinned';
@@ -73,6 +78,18 @@ export async function registerPanelSettings(): Promise<void> {
             maximum: MAX_PANEL_HEIGHT_PERCENTAGE,
             step: 5,
         },
+        [SETTING_PANEL_TOP_OFFSET]: {
+            value: DEFAULT_PANEL_TOP_OFFSET,
+            type: SettingItemType.Int,
+            public: true,
+            section: SECTION_ID,
+            label: 'Panel top offset (px)',
+            description:
+                '[Desktop Only] Push the panel down from the top of the editor to avoid overlapping other top-right editor decorations, such as a backlinks indicator (min: 0px, max: 200px).',
+            minimum: MIN_PANEL_TOP_OFFSET,
+            maximum: MAX_PANEL_TOP_OFFSET,
+            step: 4,
+        },
         [SETTING_COMPACT_MODE]: {
             value: false,
             type: SettingItemType.Bool,
@@ -102,7 +119,12 @@ export async function registerPanelSettings(): Promise<void> {
 }
 
 export async function loadContentScriptSettings(): Promise<ContentScriptSettings> {
-    const values = await joplin.settings.values([SETTING_PANEL_WIDTH, SETTING_PANEL_MAX_HEIGHT, SETTING_COMPACT_MODE]);
+    const values = await joplin.settings.values([
+        SETTING_PANEL_WIDTH,
+        SETTING_PANEL_MAX_HEIGHT,
+        SETTING_PANEL_TOP_OFFSET,
+        SETTING_COMPACT_MODE,
+    ]);
 
     const widthResult = normalizePanelWidth(values[SETTING_PANEL_WIDTH]);
     if (widthResult.changed) {
@@ -112,6 +134,13 @@ export async function loadContentScriptSettings(): Promise<ContentScriptSettings
     const heightResult = normalizePanelHeightPercentage(values[SETTING_PANEL_MAX_HEIGHT]);
     if (heightResult.changed) {
         logger.warn(`Invalid panel height setting: ${values[SETTING_PANEL_MAX_HEIGHT]}. Using ${heightResult.value}%.`);
+    }
+
+    const topOffsetResult = normalizePanelTopOffset(values[SETTING_PANEL_TOP_OFFSET]);
+    if (topOffsetResult.changed) {
+        logger.warn(
+            `Invalid panel top offset setting: ${values[SETTING_PANEL_TOP_OFFSET]}. Using ${topOffsetResult.value}px.`
+        );
     }
 
     const compactModeResult = normalizeBooleanSetting(values[SETTING_COMPACT_MODE], false);
@@ -125,6 +154,7 @@ export async function loadContentScriptSettings(): Promise<ContentScriptSettings
             maxHeightRatio: heightResult.value / 100,
         },
         compactMode: compactModeResult.value,
+        topOffset: topOffsetResult.value,
     };
 }
 
