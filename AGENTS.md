@@ -26,7 +26,7 @@ Start here when exploring the codebase:
 | `src/contentScripts/ui/headingPanel.ts`  | Floating panel DOM, keyboard/mouse interactions, filtering     |
 | `src/contentScripts/ui/fuzzyFilter.ts`   | Fuzzy search ranking and match highlighting                    |
 | `src/contentScripts/theme/panelTheme.ts` | CSS generation using Joplin theme variables                    |
-| `src/headingExtractor.ts`                | Lezer-based heading parsing and anchor generation              |
+| `src/contentScripts/headingExtractor.ts` | Lezer-based heading parsing and anchor generation              |
 | `src/linkFormatting.ts`                  | Markdown link formatting for copy functionality                |
 
 ## Common Pitfalls

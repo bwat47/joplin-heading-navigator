@@ -19,8 +19,8 @@
 import { EditorState, Text } from '@codemirror/state';
 import { ensureSyntaxTree, syntaxTree } from '@codemirror/language';
 import type { SyntaxNode, Tree } from '@lezer/common';
-import logger from './logger';
-import { HeadingItem } from './types';
+import logger from '../logger';
+import { HeadingItem } from '../types';
 import uslug from '@joplin/fork-uslug';
 
 const UNSUPPORTED_INLINE_FORMATTING_PATTERN = /(==|\+\+)(?=\S)([\s\S]*?\S)\1/g;

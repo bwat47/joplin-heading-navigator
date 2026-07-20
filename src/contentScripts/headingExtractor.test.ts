@@ -1,5 +1,5 @@
 import { computeHeadingState } from './headingExtractor';
-import { createMarkdownState, extractHeadingsFromMarkdown } from './testing/markdownState';
+import { createMarkdownState, extractHeadingsFromMarkdown } from '../testing/markdownState';
 
 describe('heading extraction', () => {
     it('parses ATX and Setext headings including nested structures', () => {
