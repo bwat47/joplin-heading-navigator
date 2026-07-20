@@ -1,11 +1,15 @@
 import {
+    DEFAULT_PANEL_TOP_OFFSET,
     MAX_PANEL_HEIGHT_PERCENTAGE,
+    MAX_PANEL_TOP_OFFSET,
     MAX_PANEL_WIDTH,
     MIN_PANEL_HEIGHT_PERCENTAGE,
+    MIN_PANEL_TOP_OFFSET,
     MIN_PANEL_WIDTH,
     normalizePanelDimensions,
     normalizePanelHeightPercentage,
     normalizePanelHeightRatio,
+    normalizePanelTopOffset,
     normalizePanelWidth,
 } from './panelDimensions';
 import { DEFAULT_PANEL_DIMENSIONS } from './types';
@@ -67,6 +71,30 @@ describe('normalizePanelHeightRatio', () => {
             value: DEFAULT_PANEL_DIMENSIONS.maxHeightRatio,
             changed: false,
         });
+    });
+});
+
+describe('normalizePanelTopOffset', () => {
+    it('clamps offset to valid range and rounds', () => {
+        expect(normalizePanelTopOffset(MIN_PANEL_TOP_OFFSET - 20)).toEqual({
+            value: MIN_PANEL_TOP_OFFSET,
+            changed: true,
+        });
+        expect(normalizePanelTopOffset(MAX_PANEL_TOP_OFFSET + 50)).toEqual({
+            value: MAX_PANEL_TOP_OFFSET,
+            changed: true,
+        });
+        expect(normalizePanelTopOffset(44.6)).toEqual({ value: 45, changed: true });
+        expect(normalizePanelTopOffset(DEFAULT_PANEL_TOP_OFFSET)).toEqual({
+            value: DEFAULT_PANEL_TOP_OFFSET,
+            changed: false,
+        });
+    });
+
+    it('handles invalid input gracefully', () => {
+        expect(normalizePanelTopOffset(Number.NaN)).toEqual({ value: DEFAULT_PANEL_TOP_OFFSET, changed: true });
+        expect(normalizePanelTopOffset('not a number')).toEqual({ value: DEFAULT_PANEL_TOP_OFFSET, changed: true });
+        expect(normalizePanelTopOffset(null)).toEqual({ value: DEFAULT_PANEL_TOP_OFFSET, changed: true });
     });
 });
 

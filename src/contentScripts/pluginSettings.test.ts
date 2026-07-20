@@ -1,6 +1,6 @@
 import { EditorState } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
-import { MAX_PANEL_WIDTH, MIN_PANEL_HEIGHT_PERCENTAGE } from '../panelDimensions';
+import { DEFAULT_PANEL_TOP_OFFSET, MAX_PANEL_WIDTH, MIN_PANEL_HEIGHT_PERCENTAGE } from '../panelDimensions';
 import { DEFAULT_PANEL_DIMENSIONS } from '../types';
 import {
     applyContentScriptSettings,
@@ -24,6 +24,7 @@ describe('content script settings', () => {
             normalizeContentScriptSettings({
                 dimensions: { width: 999, maxHeightRatio: 0.1 },
                 compactMode: true,
+                topOffset: 44,
             })
         ).toEqual({
             dimensions: {
@@ -31,11 +32,21 @@ describe('content script settings', () => {
                 maxHeightRatio: MIN_PANEL_HEIGHT_PERCENTAGE / 100,
             },
             compactMode: true,
+            topOffset: 44,
         });
 
         expect(
             normalizeContentScriptSettings({ dimensions: DEFAULT_PANEL_DIMENSIONS, compactMode: 1 }).compactMode
         ).toBe(false);
+    });
+
+    it('normalizes the top offset and falls back to default when invalid', () => {
+        expect(normalizeContentScriptSettings({ topOffset: 40 }).topOffset).toBe(40);
+        expect(normalizeContentScriptSettings({ topOffset: 5000 }).topOffset).toBe(200);
+        expect(normalizeContentScriptSettings({ topOffset: 'nope' }).topOffset).toBe(DEFAULT_PANEL_TOP_OFFSET);
+        expect(normalizeContentScriptSettings({ dimensions: DEFAULT_PANEL_DIMENSIONS }).topOffset).toBe(
+            DEFAULT_PANEL_TOP_OFFSET
+        );
     });
 
     it('provides defaults and reconfigures the facet', () => {

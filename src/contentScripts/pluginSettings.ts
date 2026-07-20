@@ -2,13 +2,14 @@ import { Compartment, Facet, type EditorState, type Extension } from '@codemirro
 import { EditorView } from '@codemirror/view';
 import type { ContentScriptContext } from 'api/types';
 import type { ContentScriptToPluginMessage } from '../messages';
-import { normalizePanelDimensions } from '../panelDimensions';
+import { DEFAULT_PANEL_TOP_OFFSET, normalizePanelDimensions, normalizePanelTopOffset } from '../panelDimensions';
 import { DEFAULT_PANEL_DIMENSIONS, type ContentScriptSettings } from '../types';
 import logger from '../logger';
 
 export const DEFAULT_CONTENT_SCRIPT_SETTINGS: ContentScriptSettings = {
     dimensions: { ...DEFAULT_PANEL_DIMENSIONS },
     compactMode: false,
+    topOffset: DEFAULT_PANEL_TOP_OFFSET,
 };
 
 const settingsFacet = Facet.define<ContentScriptSettings, ContentScriptSettings>({
@@ -26,7 +27,7 @@ export function normalizeContentScriptSettings(value: unknown): ContentScriptSet
         return DEFAULT_CONTENT_SCRIPT_SETTINGS;
     }
 
-    const candidate = value as { dimensions?: unknown; compactMode?: unknown };
+    const candidate = value as { dimensions?: unknown; compactMode?: unknown; topOffset?: unknown };
     const dimensions =
         candidate.dimensions && typeof candidate.dimensions === 'object'
             ? normalizePanelDimensions(candidate.dimensions)
@@ -35,6 +36,7 @@ export function normalizeContentScriptSettings(value: unknown): ContentScriptSet
     return {
         dimensions,
         compactMode: typeof candidate.compactMode === 'boolean' ? candidate.compactMode : false,
+        topOffset: normalizePanelTopOffset(candidate.topOffset).value,
     };
 }
 

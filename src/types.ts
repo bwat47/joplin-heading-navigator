@@ -16,6 +16,8 @@ export interface PanelDimensions {
 export interface ContentScriptSettings {
     dimensions: PanelDimensions;
     compactMode: boolean;
+    /** Distance in px from the top of the editor to the panel (desktop only). */
+    topOffset: number;
 }
 
 export const DEFAULT_PANEL_DIMENSIONS: PanelDimensions = {
