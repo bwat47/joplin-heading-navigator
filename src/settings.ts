@@ -5,7 +5,7 @@
  *
  * See:
  * - panelDimensions.ts - Validation and normalization utilities
- * - index.ts - Registers settings and synchronizes editor-facing values
+ * - index.ts - Registers settings and serves editor-facing values on request
  */
 
 import joplin from 'api';
@@ -126,12 +126,6 @@ export async function loadContentScriptSettings(): Promise<ContentScriptSettings
         },
         compactMode: compactModeResult.value,
     };
-}
-
-const EDITOR_AFFECTING_SETTING_KEYS = new Set([SETTING_PANEL_WIDTH, SETTING_PANEL_MAX_HEIGHT, SETTING_COMPACT_MODE]);
-
-export function isEditorAffectingSettingChanged(keys: readonly string[]): boolean {
-    return keys.some((key) => EDITOR_AFFECTING_SETTING_KEYS.has(key));
 }
 
 export async function loadPinnedState(): Promise<boolean> {

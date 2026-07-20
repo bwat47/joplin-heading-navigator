@@ -2,7 +2,7 @@ import { EditorSelection, EditorState, StateEffect, type Extension } from '@code
 import { EditorView } from '@codemirror/view';
 import { parser } from '@lezer/markdown';
 import type { CodeMirrorControl, ContentScriptContext } from 'api/types';
-import { EDITOR_COMMAND_TOGGLE_PANEL, EDITOR_COMMAND_UPDATE_SETTINGS } from '../constants';
+import { EDITOR_COMMAND_TOGGLE_PANEL } from '../constants';
 import type { ContentScriptSettings } from '../types';
 import type { PanelRestoreState } from '../messages';
 import headingNavigator from './headingNavigator';
@@ -16,7 +16,6 @@ class ResizeObserverMock {
 describe('heading navigator panel lifecycle', () => {
     let view: EditorView;
     let togglePanel: (isMobile?: boolean) => void;
-    let updateSettings: (settings: unknown) => void;
     let postMessage: ReturnType<typeof vi.fn>;
 
     beforeEach(() => {
@@ -39,12 +38,9 @@ describe('heading navigator panel lifecycle', () => {
             addExtension: (extension: Extension) => {
                 view.dispatch({ effects: StateEffect.appendConfig.of(extension) });
             },
-            registerCommand: (name: string, callback: typeof togglePanel | typeof updateSettings) => {
+            registerCommand: (name: string, callback: typeof togglePanel) => {
                 if (name === EDITOR_COMMAND_TOGGLE_PANEL) {
-                    togglePanel = callback as typeof togglePanel;
-                }
-                if (name === EDITOR_COMMAND_UPDATE_SETTINGS) {
-                    updateSettings = callback as typeof updateSettings;
+                    togglePanel = callback;
                 }
             },
         } as unknown as CodeMirrorControl;
@@ -196,38 +192,10 @@ describe('heading navigator panel lifecycle', () => {
         expect(document.activeElement).toBe(view.contentDOM);
     });
 
-    it('applies live settings to an open pinned panel without disturbing its state', () => {
-        togglePanel(false);
-        const panelElement = document.querySelector<HTMLDivElement>('.heading-navigator-panel')!;
-        const pinButton = document.querySelector<HTMLButtonElement>('.heading-navigator-pin-button')!;
-        const input = document.querySelector<HTMLInputElement>('.heading-navigator-input')!;
-        pinButton.click();
-        input.value = 'Two';
-        input.dispatchEvent(new Event('input', { bubbles: true }));
-        vi.advanceTimersByTime(100);
-        view.dispatch({ selection: EditorSelection.cursor(7) });
-        view.focus();
-
-        updateSettings({
-            dimensions: { width: 480, maxHeightRatio: 0.6 },
-            compactMode: true,
-        });
-
-        expect(document.querySelector('.heading-navigator-panel')).toBe(panelElement);
-        expect(panelElement.classList.contains('is-pinned')).toBe(true);
-        expect(panelElement.classList.contains('is-compact')).toBe(true);
-        expect(input.value).toBe('Two');
-        expect(document.querySelectorAll('.heading-navigator-item')).toHaveLength(1);
-        expect(view.state.selection.main.head).toBe(7);
-        expect(document.activeElement).toBe(view.contentDOM);
-        expect(document.getElementById('heading-navigator-styles')?.textContent).toContain('width: 480px;');
-        expect(document.getElementById('heading-navigator-styles')?.textContent).toContain('max-height: 60.00%;');
-    });
 });
 
 describe('pinned panel restoration', () => {
     let view: EditorView;
-    let updateSettings: (settings: unknown) => void;
 
     const flushRestore = () => new Promise((resolve) => setTimeout(resolve, 0));
 
@@ -249,11 +217,7 @@ describe('pinned panel restoration', () => {
             addExtension: (extension: Extension) => {
                 view.dispatch({ effects: StateEffect.appendConfig.of(extension) });
             },
-            registerCommand: (name: string, callback: (settings: unknown) => void) => {
-                if (name === EDITOR_COMMAND_UPDATE_SETTINGS) {
-                    updateSettings = callback;
-                }
-            },
+            registerCommand: () => {},
         } as unknown as CodeMirrorControl;
         const postMessage = vi.fn(async (message: { type: string }) => {
             if (message.type === 'getContentScriptSettings') {
@@ -368,31 +332,6 @@ describe('pinned panel restoration', () => {
         expect(panelElement.classList.contains('is-pinned')).toBe(true);
         expect(panelElement.classList.contains('is-compact')).toBe(true);
         expect(document.getElementById('heading-navigator-styles')?.textContent).toContain('width: 500px;');
-    });
-
-    it('does not let a delayed initial response overwrite a newer pushed setting', async () => {
-        let respondWithSettings!: () => void;
-        const settingsGate = new Promise<void>((resolve) => {
-            respondWithSettings = resolve;
-        });
-        createEditor(
-            { pinned: true, isMobile: false },
-            undefined,
-            { dimensions: { width: 500, maxHeightRatio: 0.65 }, compactMode: true },
-            settingsGate
-        );
-        await flushRestore();
-
-        updateSettings({
-            dimensions: { width: 440, maxHeightRatio: 0.7 },
-            compactMode: false,
-        });
-        respondWithSettings();
-        await flushRestore();
-
-        const panelElement = document.querySelector('.heading-navigator-panel')!;
-        expect(panelElement.classList.contains('is-compact')).toBe(false);
-        expect(document.getElementById('heading-navigator-styles')?.textContent).toContain('width: 440px;');
     });
 
     it('uses defaults when initial settings synchronization fails', async () => {

@@ -19,15 +19,9 @@
 
 import joplin from 'api';
 import { ContentScriptType, MenuItemLocation, ToolbarButtonLocation } from 'api/types';
-import {
-    CODEMIRROR_CONTENT_SCRIPT_ID,
-    COMMAND_GO_TO_HEADING,
-    EDITOR_COMMAND_TOGGLE_PANEL,
-    EDITOR_COMMAND_UPDATE_SETTINGS,
-} from './constants';
+import { CODEMIRROR_CONTENT_SCRIPT_ID, COMMAND_GO_TO_HEADING, EDITOR_COMMAND_TOGGLE_PANEL } from './constants';
 import logger from './logger';
 import {
-    isEditorAffectingSettingChanged,
     loadContentScriptSettings,
     loadCopyLinkSettings,
     loadPinnedState,
@@ -126,23 +120,6 @@ async function registerCommands(): Promise<void> {
     });
 }
 
-/**
- * Best-effort update for the active CodeMirror editor. Other editor layouts do not
- * register this command, so execution can reject normally; newly created CodeMirror
- * editors still fetch the latest settings during their initial synchronization.
- */
-async function pushContentScriptSettings(): Promise<void> {
-    try {
-        const settings = await loadContentScriptSettings();
-        await joplin.commands.execute('editor.execCommand', {
-            name: EDITOR_COMMAND_UPDATE_SETTINGS,
-            args: [settings],
-        });
-    } catch (error) {
-        logger.debug('Skipped content script settings push because no CodeMirror editor may be active', error);
-    }
-}
-
 async function registerMenuItems(): Promise<void> {
     await joplin.views.menuItems.create('headingNavigatorMenuItem', COMMAND_GO_TO_HEADING, MenuItemLocation.Edit);
 }
@@ -159,11 +136,6 @@ joplin.plugins.register({
     onStart: async () => {
         logger.info('Heading Navigator plugin starting');
         await registerPanelSettings();
-        await joplin.settings.onChange(async ({ keys }) => {
-            if (isEditorAffectingSettingChanged(keys)) {
-                await pushContentScriptSettings();
-            }
-        });
         await registerContentScripts();
         await registerCommands();
         await registerMenuItems();

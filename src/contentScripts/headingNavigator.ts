@@ -27,18 +27,13 @@
 import { EditorSelection, EditorState } from '@codemirror/state';
 import { EditorView, ViewPlugin, ViewUpdate } from '@codemirror/view';
 import type { CodeMirrorControl, ContentScriptContext, MarkdownEditorContentScriptModule } from 'api/types';
-import { EDITOR_COMMAND_TOGGLE_PANEL, EDITOR_COMMAND_UPDATE_SETTINGS } from '../constants';
+import { EDITOR_COMMAND_TOGGLE_PANEL } from '../constants';
 import type { HeadingItem } from '../types';
 import type { ContentScriptToPluginMessage, PanelRestoreState } from '../messages';
 import { extractHeadings } from '../headingExtractor';
 import { HeadingPanel, type PanelCloseReason } from './ui/headingPanel';
 import logger from '../logger';
-import {
-    applyContentScriptSettings,
-    createSettingsExtension,
-    getContentScriptSettings,
-    syncInitialContentScriptSettings,
-} from './pluginSettings';
+import { createSettingsExtension, getContentScriptSettings, syncInitialContentScriptSettings } from './pluginSettings';
 
 // Track active stabilization timeouts per editor. WeakMap ensures automatic
 // cleanup when editor instances are destroyed (e.g., note close, plugin reload).
@@ -279,7 +274,6 @@ export default function headingNavigator(context: ContentScriptContext): Markdow
             // Set on editor teardown so the async startup restore cannot mount a panel
             // (and leak its document-level listeners) against a destroyed view.
             let editorDestroyed = false;
-            let settingsUpdateVersion = 0;
             const noteIdFacet = editorControl.joplinExtensions?.noteIdFacet;
 
             const resolveNoteId = (): string | null => {
@@ -462,12 +456,6 @@ export default function headingNavigator(context: ContentScriptContext): Markdow
                 }
             };
 
-            const applySettingsUpdate = (settings: unknown): void => {
-                settingsUpdateVersion += 1;
-                const nextSettings = applyContentScriptSettings(view, settings);
-                panel?.setSettings(nextSettings);
-            };
-
             const updateListener = EditorView.updateListener.of((update: ViewUpdate) => {
                 // Skip all work when panel is closed - headings are computed fresh in openPanel()
                 if (!panel || !panel.isOpen()) {
@@ -519,14 +507,8 @@ export default function headingNavigator(context: ContentScriptContext): Markdow
             };
 
             editorControl.addExtension([createSettingsExtension(), updateListener, lifecyclePlugin]);
-            editorControl.registerCommand(EDITOR_COMMAND_UPDATE_SETTINGS, applySettingsUpdate);
             editorControl.registerCommand(EDITOR_COMMAND_TOGGLE_PANEL, togglePanel);
-            const initialSettingsVersion = settingsUpdateVersion;
-            void syncInitialContentScriptSettings(
-                context,
-                view,
-                () => !editorDestroyed && settingsUpdateVersion === initialSettingsVersion
-            ).then((settings) => {
+            void syncInitialContentScriptSettings(context, view, () => !editorDestroyed).then((settings) => {
                 if (settings) {
                     panel?.setSettings(settings);
                 }
