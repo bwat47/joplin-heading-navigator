@@ -191,7 +191,6 @@ describe('heading navigator panel lifecycle', () => {
         expect(document.querySelector('.heading-navigator-panel')).toBeNull();
         expect(document.activeElement).toBe(view.contentDOM);
     });
-
 });
 
 describe('pinned panel restoration', () => {
