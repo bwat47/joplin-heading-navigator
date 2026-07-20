@@ -5,13 +5,13 @@
  *
  * See:
  * - panelDimensions.ts - Validation and normalization utilities
- * - index.ts - Calls registerPanelSettings() on plugin startup and forwards loaded values
+ * - index.ts - Registers settings and serves editor-facing values on request
  */
 
 import joplin from 'api';
 import { SettingItemType } from 'api/types';
 import logger from './logger';
-import type { PanelDimensions } from './types';
+import type { ContentScriptSettings } from './types';
 import {
     DEFAULT_PANEL_HEIGHT_PERCENTAGE,
     DEFAULT_PANEL_WIDTH,
@@ -29,11 +29,6 @@ const SETTING_PANEL_MAX_HEIGHT = 'headingNavigator.panelMaxHeightPercentage';
 const SETTING_COMPACT_MODE = 'headingNavigator.compactMode';
 const SETTING_COPY_INTERNAL_ANCHOR_LINKS = 'headingNavigator.copyInternalAnchorLinks';
 const SETTING_PANEL_PINNED = 'headingNavigator.panelPinned';
-
-export interface PanelSettings {
-    dimensions: PanelDimensions;
-    compactMode: boolean;
-}
 
 export interface CopyLinkSettings {
     copyInternalAnchorLinks: boolean;
@@ -106,7 +101,7 @@ export async function registerPanelSettings(): Promise<void> {
     });
 }
 
-export async function loadPanelSettings(): Promise<PanelSettings> {
+export async function loadContentScriptSettings(): Promise<ContentScriptSettings> {
     const values = await joplin.settings.values([SETTING_PANEL_WIDTH, SETTING_PANEL_MAX_HEIGHT, SETTING_COMPACT_MODE]);
 
     const widthResult = normalizePanelWidth(values[SETTING_PANEL_WIDTH]);

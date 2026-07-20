@@ -56,17 +56,20 @@ Panel appended to `view.scrollDOM.parentElement` to stay associated with specifi
 
 ## Data Flow
 
-1. **Command Trigger**: User invokes "Go to Heading" → plugin host loads settings and forwards to content script
-2. **Panel Display**: Content script extracts headings via Lezer, opens an unpinned panel with the active heading highlighted
-3. **Navigation**: Filter/navigate updates editor selection and scrolls the heading into view
-4. **Transient Selection**: Selection closes the panel; Escape restores the original state if the panel was never pinned
-5. **Pinned Selection**: Selection returns focus to the editor while the mounted panel follows cursor movement
-6. **Copy**: Request sent to plugin host → reads copy-link setting → formats markdown link → writes to clipboard
-7. **Pin Persistence**: Pin toggles are persisted to a private Joplin setting via the message bridge; at editor startup the content script requests the restore state (pinned flag plus panel settings) and reopens the panel pinned without stealing editor focus
+1. **Settings Sync**: Each editor installs a settings facet with safe defaults, then requests normalized panel settings from the plugin host
+2. **Command Trigger**: User invokes "Go to Heading" → plugin host forwards the platform flag to the content script
+3. **Panel Display**: Content script reads settings from the facet, extracts headings via Lezer, and opens an unpinned panel with the active heading highlighted
+4. **Navigation**: Filter/navigate updates editor selection and scrolls the heading into view
+5. **Transient Selection**: Selection closes the panel; Escape restores the original state if the panel was never pinned
+6. **Pinned Selection**: Selection returns focus to the editor while the mounted panel follows cursor movement
+7. **Copy**: Request sent to plugin host → reads copy-link setting → formats markdown link → writes to clipboard
+8. **Pin Persistence**: Pin toggles are persisted to a private Joplin setting; at editor startup the content script independently requests the pinned/platform restore state and reopens the panel without stealing focus
+9. **Settings Changes**: There is no live push. Joplin recreates the editor (and content script) after the settings screen closes, so the startup settings fetch in step 1 always delivers current values.
 
 ## State Management
 
 - **Panel State**: `HeadingPanel` class (pin state, filtered list, active heading, debounce timers)
+- **Content Script Settings**: CodeMirror facet and compartment containing normalized panel dimensions and compact mode
 - **Pinned Persistence**: Private `headingNavigator.panelPinned` setting written by the plugin host on user pin/unpin; read back on editor creation to restore a pinned panel (desktop only)
 - **Editor State**: Selection/scroll snapshots support transient cancellation and are discarded when pinning
 - **Heading Cache**: Recomputed 150 ms after document changes stop while the panel is open

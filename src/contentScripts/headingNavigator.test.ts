@@ -3,11 +3,9 @@ import { EditorView } from '@codemirror/view';
 import { parser } from '@lezer/markdown';
 import type { CodeMirrorControl, ContentScriptContext } from 'api/types';
 import { EDITOR_COMMAND_TOGGLE_PANEL } from '../constants';
-import type { PanelDimensions } from '../types';
+import type { ContentScriptSettings } from '../types';
 import type { PanelRestoreState } from '../messages';
 import headingNavigator from './headingNavigator';
-
-const panelDimensions: PanelDimensions = { width: 320, maxHeightRatio: 0.75 };
 
 class ResizeObserverMock {
     public observe(): void {}
@@ -17,7 +15,7 @@ class ResizeObserverMock {
 
 describe('heading navigator panel lifecycle', () => {
     let view: EditorView;
-    let togglePanel: (dimensions?: PanelDimensions, isMobile?: boolean, compact?: boolean) => void;
+    let togglePanel: (isMobile?: boolean) => void;
     let postMessage: ReturnType<typeof vi.fn>;
 
     beforeEach(() => {
@@ -63,7 +61,7 @@ describe('heading navigator panel lifecycle', () => {
 
     it('debounces reparsing until 150ms after the latest document change', () => {
         const parseSpy = vi.spyOn(parser, 'parse');
-        togglePanel(panelDimensions, false, false);
+        togglePanel(false);
         expect(parseSpy).toHaveBeenCalledTimes(1);
 
         view.dispatch({ changes: { from: view.state.doc.length, insert: '\n### Three' } });
@@ -81,10 +79,10 @@ describe('heading navigator panel lifecycle', () => {
 
     it('cancels a pending reparse when an unpinned panel closes', () => {
         const parseSpy = vi.spyOn(parser, 'parse');
-        togglePanel(panelDimensions, false, false);
+        togglePanel(false);
         view.dispatch({ changes: { from: view.state.doc.length, insert: '\n### Three' } });
 
-        togglePanel(panelDimensions, false, false);
+        togglePanel(false);
         vi.advanceTimersByTime(150);
 
         expect(parseSpy).toHaveBeenCalledTimes(1);
@@ -93,7 +91,7 @@ describe('heading navigator panel lifecycle', () => {
 
     it('updates cursor-follow selection without reparsing or replacing list items', () => {
         const parseSpy = vi.spyOn(parser, 'parse');
-        togglePanel(panelDimensions, false, false);
+        togglePanel(false);
         const itemsBefore = Array.from(document.querySelectorAll<HTMLLIElement>('.heading-navigator-item'));
 
         view.dispatch({ selection: EditorSelection.cursor(8) });
@@ -105,18 +103,18 @@ describe('heading navigator panel lifecycle', () => {
     });
 
     it('focuses the filter instead of closing when the command is invoked while pinned', () => {
-        togglePanel(panelDimensions, false, false);
+        togglePanel(false);
         document.querySelector<HTMLButtonElement>('.heading-navigator-pin-button')?.click();
         view.focus();
 
-        togglePanel(panelDimensions, false, false);
+        togglePanel(false);
 
         expect(document.querySelector('.heading-navigator-panel')).not.toBeNull();
         expect(document.activeElement).toBe(document.querySelector('.heading-navigator-input'));
     });
 
     it('restores the opening selection on unpinned Escape', () => {
-        togglePanel(panelDimensions, false, false);
+        togglePanel(false);
         const input = document.querySelector<HTMLInputElement>('.heading-navigator-input')!;
 
         input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
@@ -129,7 +127,7 @@ describe('heading navigator panel lifecycle', () => {
     });
 
     it('drops restoration semantics after pinning and leaves the panel open on Escape', () => {
-        togglePanel(panelDimensions, false, false);
+        togglePanel(false);
         document.querySelector<HTMLButtonElement>('.heading-navigator-pin-button')?.click();
         const input = document.querySelector<HTMLInputElement>('.heading-navigator-input')!;
 
@@ -144,7 +142,7 @@ describe('heading navigator panel lifecycle', () => {
     });
 
     it('does not restore the opening selection after pinning and then unpinning', () => {
-        togglePanel(panelDimensions, false, false);
+        togglePanel(false);
         const pinButton = document.querySelector<HTMLButtonElement>('.heading-navigator-pin-button')!;
         pinButton.click();
         pinButton.click();
@@ -160,7 +158,7 @@ describe('heading navigator panel lifecycle', () => {
     });
 
     it('persists pinned state when the user toggles the pin button', () => {
-        togglePanel(panelDimensions, false, false);
+        togglePanel(false);
         const pinButton = document.querySelector<HTMLButtonElement>('.heading-navigator-pin-button')!;
 
         pinButton.click();
@@ -171,7 +169,7 @@ describe('heading navigator panel lifecycle', () => {
     });
 
     it('keeps pinned selections mounted and closes after unpinning and clicking outside', () => {
-        togglePanel(panelDimensions, false, false);
+        togglePanel(false);
         const pinButton = document.querySelector<HTMLButtonElement>('.heading-navigator-pin-button')!;
         pinButton.click();
 
@@ -193,6 +191,7 @@ describe('heading navigator panel lifecycle', () => {
         expect(document.querySelector('.heading-navigator-panel')).toBeNull();
         expect(document.activeElement).toBe(view.contentDOM);
     });
+
 });
 
 describe('pinned panel restoration', () => {
@@ -202,7 +201,9 @@ describe('pinned panel restoration', () => {
 
     function createEditor(
         restoreState: PanelRestoreState | undefined,
-        respondAfter?: Promise<void>
+        restoreRespondAfter?: Promise<void>,
+        settingsResponse?: ContentScriptSettings | Error,
+        settingsRespondAfter?: Promise<void>
     ): ReturnType<typeof vi.fn> {
         const parent = document.createElement('div');
         document.body.appendChild(parent);
@@ -219,8 +220,17 @@ describe('pinned panel restoration', () => {
             registerCommand: () => {},
         } as unknown as CodeMirrorControl;
         const postMessage = vi.fn(async (message: { type: string }) => {
-            if (respondAfter) {
-                await respondAfter;
+            if (message.type === 'getContentScriptSettings') {
+                if (settingsRespondAfter) {
+                    await settingsRespondAfter;
+                }
+                if (settingsResponse instanceof Error) {
+                    throw settingsResponse;
+                }
+                return settingsResponse;
+            }
+            if (restoreRespondAfter) {
+                await restoreRespondAfter;
             }
             return message.type === 'getPanelRestoreState' ? restoreState : undefined;
         });
@@ -245,18 +255,25 @@ describe('pinned panel restoration', () => {
     });
 
     it('reopens the panel pinned without stealing focus when the host reports a pinned state', async () => {
-        const postMessage = createEditor({
-            pinned: true,
-            dimensions: panelDimensions,
-            compactMode: false,
-            isMobile: false,
-        });
+        const postMessage = createEditor(
+            {
+                pinned: true,
+                isMobile: false,
+            },
+            undefined,
+            {
+                dimensions: { width: 480, maxHeightRatio: 0.6 },
+                compactMode: true,
+            }
+        );
 
         await flushRestore();
 
         const panelElement = document.querySelector('.heading-navigator-panel');
         expect(panelElement).not.toBeNull();
         expect(panelElement!.classList.contains('is-pinned')).toBe(true);
+        expect(panelElement!.classList.contains('is-compact')).toBe(true);
+        expect(document.getElementById('heading-navigator-styles')?.textContent).toContain('width: 480px;');
         expect(document.activeElement).not.toBe(document.querySelector('.heading-navigator-input'));
         expect(postMessage).not.toHaveBeenCalledWith({ type: 'persistPinnedState', pinned: true });
     });
@@ -264,8 +281,6 @@ describe('pinned panel restoration', () => {
     it('does not reopen the panel when the persisted state is unpinned', async () => {
         createEditor({
             pinned: false,
-            dimensions: panelDimensions,
-            compactMode: false,
             isMobile: false,
         });
 
@@ -277,8 +292,6 @@ describe('pinned panel restoration', () => {
     it('does not reopen the panel on mobile', async () => {
         createEditor({
             pinned: true,
-            dimensions: panelDimensions,
-            compactMode: false,
             isMobile: true,
         });
 
@@ -295,6 +308,43 @@ describe('pinned panel restoration', () => {
         expect(document.querySelector('.heading-navigator-panel')).toBeNull();
     });
 
+    it('updates a restored panel when settings synchronization finishes later', async () => {
+        let respondWithSettings!: () => void;
+        const settingsGate = new Promise<void>((resolve) => {
+            respondWithSettings = resolve;
+        });
+        createEditor(
+            { pinned: true, isMobile: false },
+            undefined,
+            { dimensions: { width: 500, maxHeightRatio: 0.65 }, compactMode: true },
+            settingsGate
+        );
+
+        await flushRestore();
+        const panelElement = document.querySelector('.heading-navigator-panel')!;
+        expect(panelElement.classList.contains('is-pinned')).toBe(true);
+        expect(panelElement.classList.contains('is-compact')).toBe(false);
+
+        respondWithSettings();
+        await flushRestore();
+
+        expect(document.querySelector('.heading-navigator-panel')).toBe(panelElement);
+        expect(panelElement.classList.contains('is-pinned')).toBe(true);
+        expect(panelElement.classList.contains('is-compact')).toBe(true);
+        expect(document.getElementById('heading-navigator-styles')?.textContent).toContain('width: 500px;');
+    });
+
+    it('uses defaults when initial settings synchronization fails', async () => {
+        createEditor({ pinned: true, isMobile: false }, undefined, new Error('settings unavailable'));
+
+        await flushRestore();
+
+        const panelElement = document.querySelector('.heading-navigator-panel')!;
+        expect(panelElement.classList.contains('is-pinned')).toBe(true);
+        expect(panelElement.classList.contains('is-compact')).toBe(false);
+        expect(document.getElementById('heading-navigator-styles')?.textContent).toContain('width: 320px;');
+    });
+
     it('does not reopen the panel when the editor is destroyed before restore completes', async () => {
         let respond!: () => void;
         const gate = new Promise<void>((resolve) => {
@@ -303,8 +353,6 @@ describe('pinned panel restoration', () => {
         createEditor(
             {
                 pinned: true,
-                dimensions: panelDimensions,
-                compactMode: false,
                 isMobile: false,
             },
             gate

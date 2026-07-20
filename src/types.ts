@@ -13,6 +13,11 @@ export interface PanelDimensions {
     maxHeightRatio: number;
 }
 
+export interface ContentScriptSettings {
+    dimensions: PanelDimensions;
+    compactMode: boolean;
+}
+
 export const DEFAULT_PANEL_DIMENSIONS: PanelDimensions = {
     width: 320,
     // Represents 75% of the editor viewport height

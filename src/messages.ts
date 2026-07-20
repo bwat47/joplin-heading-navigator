@@ -10,8 +10,6 @@
  * - index.ts - Plugin host that receives and processes messages
  */
 
-import type { PanelDimensions } from './types';
-
 export interface CopyHeadingLinkMessage {
     type: 'copyHeadingLink';
     noteId: string;
@@ -30,19 +28,21 @@ interface GetPanelRestoreStateMessage {
     type: 'getPanelRestoreState';
 }
 
+interface GetContentScriptSettingsMessage {
+    type: 'getContentScriptSettings';
+}
+
 /**
- * Host response to GetPanelRestoreStateMessage. Carries panel settings alongside the
- * pinned flag because on auto-restore the toggle command (which normally supplies
- * dimensions/compact/isMobile as args) has not run yet.
+ * Host response to GetPanelRestoreStateMessage. User preferences are synchronized
+ * independently through the content-script settings facet.
  */
 export interface PanelRestoreState {
     pinned: boolean;
-    dimensions: PanelDimensions;
-    compactMode: boolean;
     isMobile: boolean;
 }
 
 export type ContentScriptToPluginMessage =
     | CopyHeadingLinkMessage
     | PersistPinnedStateMessage
-    | GetPanelRestoreStateMessage;
+    | GetPanelRestoreStateMessage
+    | GetContentScriptSettingsMessage;

@@ -1,5 +1,5 @@
 import { EditorView } from '@codemirror/view';
-import type { HeadingItem, PanelDimensions } from '../../types';
+import type { ContentScriptSettings, HeadingItem, PanelDimensions } from '../../types';
 import { createPanelCss } from '../theme/panelTheme';
 import { CopyButtonController } from './copyButtonController';
 import { fuzzyFilter, highlightMatch } from './fuzzyFilter';
@@ -42,7 +42,7 @@ export interface PanelCallbacks {
  *   onCopy: (heading) => copyHeadingLink(heading),
  *   onPinChange: (pinned) => { if (pinned) forgetRestoreState(); },
  *   onRequestEditorFocus: () => editorView.focus()
- * }, dimensions);
+ * }, settings);
  *
  * panel.open(headings, currentHeadingId);
  * ```
@@ -68,7 +68,7 @@ export class HeadingPanel {
 
     private previousFilterText = '';
 
-    private options: PanelDimensions;
+    private settings: ContentScriptSettings;
 
     private lastPreviewedId: string | null = null;
 
@@ -113,9 +113,8 @@ export class HeadingPanel {
     public constructor(
         view: EditorView,
         callbacks: PanelCallbacks,
-        options: PanelDimensions,
-        private readonly isMobile = false,
-        compactMode = false
+        settings: ContentScriptSettings,
+        private readonly isMobile = false
     ) {
         this.view = view;
         this.onPreview = callbacks.onPreview;
@@ -124,11 +123,11 @@ export class HeadingPanel {
         this.onCopy = callbacks.onCopy;
         this.onPinChange = callbacks.onPinChange;
         this.onRequestEditorFocus = callbacks.onRequestEditorFocus;
-        this.options = options;
+        this.settings = settings;
 
         this.container = document.createElement('div');
         this.container.className = 'heading-navigator-panel';
-        const effectiveCompactMode = compactMode && !this.isMobile;
+        const effectiveCompactMode = settings.compactMode && !this.isMobile;
         if (effectiveCompactMode) {
             this.container.classList.add('is-compact');
         }
@@ -443,20 +442,18 @@ export class HeadingPanel {
     }
 
     /**
-     * Updates the panel's dimensions and regenerates styles if needed.
+     * Applies editor-facing settings to the mounted panel.
      *
-     * Triggers style regeneration only if dimensions actually changed, avoiding unnecessary
-     * CSS recalculation.
-     *
-     * @param options - New panel dimension configuration
+     * @param settings - New dimension and compact-mode configuration
      */
-    public setOptions(options: PanelDimensions): void {
-        this.options = options;
-        ensurePanelStyles(this.view, this.options);
+    public setSettings(settings: ContentScriptSettings): void {
+        this.settings = settings;
+        ensurePanelStyles(this.view, this.settings.dimensions);
+        this.container.classList.toggle('is-compact', this.settings.compactMode && !this.isMobile);
     }
 
     private mount(): void {
-        ensurePanelStyles(this.view, this.options);
+        ensurePanelStyles(this.view, this.settings.dimensions);
 
         if (!this.container.parentElement) {
             const scrollRoot = this.view.scrollDOM.parentElement;
