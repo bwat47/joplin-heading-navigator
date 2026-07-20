@@ -5,7 +5,7 @@ describe('createPanelCss', () => {
         const css = createPanelCss({ width: 480, maxHeightRatio: 0.65 });
 
         expect(css).toContain('width: 480px;');
-        expect(css).toContain('max-height: 65.00%;');
+        expect(css).toMatch(/max-height: min\(\s*65\.00%,/);
     });
 
     it('includes all required CSS classes', () => {
@@ -37,10 +37,16 @@ describe('createPanelCss', () => {
         expect(css).toContain('top: var(--heading-navigator-top-offset, 12px);');
     });
 
+    it('caps the panel height to the space remaining below the configured top offset', () => {
+        const css = createPanelCss({ width: 400, maxHeightRatio: 0.9 });
+
+        expect(css).toContain('max(0px, calc(100% - var(--heading-navigator-top-offset, 12px) - 12px))');
+    });
+
     it('rounds dimensions appropriately', () => {
         const css = createPanelCss({ width: 450.7, maxHeightRatio: 0.6543 });
 
         expect(css).toContain('width: 451px;');
-        expect(css).toContain('max-height: 65.43%;');
+        expect(css).toMatch(/max-height: min\(\s*65\.43%,/);
     });
 });

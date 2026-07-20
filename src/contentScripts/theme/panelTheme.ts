@@ -12,6 +12,8 @@ import type { PanelDimensions } from '../../types';
 /** Inline CSS custom property carrying the panel's distance from the top of the editor. */
 export const PANEL_TOP_OFFSET_VAR = '--heading-navigator-top-offset';
 
+const PANEL_BOTTOM_GAP_PX = 12;
+
 const SEARCH_CANCEL_MASK_DATA_URI =
     "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2 2l8 8m0-8L2 10' fill='none' stroke='white' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E";
 
@@ -34,7 +36,10 @@ export function createPanelCss(dimensions: PanelDimensions): string {
     top: var(${PANEL_TOP_OFFSET_VAR}, ${DEFAULT_PANEL_TOP_OFFSET}px);
     right: 12px;
     width: ${panelWidth};
-    max-height: ${maxHeight};
+    max-height: min(
+        ${maxHeight},
+        max(0px, calc(100% - var(${PANEL_TOP_OFFSET_VAR}, ${DEFAULT_PANEL_TOP_OFFSET}px) - ${PANEL_BOTTOM_GAP_PX}px))
+    );
     display: flex;
     flex-direction: column;
     font-family: system-ui, sans-serif !important;
