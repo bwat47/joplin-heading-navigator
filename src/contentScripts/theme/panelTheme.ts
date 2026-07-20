@@ -48,8 +48,18 @@ export function createPanelCss(dimensions: PanelDimensions): string {
     border: 1px solid var(--joplin-divider-color, #dddddd);
     border-radius: 6px;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+    transition: box-shadow 160ms ease-out;
     z-index: 2000;
     overflow: hidden;
+}
+
+/*
+ * A pinned panel stays open while focus is in the editor. Soften its shadow
+ * in that unfocused state so it reads as inactive. Unpinned panels close on
+ * blur, so they are always focused while visible and keep the full shadow.
+ */
+.heading-navigator-panel.is-pinned:not(:focus-within) {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
 }
 
 .heading-navigator-header {
