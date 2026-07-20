@@ -24,13 +24,14 @@
  * - ui/headingPanel.ts - Floating panel UI implementation
  */
 
-import { EditorSelection, EditorState } from '@codemirror/state';
+import { EditorSelection } from '@codemirror/state';
 import { EditorView, ViewPlugin, ViewUpdate } from '@codemirror/view';
+import { syntaxTree } from '@codemirror/language';
 import type { CodeMirrorControl, ContentScriptContext, MarkdownEditorContentScriptModule } from 'api/types';
 import { EDITOR_COMMAND_TOGGLE_PANEL } from '../constants';
 import type { HeadingItem } from '../types';
 import type { ContentScriptToPluginMessage, PanelRestoreState } from '../messages';
-import { extractHeadings } from '../headingExtractor';
+import { computeHeadingState } from '../headingExtractor';
 import { HeadingPanel, type PanelCloseReason } from './ui/headingPanel';
 import logger from '../logger';
 import { createSettingsExtension, getContentScriptSettings, syncInitialContentScriptSettings } from './pluginSettings';
@@ -200,10 +201,6 @@ function isSameSelection(a: SelectionLike, b: SelectionLike): boolean {
     return normalizedA.from === normalizedB.from && normalizedA.to === normalizedB.to;
 }
 
-function computeHeadings(state: EditorState): HeadingItem[] {
-    return extractHeadings(state.doc.toString());
-}
-
 function findActiveHeadingId(headings: HeadingItem[], position: number): string | null {
     if (!headings.length) {
         return null;
@@ -265,6 +262,10 @@ export default function headingNavigator(context: ContentScriptContext): Markdow
             const view = editorControl.editor as EditorView;
             let panel: HeadingPanel | null = null;
             let headings: HeadingItem[] = [];
+            // False while the syntax tree covers only a prefix of a very large document;
+            // the update listener refreshes the list as scrolling/background parsing
+            // extends the tree.
+            let headingsComplete = true;
             let initialSelectionRange: { from: number; to: number } | null = null;
             let initialScrollSnapshot: ReturnType<EditorView['scrollSnapshot']> | null = null;
             let headingReparseTimer: number | null = null;
@@ -370,8 +371,14 @@ export default function headingNavigator(context: ContentScriptContext): Markdow
                 return panel;
             };
 
+            const refreshHeadings = (): void => {
+                const computation = computeHeadingState(view.state);
+                headings = computation.headings;
+                headingsComplete = computation.complete;
+            };
+
             const openPanel = (isMobile: boolean, focusInput = true): void => {
-                headings = computeHeadings(view.state);
+                refreshHeadings();
                 const activeHeadingId = findActiveHeadingId(headings, view.state.selection.main.head);
                 const selection = view.state.selection.main;
                 initialSelectionRange = { from: selection.from, to: selection.to };
@@ -404,7 +411,7 @@ export default function headingNavigator(context: ContentScriptContext): Markdow
                         return;
                     }
 
-                    headings = computeHeadings(view.state);
+                    refreshHeadings();
                     updatePanelHeadings();
                 }, HEADING_REPARSE_DEBOUNCE_MS);
             };
@@ -463,6 +470,10 @@ export default function headingNavigator(context: ContentScriptContext): Markdow
                 }
 
                 if (update.docChanged) {
+                    scheduleHeadingReparse();
+                } else if (!headingsComplete && syntaxTree(update.state) !== syntaxTree(update.startState)) {
+                    // Scrolling or background parsing extended the tree without a document
+                    // change; fold the newly covered headings into the list.
                     scheduleHeadingReparse();
                 } else if (update.selectionSet) {
                     const activeHeadingId = findActiveHeadingId(headings, update.state.selection.main.head);

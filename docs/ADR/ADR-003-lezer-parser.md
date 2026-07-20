@@ -1,6 +1,37 @@
 # ADR-003: Lezer Parser for Heading Extraction
 
-**Status**: Accepted
+**Status**: Amended (2026-07) — extraction now reads the editor's live syntax tree; see Addendum
+
+## Addendum (2026-07): Migrated to the live CodeMirror syntax tree
+
+The original decision below (standalone `@lezer/markdown` parse of the full document string)
+was revisited once profiling showed blocking parses on very large documents. Extraction now
+reads the editor's incrementally-maintained tree via `@codemirror/language`:
+
+- `computeHeadingState(state)` calls `ensureSyntaxTree(state, doc.length, 250ms)`. The
+  budget covers multi-megabyte documents in one shot (`@lezer/markdown` parses roughly
+  1 MB in under 100 ms), producing a complete heading list with no full-string
+  materialization and no redundant reparse. Parse progress persists in CodeMirror's parse
+  context, so the budget is effectively a one-time cost per document.
+- When the budget is exceeded (pathological, multi-megabyte documents), the partial tree's
+  headings render immediately with no UI indicator, covering the parsed prefix of the
+  document. The list self-heals opportunistically: when scrolling or CodeMirror's
+  background parsing extends the tree, the update listener recomputes the list (150 ms
+  debounce). There is deliberately no active completion driver — a `forceParsing`-based
+  chunk loop was implemented and removed as complexity disproportionate to documents that
+  only trigger it (several MB of markdown, beyond any sane note).
+- There is deliberately **no fallback** to a standalone string parse. If the tree is empty
+  for a non-empty document (markdown language missing), a warning is logged — one code path.
+- `@codemirror/language` resolves to Joplin's own instance through the content-script
+  webpack externals, so the tree read is the same one the editor maintains.
+
+Testing note: Joplin's exact editor grammar (`@joplin/editor`) is not published to npm.
+Tests build trees with `markdownLanguage` from `@codemirror/lang-markdown` (GFM + subscript/
+superscript/emoji) as a best-effort mirror; `src/testing/markdownState.ts` is the single
+place that divergence lives. The original "easier testing" rationale (§3) is retired —
+tests now go through headless `EditorState` trees on the production code path.
+
+The original ADR text is preserved below for historical context.
 
 ## Context
 
