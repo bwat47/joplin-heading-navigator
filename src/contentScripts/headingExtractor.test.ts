@@ -271,6 +271,23 @@ describe('heading extraction', () => {
         expect(headings[1].text).toBe('Another');
     });
 
+    it('keeps inline math verbatim so anchors match Joplin heading links', () => {
+        const content = `# Maxwell $E=mc^2$
+## Decay of $\\alpha$ particles
+### Price is 5$ or 10$`;
+        const headings = extractHeadingsFromMarkdown(content);
+
+        expect(headings[0].text).toBe('Maxwell $E=mc^2$');
+        expect(headings[0].anchor).toBe('maxwell-emc2');
+
+        expect(headings[1].text).toBe('Decay of $\\alpha$ particles');
+        expect(headings[1].anchor).toBe('decay-of-alpha-particles');
+
+        // Lone dollar signs are not math and stay plain text.
+        expect(headings[2].text).toBe('Price is 5$ or 10$');
+        expect(headings[2].anchor).toBe('price-is-5-or-10');
+    });
+
     it('handles images without alt text', () => {
         const content = '# ![](image.png) Icon';
         const headings = extractHeadingsFromMarkdown(content);

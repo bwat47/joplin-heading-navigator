@@ -27,6 +27,7 @@
         "@codemirror/view": "6.38.7",
         "@eslint/js": "^10.0.1",
         "@lezer/common": "^1.5.2",
+        "@lezer/markdown": "^1.6.0",
         "@types/node": "^25.9.4",
         "@typescript-eslint/eslint-plugin": "^8.59.2",
         "@typescript-eslint/parser": "^8.59.2",

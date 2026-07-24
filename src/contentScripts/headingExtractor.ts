@@ -26,6 +26,20 @@ import uslug from '@joplin/fork-uslug';
 const UNSUPPORTED_INLINE_FORMATTING_PATTERN = /(==|\+\+)(?=\S)([\s\S]*?\S)\1/g;
 
 /**
+ * Nodes whose source text is copied verbatim instead of being walked.
+ *
+ * Joplin's editor grammar wraps `$...$` math in an `InlineMath` node whose content is
+ * re-parsed by a TeX parser, so walking it drops every token that parser recognises
+ * (`# Maxwell $E=mc^2$` came out as `Maxwell $=$`). Joplin's own in-editor heading links
+ * slug the raw heading source, so keeping the formula and its `$` delimiters verbatim is
+ * also what produces the anchor Joplin's ctrl+click navigation looks for
+ * (`maxwell-emc2`).
+ *
+ * `BlockMath` cannot start on a heading line, but is listed for the same reason.
+ */
+const VERBATIM_NODE_NAMES = new Set(['InlineMath', 'BlockMath']);
+
+/**
  * Time budget for the synchronous ensureSyntaxTree pass in computeHeadingState.
  * Covers multi-megabyte documents in one shot (@lezer/markdown parses roughly
  * 1 MB in under 100 ms); exceeded only by pathological documents, which then
@@ -62,6 +76,7 @@ function parseHeadingLevel(nodeName: string): number | null {
  * - Skips syntax marks and heading markers
  * - Handles "gaps" (ranges not covered by any child nodes)
  * - Processes escape sequences and HTML tags
+ * - Copies math regions verbatim
  *
  * @param node - Lezer syntax node (heading or inline element)
  * @param doc - Source markdown document
@@ -97,6 +112,13 @@ function extractInlineText(node: SyntaxNode, doc: Text): string {
         // --- Handle gaps (plain unformatted text between inline elements) ---
         if (from > lastPos) {
             out += doc.sliceString(lastPos, from);
+        }
+
+        // --- Keep math regions exactly as written (see VERBATIM_NODE_NAMES) ---
+        if (VERBATIM_NODE_NAMES.has(name)) {
+            out += doc.sliceString(from, to);
+            lastPos = to;
+            continue;
         }
 
         // A URL node is a hidden link destination only inside a Link/Image
