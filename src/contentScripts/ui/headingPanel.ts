@@ -528,22 +528,16 @@ export class HeadingPanel {
                 ? this.filtered.find((h) => h.id === this.initialSelectedHeadingId)
                 : null;
             this.selectedHeadingId = initialHeading ? initialHeading.id : this.filtered[0].id;
-        } else if (!normalized) {
-            // When filter is empty but this is a programmatic update (keyboard navigation), preserve current selection if valid
-            if (!this.selectedHeadingId || !this.filtered.find((h) => h.id === this.selectedHeadingId)) {
-                this.selectedHeadingId = this.filtered[0].id;
-            }
-        } else if (filterChanged) {
+        } else if (normalized && filterChanged) {
             // When filter text changed, always select the first matching heading
             // This matches VS Code/Sublime Text behavior: as you type or backspace,
             // the selection follows the first match in document order
             this.selectedHeadingId = this.filtered[0].id;
-        } else {
-            // When filter text is the same (e.g., debounce firing after arrow key navigation),
-            // preserve current selection if valid
-            if (!this.selectedHeadingId || !this.filtered.find((h) => h.id === this.selectedHeadingId)) {
-                this.selectedHeadingId = this.filtered[0].id;
-            }
+        } else if (!this.selectedHeadingId || !this.filtered.find((h) => h.id === this.selectedHeadingId)) {
+            // Otherwise this is a programmatic update (keyboard navigation) or a repeat of the
+            // same filter text (debounce firing after arrow keys): preserve the current selection
+            // unless it is no longer in the filtered list
+            this.selectedHeadingId = this.filtered[0].id;
         }
 
         this.render();
