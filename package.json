@@ -36,6 +36,7 @@
         "eslint": "^10.3.0",
         "eslint-config-prettier": "^10.1.8",
         "eslint-plugin-import-x": "^4.16.2",
+        "eslint-plugin-sonarjs": "^4.2.0",
         "fs-extra": "^10.1.0",
         "glob": "^8.0.3",
         "globals": "^17.7.0",
