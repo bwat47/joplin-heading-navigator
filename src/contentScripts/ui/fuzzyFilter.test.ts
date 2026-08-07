@@ -33,10 +33,14 @@ describe('fuzzyFilter', () => {
         expect(results[0].text).toBe('API Reference');
     });
 
-    it('ranks word-start matches higher', () => {
-        const results = fuzzyFilter('con', headings);
+    it.each([
+        ['ranks word-start matches higher', 'con', 'Configuration'],
+        ['matches acronyms and sequential characters', 'gs', 'Getting Started'],
+        ['handles case-insensitive matching', 'INTRO', 'Introduction'],
+    ])('%s', (_behavior, query, expectedFirstHeading) => {
+        const results = fuzzyFilter(query, headings);
         expect(results.length).toBeGreaterThan(0);
-        expect(results[0].text).toBe('Configuration');
+        expect(results[0].text).toBe(expectedFirstHeading);
     });
 
     it('orders equal-scoring matches by document order', () => {
@@ -54,21 +58,9 @@ describe('fuzzyFilter', () => {
         expect(results.map((heading) => heading.id)).toEqual(['h1', 'h2', 'h3']);
     });
 
-    it('matches acronyms and sequential characters', () => {
-        const results = fuzzyFilter('gs', headings);
-        expect(results.length).toBeGreaterThan(0);
-        expect(results[0].text).toBe('Getting Started');
-    });
-
     it('returns empty array when no matches', () => {
         const results = fuzzyFilter('xyz123', headings);
         expect(results).toEqual([]);
-    });
-
-    it('handles case-insensitive matching', () => {
-        const results = fuzzyFilter('INTRO', headings);
-        expect(results.length).toBeGreaterThan(0);
-        expect(results[0].text).toBe('Introduction');
     });
 
     it('does not mutate original array', () => {
