@@ -40,6 +40,29 @@ const UNSUPPORTED_INLINE_FORMATTING_PATTERN = /(==|\+\+)(?=\S)([\s\S]*?\S)\1/g;
 const VERBATIM_NODE_NAMES = new Set(['InlineMath', 'BlockMath']);
 
 /**
+ * Nodes that carry no readable heading text.
+ * `*Mark` nodes (EmphasisMark, StrongMark, CodeMark, LinkMark, ImageMark, HeaderMark...) are
+ * matched by suffix instead of being listed here.
+ */
+const SKIPPED_NODE_NAMES = new Set([
+    'Image', // Skip images entirely (no alt text extraction)
+    'LinkLabel',
+    'LinkTitle',
+    'HTMLTag', // Skip HTML tags (matches behavior of Obsidian and other apps)
+]);
+
+/**
+ * Leaf nodes whose source text is heading content. `URL` is included because an autolink
+ * target (`<https://...>`) is visible heading text; link destinations are filtered out
+ * earlier by {@link isSkippedNode}. `Emoji` covers shortcodes like `:fire:`, which stay
+ * visible text for anchor stability.
+ */
+const TEXT_NODE_NAMES = new Set(['Text', 'CodeText', 'URL', 'Emoji']);
+
+/** Leaf nodes that are heading content when {@link extractInlineText} is called on them directly. */
+const LEAF_TEXT_NODE_NAMES = new Set(['Text', 'CodeText', 'Emoji']);
+
+/**
  * Time budget for the synchronous ensureSyntaxTree pass in computeHeadingState.
  * Covers multi-megabyte documents in one shot (@lezer/markdown parses roughly
  * 1 MB in under 100 ms); exceeded only by pathological documents, which then
@@ -71,6 +94,57 @@ function parseHeadingLevel(nodeName: string): number | null {
 }
 
 /**
+ * Reports whether a node contributes no readable heading text.
+ *
+ * Covers syntax marks (`*Mark`, incl. the `HeaderMark` for ATX `#` symbols and Setext
+ * underlines), the nodes in {@link SKIPPED_NODE_NAMES}, and hidden link destinations.
+ * A URL node is a hidden destination only inside a Link/Image (e.g. `[text](url)` /
+ * `![alt](url)`); an autolink target (`<https://...>`) is visible heading text, so it must
+ * be kept (matches Joplin's heading IDs).
+ */
+function isSkippedNode(node: SyntaxNode, name: string): boolean {
+    if (name.endsWith('Mark') || SKIPPED_NODE_NAMES.has(name)) {
+        return true;
+    }
+
+    const parentName = node.parent?.name;
+    return name === 'URL' && (parentName === 'Link' || parentName === 'Image');
+}
+
+/**
+ * Extracts the heading text contributed by a single child node.
+ *
+ * @param node - Child of the node being walked by {@link extractInlineText}
+ * @param doc - Source markdown document
+ * @returns Text to append, or '' for nodes that carry no heading text
+ */
+function extractChildText(node: SyntaxNode, doc: Text): string {
+    const name = node.name;
+
+    // --- Keep math regions exactly as written (see VERBATIM_NODE_NAMES) ---
+    if (VERBATIM_NODE_NAMES.has(name)) {
+        return doc.sliceString(node.from, node.to);
+    }
+
+    if (isSkippedNode(node, name)) {
+        return '';
+    }
+
+    // --- Handle escaped characters (e.g., \* → *) ---
+    // Escape node contains both backslash and character, extract just the character
+    if (name === 'Escape') {
+        return doc.sliceString(node.from + 1, node.to);
+    }
+
+    if (TEXT_NODE_NAMES.has(name)) {
+        return doc.sliceString(node.from, node.to);
+    }
+
+    // --- Recurse into inline containers (Emphasis, Link, InlineCode, etc.) ---
+    return extractInlineText(node, doc);
+}
+
+/**
  * Extracts readable inline text from a Lezer node.
  * - Recursively collects Text + CodeText
  * - Skips syntax marks and heading markers
@@ -94,10 +168,7 @@ function extractInlineText(node: SyntaxNode, doc: Text): string {
 
     if (!cursor.firstChild()) {
         // Leaf node case — include only text-bearing nodes
-        if (cursor.name === 'Text' || cursor.name === 'CodeText' || cursor.name === 'Emoji') {
-            return doc.sliceString(cursor.from, cursor.to);
-        }
-        return '';
+        return LEAF_TEXT_NODE_NAMES.has(cursor.name) ? doc.sliceString(cursor.from, cursor.to) : '';
     }
 
     // Start from node beginning to capture Setext heading text before underlines.
@@ -105,66 +176,13 @@ function extractInlineText(node: SyntaxNode, doc: Text): string {
     let lastPos = node.from;
 
     do {
-        const name = cursor.name;
-        const from = cursor.from;
-        const to = cursor.to;
-
         // --- Handle gaps (plain unformatted text between inline elements) ---
-        if (from > lastPos) {
-            out += doc.sliceString(lastPos, from);
+        if (cursor.from > lastPos) {
+            out += doc.sliceString(lastPos, cursor.from);
         }
 
-        // --- Keep math regions exactly as written (see VERBATIM_NODE_NAMES) ---
-        if (VERBATIM_NODE_NAMES.has(name)) {
-            out += doc.sliceString(from, to);
-            lastPos = to;
-            continue;
-        }
-
-        // A URL node is a hidden link destination only inside a Link/Image
-        // (e.g. [text](url) / ![alt](url)). An autolink target (<https://...>)
-        // is visible heading text, so it must be kept (matches Joplin's heading IDs).
-        const parentName = cursor.node.parent?.name;
-        const isLinkDestination = name === 'URL' && (parentName === 'Link' || parentName === 'Image');
-
-        // --- Skip non-content tokens ---
-        if (
-            name.endsWith('Mark') || // EmphasisMark, StrongMark, CodeMark, LinkMark, ImageMark...
-            name === 'HeaderMark' || // ATX heading # symbols and Setext underlines
-            name === 'Image' || // Skip images entirely (no alt text extraction)
-            name === 'LinkLabel' ||
-            name === 'LinkTitle' ||
-            isLinkDestination
-        ) {
-            lastPos = to;
-            continue;
-        }
-
-        // --- Handle escaped characters (e.g., \* → *) ---
-        if (name === 'Escape') {
-            // Escape node contains both backslash and character, extract just the character
-            out += doc.sliceString(from + 1, to);
-            lastPos = to;
-            continue;
-        }
-
-        // --- Skip HTML tags (matches behavior of Obsidian and other apps) ---
-        if (name === 'HTMLTag') {
-            lastPos = to;
-            continue;
-        }
-
-        // --- Leaf text (incl. visible autolink targets, which reach here as URL, and
-        // emoji shortcodes like :fire:, which stay visible text for anchor stability) ---
-        if (name === 'Text' || name === 'CodeText' || name === 'URL' || name === 'Emoji') {
-            out += doc.sliceString(from, to);
-            lastPos = to;
-            continue;
-        }
-
-        // --- Recurse into inline containers (Emphasis, Link, InlineCode, etc.) ---
-        out += extractInlineText(cursor.node, doc);
-        lastPos = to;
+        out += extractChildText(cursor.node, doc);
+        lastPos = cursor.to;
     } while (cursor.nextSibling());
 
     // Include any trailing gap. Whitespace is normalized by trim() in normalizeHeadingText.
