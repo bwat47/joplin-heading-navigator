@@ -166,6 +166,8 @@ function extractInlineText(node: SyntaxNode, doc: Text): string {
     const cursor = node.cursor();
 
     if (!cursor.firstChild()) {
+        // Text-bearing leaves are returned by extractChildText before it recurses here,
+        // so a childless node at this point contributes no heading text.
         return '';
     }
 
