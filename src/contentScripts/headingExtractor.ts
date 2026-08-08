@@ -59,9 +59,6 @@ const SKIPPED_NODE_NAMES = new Set([
  */
 const TEXT_NODE_NAMES = new Set(['Text', 'CodeText', 'URL', 'Emoji']);
 
-/** Leaf nodes that are heading content when {@link extractInlineText} is called on them directly. */
-const LEAF_TEXT_NODE_NAMES = new Set(['Text', 'CodeText', 'Emoji']);
-
 /**
  * Time budget for the synchronous ensureSyntaxTree pass in computeHeadingState.
  * Covers multi-megabyte documents in one shot (@lezer/markdown parses roughly
@@ -102,7 +99,9 @@ function parseHeadingLevel(nodeName: string): number | null {
  * `![alt](url)`); an autolink target (`<https://...>`) is visible heading text, so it must
  * be kept (matches Joplin's heading IDs).
  */
-function isSkippedNode(node: SyntaxNode, name: string): boolean {
+function isSkippedNode(node: SyntaxNode): boolean {
+    const name = node.name;
+
     if (name.endsWith('Mark') || SKIPPED_NODE_NAMES.has(name)) {
         return true;
     }
@@ -126,7 +125,7 @@ function extractChildText(node: SyntaxNode, doc: Text): string {
         return doc.sliceString(node.from, node.to);
     }
 
-    if (isSkippedNode(node, name)) {
+    if (isSkippedNode(node)) {
         return '';
     }
 
@@ -167,8 +166,9 @@ function extractInlineText(node: SyntaxNode, doc: Text): string {
     const cursor = node.cursor();
 
     if (!cursor.firstChild()) {
-        // Leaf node case — include only text-bearing nodes
-        return LEAF_TEXT_NODE_NAMES.has(cursor.name) ? doc.sliceString(cursor.from, cursor.to) : '';
+        // Text-bearing leaves are returned by extractChildText before it recurses here,
+        // so a childless node at this point contributes no heading text.
+        return '';
     }
 
     // Start from node beginning to capture Setext heading text before underlines.
