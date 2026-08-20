@@ -55,11 +55,11 @@ Start here when exploring the codebase:
 
 - **Language**: TypeScript with strict settings; 4-space indentation; semicolons required.
 - **Filenames**: `camelCase.ts` for modules; tests mirror names: `module.test.ts`.
-- **Exports**: Prefer explicit types and narrow public exports.
+- **Module boundaries**: Add explicit return types to exported functions and public methods of exported classes. Prefer named exported types for non-trivial object shapes. Let TypeScript infer local implementation details, and avoid redundant primitive annotations.
 - **Style enforcement**: Run `npm run format` before commits or if you encounter formatting errors from prettier.
 - **Documentation**: Use JSDoc for complex functions; document regex patterns with examples.
 - **Constants and configuration**: No magic literals — extract to constants, enums, config objects, or dedicated types.
-- **Structure and Testability**: Pure logic lives in small, focused units when internal behaviour is non-trivial. Global state and hidden side effects are avoided in favour of explicit dependencies.
+- **Structure and Testability**: Keep non-trivial pure logic in small, focused units that can be tested independently. Avoid global state and hidden side effects; prefer explicit dependencies where practical. Helpers that do not depend on an enclosing function's state should generally live at module scope; keep a helper local when it intentionally captures or operates on that function's state.
 
 ## Log messages
 
