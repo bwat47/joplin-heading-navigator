@@ -343,9 +343,7 @@ export class HeadingPanel {
     /**
      * Copies the heading link for the right-clicked row instead of opening a context menu.
      *
-     * The default is suppressed so the browser's own menu never covers the panel. Joplin's editor
-     * context menu is a separate concern: if the host builds it outside this webview, cancelling
-     * here cannot stop it, so this needs verifying in a real desktop build.
+     * The default is suppressed so the browser's own menu never covers the panel.
      */
     private handleContextMenu(event: MouseEvent): void {
         const item = (event.target as HTMLElement | null)?.closest<HTMLLIElement>('.heading-navigator-item');
