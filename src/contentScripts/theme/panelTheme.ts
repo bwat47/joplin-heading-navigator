@@ -250,6 +250,10 @@ export function createPanelCss(dimensions: PanelDimensions): string {
     transition: opacity 160ms ease-out, background-color 120ms ease-out, color 120ms ease-out;
 }
 
+.heading-navigator-panel.is-compact.hide-compact-level-badges .heading-navigator-level-badge {
+    display: none;
+}
+
 .heading-navigator-panel.is-compact .heading-navigator-item.is-selected .heading-navigator-level-badge {
     color: inherit;
 }

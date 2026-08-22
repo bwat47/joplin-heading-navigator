@@ -19,11 +19,12 @@ describe('content script settings', () => {
         );
     });
 
-    it('normalizes dimensions and accepts only boolean compact mode', () => {
+    it('normalizes dimensions and accepts only boolean display settings', () => {
         expect(
             normalizeContentScriptSettings({
                 dimensions: { width: 999, maxHeightRatio: 0.1 },
                 compactMode: true,
+                hideCompactModeHeadingLevelBadges: true,
                 topOffset: 44,
             })
         ).toEqual({
@@ -32,11 +33,16 @@ describe('content script settings', () => {
                 maxHeightRatio: MIN_PANEL_HEIGHT_PERCENTAGE / 100,
             },
             compactMode: true,
+            hideCompactModeHeadingLevelBadges: true,
             topOffset: 44,
         });
 
         expect(
             normalizeContentScriptSettings({ dimensions: DEFAULT_PANEL_DIMENSIONS, compactMode: 1 }).compactMode
+        ).toBe(false);
+        expect(
+            normalizeContentScriptSettings({ hideCompactModeHeadingLevelBadges: 'true' })
+                .hideCompactModeHeadingLevelBadges
         ).toBe(false);
     });
 
@@ -59,6 +65,7 @@ describe('content script settings', () => {
         const applied = applyContentScriptSettings(view, {
             dimensions: { width: 480, maxHeightRatio: 0.6 },
             compactMode: true,
+            hideCompactModeHeadingLevelBadges: true,
         });
         expect(getContentScriptSettings(view.state)).toEqual(applied);
 

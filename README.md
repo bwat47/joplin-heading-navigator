@@ -50,7 +50,7 @@ The plugin can be customized via Tools | Options | Heading Navigator:
     - Prevents the panel from obscuring too much content
 - **Panel top offset**: 0-200px distance from the top of the editor (default: 12px)
     - Push the panel down to avoid overlapping other top-right editor decorations, such as a backlinks indicator (desktop only)
-- **Compact mode**: Hide `H# - line #` metadata and reduce heading row height (default: off)
+- **Compact mode**: Hide `H# - line #` metadata and reduce heading row height (default: off), with an option to hide the remaining heading level badges
     - Shows more headings at once in the panel (desktop only)
 - **Copy internal anchor links**: Copy `[Heading](#heading-anchor)` instead of `[Heading @ Note](:/noteId#heading-anchor)` (default: off)
 

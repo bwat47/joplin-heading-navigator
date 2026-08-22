@@ -17,6 +17,9 @@ describe('createPanelCss', () => {
         expect(css).toContain('.heading-navigator-level-badge');
         expect(css).toContain('.heading-navigator-panel.is-compact .heading-navigator-level-badge');
         expect(css).toContain(
+            '.heading-navigator-panel.is-compact.hide-compact-level-badges .heading-navigator-level-badge'
+        );
+        expect(css).toContain(
             '.heading-navigator-panel.is-compact .heading-navigator-item:hover .heading-navigator-level-badge'
         );
         expect(css).toContain('.heading-navigator-input');

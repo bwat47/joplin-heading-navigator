@@ -32,6 +32,7 @@ const SETTING_PANEL_WIDTH = 'headingNavigator.panelWidth';
 const SETTING_PANEL_MAX_HEIGHT = 'headingNavigator.panelMaxHeightPercentage';
 const SETTING_PANEL_TOP_OFFSET = 'headingNavigator.panelTopOffset';
 const SETTING_COMPACT_MODE = 'headingNavigator.compactMode';
+const SETTING_HIDE_COMPACT_MODE_HEADING_LEVEL_BADGES = 'headingNavigator.hideCompactModeHeadingLevelBadges';
 const SETTING_COPY_INTERNAL_ANCHOR_LINKS = 'headingNavigator.copyInternalAnchorLinks';
 const SETTING_PANEL_PINNED = 'headingNavigator.panelPinned';
 
@@ -98,6 +99,14 @@ export async function registerPanelSettings(): Promise<void> {
             label: 'Compact mode',
             description: '[Desktop Only] Hide heading metadata row and reduce list item height.',
         },
+        [SETTING_HIDE_COMPACT_MODE_HEADING_LEVEL_BADGES]: {
+            value: false,
+            type: SettingItemType.Bool,
+            public: true,
+            section: SECTION_ID,
+            label: 'Hide heading level badges in compact mode',
+            description: '[Desktop Only] Completely hide the H1-H6 badges shown in compact mode.',
+        },
         [SETTING_COPY_INTERNAL_ANCHOR_LINKS]: {
             value: false,
             type: SettingItemType.Bool,
@@ -124,6 +133,7 @@ export async function loadContentScriptSettings(): Promise<ContentScriptSettings
         SETTING_PANEL_MAX_HEIGHT,
         SETTING_PANEL_TOP_OFFSET,
         SETTING_COMPACT_MODE,
+        SETTING_HIDE_COMPACT_MODE_HEADING_LEVEL_BADGES,
     ]);
 
     const widthResult = normalizePanelWidth(values[SETTING_PANEL_WIDTH]);
@@ -148,12 +158,23 @@ export async function loadContentScriptSettings(): Promise<ContentScriptSettings
         logger.warn(`Invalid compact mode setting: ${values[SETTING_COMPACT_MODE]}. Using ${compactModeResult.value}.`);
     }
 
+    const hideCompactModeHeadingLevelBadgesResult = normalizeBooleanSetting(
+        values[SETTING_HIDE_COMPACT_MODE_HEADING_LEVEL_BADGES],
+        false
+    );
+    if (hideCompactModeHeadingLevelBadgesResult.changed) {
+        logger.warn(
+            `Invalid compact mode heading level badge setting: ${values[SETTING_HIDE_COMPACT_MODE_HEADING_LEVEL_BADGES]}. Using ${hideCompactModeHeadingLevelBadgesResult.value}.`
+        );
+    }
+
     return {
         dimensions: {
             width: widthResult.value,
             maxHeightRatio: heightResult.value / 100,
         },
         compactMode: compactModeResult.value,
+        hideCompactModeHeadingLevelBadges: hideCompactModeHeadingLevelBadgesResult.value,
         topOffset: topOffsetResult.value,
     };
 }

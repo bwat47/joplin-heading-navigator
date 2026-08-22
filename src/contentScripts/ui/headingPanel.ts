@@ -127,10 +127,7 @@ export class HeadingPanel {
 
         this.container = document.createElement('div');
         this.container.className = 'heading-navigator-panel';
-        const effectiveCompactMode = settings.compactMode && !this.isMobile;
-        if (effectiveCompactMode) {
-            this.container.classList.add('is-compact');
-        }
+        this.applyModeClasses();
         if (this.isMobile) {
             this.container.classList.add('is-mobile');
         }
@@ -449,8 +446,17 @@ export class HeadingPanel {
     public setSettings(settings: ContentScriptSettings): void {
         this.settings = settings;
         ensurePanelStyles(this.view, this.settings.dimensions);
-        this.container.classList.toggle('is-compact', this.settings.compactMode && !this.isMobile);
+        this.applyModeClasses();
         this.applyTopOffset();
+    }
+
+    private applyModeClasses(): void {
+        const compactMode = this.settings.compactMode && !this.isMobile;
+        this.container.classList.toggle('is-compact', compactMode);
+        this.container.classList.toggle(
+            'hide-compact-level-badges',
+            compactMode && this.settings.hideCompactModeHeadingLevelBadges
+        );
     }
 
     /**

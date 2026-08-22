@@ -9,6 +9,7 @@ import logger from '../logger';
 export const DEFAULT_CONTENT_SCRIPT_SETTINGS: ContentScriptSettings = {
     dimensions: { ...DEFAULT_PANEL_DIMENSIONS },
     compactMode: false,
+    hideCompactModeHeadingLevelBadges: false,
     topOffset: DEFAULT_PANEL_TOP_OFFSET,
 };
 
@@ -27,7 +28,12 @@ export function normalizeContentScriptSettings(value: unknown): ContentScriptSet
         return DEFAULT_CONTENT_SCRIPT_SETTINGS;
     }
 
-    const candidate = value as { dimensions?: unknown; compactMode?: unknown; topOffset?: unknown };
+    const candidate = value as {
+        dimensions?: unknown;
+        compactMode?: unknown;
+        hideCompactModeHeadingLevelBadges?: unknown;
+        topOffset?: unknown;
+    };
     const dimensions =
         candidate.dimensions && typeof candidate.dimensions === 'object'
             ? normalizePanelDimensions(candidate.dimensions)
@@ -36,6 +42,10 @@ export function normalizeContentScriptSettings(value: unknown): ContentScriptSet
     return {
         dimensions,
         compactMode: typeof candidate.compactMode === 'boolean' ? candidate.compactMode : false,
+        hideCompactModeHeadingLevelBadges:
+            typeof candidate.hideCompactModeHeadingLevelBadges === 'boolean'
+                ? candidate.hideCompactModeHeadingLevelBadges
+                : false,
         topOffset: normalizePanelTopOffset(candidate.topOffset).value,
     };
 }

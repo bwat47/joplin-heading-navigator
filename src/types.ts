@@ -16,6 +16,7 @@ export interface PanelDimensions {
 export interface ContentScriptSettings {
     dimensions: PanelDimensions;
     compactMode: boolean;
+    hideCompactModeHeadingLevelBadges: boolean;
     /** Distance in px from the top of the editor to the panel (desktop only). */
     topOffset: number;
 }

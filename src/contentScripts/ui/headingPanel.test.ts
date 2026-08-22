@@ -44,6 +44,7 @@ describe('HeadingPanel pinned mode', () => {
         panel = new HeadingPanel(view, callbacks, {
             dimensions: { width: 320, maxHeightRatio: 0.75 },
             compactMode: false,
+            hideCompactModeHeadingLevelBadges: false,
             topOffset: 40,
         });
         panel.open(headings, headings[0].id);
@@ -125,6 +126,7 @@ describe('HeadingPanel pinned mode', () => {
         panel = new HeadingPanel(view, callbacks, {
             dimensions: { width: 320, maxHeightRatio: 0.75 },
             compactMode: false,
+            hideCompactModeHeadingLevelBadges: false,
             topOffset: 40,
         });
         panel.open(headings, headings[0].id, false);
@@ -140,6 +142,7 @@ describe('HeadingPanel pinned mode', () => {
         panel.setSettings({
             dimensions: { width: 320, maxHeightRatio: 0.75 },
             compactMode: false,
+            hideCompactModeHeadingLevelBadges: false,
             topOffset: 88,
         });
 
@@ -151,14 +154,48 @@ describe('HeadingPanel pinned mode', () => {
         panel = new HeadingPanel(
             view,
             callbacks,
-            { dimensions: { width: 320, maxHeightRatio: 0.75 }, compactMode: true, topOffset: 40 },
+            {
+                dimensions: { width: 320, maxHeightRatio: 0.75 },
+                compactMode: true,
+                hideCompactModeHeadingLevelBadges: true,
+                topOffset: 40,
+            },
             true
         );
         panel.open(headings, headings[0].id);
 
         expect(document.querySelector('.heading-navigator-pin-button')).toBeNull();
         expect(document.querySelector('.heading-navigator-panel')?.classList.contains('is-compact')).toBe(false);
+        expect(
+            document.querySelector('.heading-navigator-panel')?.classList.contains('hide-compact-level-badges')
+        ).toBe(false);
         panel.setPinned(true);
         expect(panel.isPinned()).toBe(false);
+    });
+
+    it('hides compact heading level badges when configured and restores them on update', () => {
+        const container = document.querySelector<HTMLDivElement>('.heading-navigator-panel')!;
+
+        panel.setSettings({
+            dimensions: { width: 320, maxHeightRatio: 0.75 },
+            compactMode: true,
+            hideCompactModeHeadingLevelBadges: true,
+            topOffset: 40,
+        });
+
+        expect(container.classList.contains('is-compact')).toBe(true);
+        expect(container.classList.contains('hide-compact-level-badges')).toBe(true);
+        expect(document.querySelectorAll('.heading-navigator-level-badge')).toHaveLength(headings.length);
+        expect(getComputedStyle(document.querySelector('.heading-navigator-level-badge')!).display).toBe('none');
+
+        panel.setSettings({
+            dimensions: { width: 320, maxHeightRatio: 0.75 },
+            compactMode: true,
+            hideCompactModeHeadingLevelBadges: false,
+            topOffset: 40,
+        });
+
+        expect(container.classList.contains('hide-compact-level-badges')).toBe(false);
+        expect(getComputedStyle(document.querySelector('.heading-navigator-level-badge')!).display).toBe('flex');
     });
 });

@@ -269,6 +269,7 @@ describe('pinned panel restoration', () => {
             {
                 dimensions: { width: 480, maxHeightRatio: 0.6 },
                 compactMode: true,
+                hideCompactModeHeadingLevelBadges: true,
                 topOffset: 12,
             }
         );
@@ -279,6 +280,7 @@ describe('pinned panel restoration', () => {
         expect(panelElement).not.toBeNull();
         expect(panelElement!.classList.contains('is-pinned')).toBe(true);
         expect(panelElement!.classList.contains('is-compact')).toBe(true);
+        expect(panelElement!.classList.contains('hide-compact-level-badges')).toBe(true);
         expect(document.getElementById('heading-navigator-styles')?.textContent).toContain('width: 480px;');
         expect(document.activeElement).not.toBe(document.querySelector('.heading-navigator-input'));
         expect(postMessage).not.toHaveBeenCalledWith({ type: 'persistPinnedState', pinned: true });
@@ -322,7 +324,12 @@ describe('pinned panel restoration', () => {
         createEditor(
             { pinned: true, isMobile: false },
             undefined,
-            { dimensions: { width: 500, maxHeightRatio: 0.65 }, compactMode: true, topOffset: 12 },
+            {
+                dimensions: { width: 500, maxHeightRatio: 0.65 },
+                compactMode: true,
+                hideCompactModeHeadingLevelBadges: true,
+                topOffset: 12,
+            },
             settingsGate
         );
 
@@ -337,6 +344,7 @@ describe('pinned panel restoration', () => {
         expect(document.querySelector('.heading-navigator-panel')).toBe(panelElement);
         expect(panelElement.classList.contains('is-pinned')).toBe(true);
         expect(panelElement.classList.contains('is-compact')).toBe(true);
+        expect(panelElement.classList.contains('hide-compact-level-badges')).toBe(true);
         expect(document.getElementById('heading-navigator-styles')?.textContent).toContain('width: 500px;');
     });
 

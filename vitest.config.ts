@@ -2,10 +2,16 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
     resolve: {
-        alias: {
-            api: new URL('./api/index.ts', import.meta.url).pathname,
-            'api/': new URL('./api/', import.meta.url).pathname,
-        },
+        alias: [
+            {
+                find: /^api\/(.+)$/,
+                replacement: `${new URL('./api/', import.meta.url).pathname}$1`,
+            },
+            {
+                find: 'api',
+                replacement: new URL('./api/index.ts', import.meta.url).pathname,
+            },
+        ],
     },
     test: {
         globals: true,
