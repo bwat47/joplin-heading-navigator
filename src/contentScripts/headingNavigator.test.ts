@@ -2,6 +2,7 @@ import { EditorSelection, EditorState, StateEffect, type Extension } from '@code
 import { EditorView } from '@codemirror/view';
 import type { CodeMirrorControl, ContentScriptContext } from 'api/types';
 import { EDITOR_COMMAND_TOGGLE_PANEL } from '../constants';
+import { HEADING_METADATA_DISPLAY } from '../headingMetadataDisplay';
 import type { ContentScriptSettings } from '../types';
 import type { PanelRestoreState } from '../messages';
 import * as headingExtractor from './headingExtractor';
@@ -268,8 +269,7 @@ describe('pinned panel restoration', () => {
             undefined,
             {
                 dimensions: { width: 480, maxHeightRatio: 0.6 },
-                compactMode: true,
-                hideCompactModeHeadingLevelBadges: true,
+                metadataDisplay: HEADING_METADATA_DISPLAY.none,
                 topOffset: 12,
             }
         );
@@ -280,7 +280,7 @@ describe('pinned panel restoration', () => {
         expect(panelElement).not.toBeNull();
         expect(panelElement!.classList.contains('is-pinned')).toBe(true);
         expect(panelElement!.classList.contains('is-compact')).toBe(true);
-        expect(panelElement!.classList.contains('hide-compact-level-badges')).toBe(true);
+        expect(panelElement!.classList.contains('hide-level-badges')).toBe(true);
         expect(document.getElementById('heading-navigator-styles')?.textContent).toContain('width: 480px;');
         expect(document.activeElement).not.toBe(document.querySelector('.heading-navigator-input'));
         expect(postMessage).not.toHaveBeenCalledWith({ type: 'persistPinnedState', pinned: true });
@@ -326,8 +326,7 @@ describe('pinned panel restoration', () => {
             undefined,
             {
                 dimensions: { width: 500, maxHeightRatio: 0.65 },
-                compactMode: true,
-                hideCompactModeHeadingLevelBadges: true,
+                metadataDisplay: HEADING_METADATA_DISPLAY.none,
                 topOffset: 12,
             },
             settingsGate
@@ -344,7 +343,7 @@ describe('pinned panel restoration', () => {
         expect(document.querySelector('.heading-navigator-panel')).toBe(panelElement);
         expect(panelElement.classList.contains('is-pinned')).toBe(true);
         expect(panelElement.classList.contains('is-compact')).toBe(true);
-        expect(panelElement.classList.contains('hide-compact-level-badges')).toBe(true);
+        expect(panelElement.classList.contains('hide-level-badges')).toBe(true);
         expect(document.getElementById('heading-navigator-styles')?.textContent).toContain('width: 500px;');
     });
 

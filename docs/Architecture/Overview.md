@@ -69,7 +69,7 @@ Panel appended to `view.scrollDOM.parentElement` to stay associated with specifi
 ## State Management
 
 - **Panel State**: `HeadingPanel` class (pin state, filtered list, active heading, debounce timers)
-- **Content Script Settings**: CodeMirror facet and compartment containing normalized panel dimensions, compact mode, and compact badge visibility
+- **Content Script Settings**: CodeMirror facet and compartment containing normalized panel dimensions, heading metadata display mode, and top offset
 - **Pinned Persistence**: Private `headingNavigator.panelPinned` setting written by the plugin host on user pin/unpin; read back on editor creation to restore a pinned panel (desktop only)
 - **Editor State**: Selection/scroll snapshots support transient cancellation and are discarded when pinning
 - **Heading Cache**: Recomputed 150 ms after document changes stop while the panel is open

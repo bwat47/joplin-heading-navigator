@@ -1,3 +1,5 @@
+import type { HeadingMetadataDisplay } from './headingMetadataDisplay';
+
 export interface HeadingItem {
     id: string;
     text: string;
@@ -15,8 +17,8 @@ export interface PanelDimensions {
 
 export interface ContentScriptSettings {
     dimensions: PanelDimensions;
-    compactMode: boolean;
-    hideCompactModeHeadingLevelBadges: boolean;
+    /** What each heading row shows alongside its text. */
+    metadataDisplay: HeadingMetadataDisplay;
     /** Distance in px from the top of the editor to the panel (desktop only). */
     topOffset: number;
 }
