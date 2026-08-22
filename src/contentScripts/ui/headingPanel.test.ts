@@ -20,6 +20,27 @@ function computedDisplay(selector: string): string {
     return getComputedStyle(document.querySelector(selector)!).display;
 }
 
+function computedItemPaddingRight(): string {
+    return getComputedStyle(document.querySelector('.heading-navigator-item')!).paddingRight;
+}
+
+function items(): HTMLLIElement[] {
+    return Array.from(document.querySelectorAll<HTMLLIElement>('.heading-navigator-item'));
+}
+
+function rightClick(target: Element): MouseEvent {
+    const event = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
+    target.dispatchEvent(event);
+    return event;
+}
+
+/** jsdom has no Touch constructor, so synthesize just the coordinates the handlers read. */
+function dispatchTouch(target: Element, type: string, x = 0, y = 0): void {
+    const event = new Event(type, { bubbles: true, cancelable: true });
+    Object.defineProperty(event, 'touches', { value: [{ clientX: x, clientY: y }] });
+    target.dispatchEvent(event);
+}
+
 class ResizeObserverMock {
     public observe(): void {}
     public unobserve(): void {}
@@ -171,6 +192,8 @@ describe('HeadingPanel pinned mode', () => {
         const style = getComputedStyle(item);
         expect(style.paddingTop).toBe('14px');
         expect(style.paddingBottom).toBe('14px');
+        // The badge gutter still applies on mobile, where compact mode renders one.
+        expect(style.paddingRight).toBe('40px');
     });
 
     it('switches row metadata between the full row, the level badge, and neither', () => {
@@ -180,6 +203,8 @@ describe('HeadingPanel pinned mode', () => {
         expect(container.classList.contains('hide-level-badges')).toBe(false);
         expect(computedDisplay('.heading-navigator-item-level')).not.toBe('none');
         expect(computedDisplay('.heading-navigator-level-badge')).toBe('none');
+        // No badge and no copy button, so the row gutter is plain padding.
+        expect(computedItemPaddingRight()).toBe('12px');
 
         panel.setSettings(panelSettings(HEADING_METADATA_DISPLAY.compact));
 
@@ -188,6 +213,8 @@ describe('HeadingPanel pinned mode', () => {
         expect(computedDisplay('.heading-navigator-item-level')).toBe('none');
         expect(computedDisplay('.heading-navigator-level-badge')).toBe('flex');
         expect(getComputedStyle(document.querySelector('.heading-navigator-item')!).paddingTop).toBe('6px');
+        // Only the badge earns gutter space.
+        expect(computedItemPaddingRight()).toBe('40px');
 
         panel.setSettings(panelSettings(HEADING_METADATA_DISPLAY.none));
 
@@ -196,11 +223,96 @@ describe('HeadingPanel pinned mode', () => {
         // Badges stay in the DOM so switching back does not require re-rendering rows.
         expect(document.querySelectorAll('.heading-navigator-level-badge')).toHaveLength(headings.length);
         expect(computedDisplay('.heading-navigator-level-badge')).toBe('none');
+        expect(computedItemPaddingRight()).toBe('12px');
 
         panel.setSettings(panelSettings(HEADING_METADATA_DISPLAY.full));
 
         expect(container.classList.contains('is-compact')).toBe(false);
         expect(computedDisplay('.heading-navigator-level-badge')).toBe('none');
         expect(computedDisplay('.heading-navigator-item-level')).not.toBe('none');
+    });
+
+    it('copies the heading link on right-click and suppresses the default context menu', () => {
+        const event = rightClick(items()[1].querySelector('.heading-navigator-item-text')!);
+
+        expect(callbacks.onCopy).toHaveBeenCalledWith(headings[1]);
+        expect(event.defaultPrevented).toBe(true);
+        expect(items()[1].classList.contains('is-copied')).toBe(true);
+        expect(callbacks.onSelect).not.toHaveBeenCalled();
+    });
+
+    it('leaves right-clicks outside a heading row alone', () => {
+        const event = rightClick(document.querySelector('.heading-navigator-input')!);
+
+        expect(callbacks.onCopy).not.toHaveBeenCalled();
+        expect(event.defaultPrevented).toBe(false);
+    });
+
+    it('renders no copy button', () => {
+        expect(document.querySelector('.heading-navigator-copy-button')).toBeNull();
+    });
+
+    it('moves the copy confirmation to the most recently copied row', () => {
+        rightClick(items()[0]);
+        expect(items()[0].classList.contains('is-copied')).toBe(true);
+
+        rightClick(items()[1]);
+        expect(items()[0].classList.contains('is-copied')).toBe(false);
+        expect(items()[1].classList.contains('is-copied')).toBe(true);
+    });
+
+    it('clears the copy confirmation timer when the panel is destroyed', () => {
+        vi.useFakeTimers();
+        try {
+            rightClick(items()[0]);
+            expect(vi.getTimerCount()).toBeGreaterThan(0);
+
+            panel.destroy();
+
+            expect(vi.getTimerCount()).toBe(0);
+        } finally {
+            vi.useRealTimers();
+        }
+
+        // afterEach destroys again; keep that safe by handing it a live panel.
+        panel = new HeadingPanel(view, callbacks, panelSettings());
+    });
+
+    it('copies on mobile long-press and ignores right-click there', () => {
+        panel.destroy();
+        panel = new HeadingPanel(view, callbacks, panelSettings(), true);
+        panel.open(headings, headings[0].id);
+
+        const event = rightClick(items()[0]);
+        expect(callbacks.onCopy).not.toHaveBeenCalled();
+        expect(event.defaultPrevented).toBe(false);
+
+        vi.useFakeTimers();
+        try {
+            dispatchTouch(items()[1], 'touchstart');
+            vi.advanceTimersByTime(600);
+        } finally {
+            vi.useRealTimers();
+        }
+
+        expect(callbacks.onCopy).toHaveBeenCalledWith(headings[1]);
+        expect(items()[1].classList.contains('is-copied')).toBe(true);
+    });
+
+    it('cancels a mobile long-press once the touch turns into a scroll', () => {
+        panel.destroy();
+        panel = new HeadingPanel(view, callbacks, panelSettings(), true);
+        panel.open(headings, headings[0].id);
+
+        vi.useFakeTimers();
+        try {
+            dispatchTouch(items()[1], 'touchstart', 10, 10);
+            dispatchTouch(items()[1], 'touchmove', 10, 40);
+            vi.advanceTimersByTime(600);
+        } finally {
+            vi.useRealTimers();
+        }
+
+        expect(callbacks.onCopy).not.toHaveBeenCalled();
     });
 });

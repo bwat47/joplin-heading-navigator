@@ -179,7 +179,7 @@ export function createPanelCss(dimensions: PanelDimensions): string {
     display: flex;
     flex-direction: column;
     gap: 2px;
-    padding: 8px 52px 8px 12px;
+    padding: 8px 12px;
     cursor: pointer;
     background-color: transparent;
 }
@@ -263,90 +263,15 @@ export function createPanelCss(dimensions: PanelDimensions): string {
     color: inherit;
 }
 
-.heading-navigator-copy-button {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    right: 8px;
-    width: 28px;
-    height: 28px;
-    padding: 4px;
-    border: none;
-    border-radius: 4px;
-    background-color: var(--joplin-background-color-hover3, rgba(203, 218, 241, 0.3));
-    color: var(--joplin-color, #32373f);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 160ms ease-out, background-color 120ms ease-out, color 120ms ease-out;
+/* Copy confirmation, shared by desktop right-click and mobile long-press. */
+.heading-navigator-item.is-copied {
+    animation: heading-navigator-flash 300ms ease-out;
+    background-color: var(--joplin-background-color-hover3, #cbdaf1) !important;
 }
 
-.heading-navigator-copy-button svg {
-    width: 16px;
-    height: 16px;
-    fill: none;
-    stroke: currentColor;
-    stroke-width: 2;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-}
-
-.heading-navigator-item:hover .heading-navigator-copy-button,
-.heading-navigator-item:focus-within .heading-navigator-copy-button {
-    opacity: 1;
-    pointer-events: auto;
-}
-
-/* The badge yields to the copy button on hover, so this only applies where that button exists. */
-.heading-navigator-panel.is-compact:not(.is-mobile) .heading-navigator-item:hover .heading-navigator-level-badge,
-.heading-navigator-panel.is-compact:not(.is-mobile) .heading-navigator-item:focus-within .heading-navigator-level-badge {
-    opacity: 0;
-}
-
-.heading-navigator-panel.is-compact .heading-navigator-copy-button {
-    right: 11px;
-    width: 22px;
-    height: 22px;
-    padding: 3px;
-    border-radius: 6px;
-}
-
-.heading-navigator-panel.is-compact .heading-navigator-copy-button svg {
-    width: 14px;
-    height: 14px;
-}
-
-.heading-navigator-copy-button:hover,
-.heading-navigator-copy-button:focus-visible {
-    background-color: var(--joplin-background-color-hover3, #cbdaf1);
-    color: var(--joplin-color, #131313);
-}
-
-.heading-navigator-item.is-selected .heading-navigator-copy-button {
-    color: inherit;
-}
-
-.heading-navigator-copy-button.is-copied {
-    background-color: var(--joplin-background-color-hover3, #cbdaf1);
-    color: var(--joplin-color, #131313);
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 220ms ease-in 120ms, background-color 120ms ease-out, color 120ms ease-out;
-}
-
-.heading-navigator-copy-button.is-copied svg path:first-child {
-    display: none;
-}
-
-.heading-navigator-copy-button.is-copied svg path:last-child {
-    d: path('M20 6L9 17l-5-5');
-}
-
-.heading-navigator-item.is-selected .heading-navigator-copy-button.is-copied {
-    color: inherit;
+@keyframes heading-navigator-flash {
+    0% { background-color: var(--joplin-background-color-hover3, #cbdaf1); }
+    100% { background-color: transparent; }
 }
 
 .heading-navigator-empty {
@@ -374,7 +299,7 @@ export function createPanelCss(dimensions: PanelDimensions): string {
 
 /* Larger touch targets on mobile */
 .heading-navigator-panel.is-mobile .heading-navigator-item {
-    padding: 14px 52px 14px 16px;
+    padding: 14px 16px;
     gap: 4px;
 }
 
@@ -383,18 +308,16 @@ export function createPanelCss(dimensions: PanelDimensions): string {
     font-size: 16px; /* Prevents iOS zoom on focus */
 }
 
-.heading-navigator-panel.is-mobile .heading-navigator-copy-button {
-    display: none;
-}
-
-.heading-navigator-item.is-mobile-copied {
-    animation: heading-navigator-flash 300ms ease-out;
-    background-color: var(--joplin-background-color-hover3, #cbdaf1) !important;
-}
-
-@keyframes heading-navigator-flash {
-    0% { background-color: var(--joplin-background-color-hover3, #cbdaf1); }
-    100% { background-color: transparent; }
+/*
+ * Row right gutter. Reserved only where a level badge is actually rendered: rows carry no copy
+ * button, so Full and None modes give the full row width to heading text.
+ *
+ * Deliberately last. It outranks both the base and the mobile padding rules on specificity, and
+ * placing it after them keeps it winning under source order too, so the gutter does not depend on
+ * which of the two a renderer weighs more heavily.
+ */
+.heading-navigator-panel.is-compact:not(.hide-level-badges) .heading-navigator-item {
+    padding-right: 40px;
 }
 `;
 }
