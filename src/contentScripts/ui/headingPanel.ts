@@ -1,4 +1,5 @@
 import { EditorView } from '@codemirror/view';
+import { HEADING_METADATA_DISPLAY } from '../../headingMetadataDisplay';
 import type { ContentScriptSettings, HeadingItem, PanelDimensions } from '../../types';
 import { createPanelCss, PANEL_TOP_OFFSET_VAR } from '../theme/panelTheme';
 import { CopyButtonController } from './copyButtonController';
@@ -127,10 +128,7 @@ export class HeadingPanel {
 
         this.container = document.createElement('div');
         this.container.className = 'heading-navigator-panel';
-        const effectiveCompactMode = settings.compactMode && !this.isMobile;
-        if (effectiveCompactMode) {
-            this.container.classList.add('is-compact');
-        }
+        this.applyMetadataDisplayClasses();
         if (this.isMobile) {
             this.container.classList.add('is-mobile');
         }
@@ -444,13 +442,26 @@ export class HeadingPanel {
     /**
      * Applies editor-facing settings to the mounted panel.
      *
-     * @param settings - New dimension and compact-mode configuration
+     * @param settings - New dimension and metadata-display configuration
      */
     public setSettings(settings: ContentScriptSettings): void {
         this.settings = settings;
         ensurePanelStyles(this.view, this.settings.dimensions);
-        this.container.classList.toggle('is-compact', this.settings.compactMode && !this.isMobile);
+        this.applyMetadataDisplayClasses();
         this.applyTopOffset();
+    }
+
+    /**
+     * Reflects the metadata display mode on the panel element.
+     *
+     * Applied on both platforms: `is-compact` swaps the `H# - line #` row for a level badge and
+     * `hide-level-badges` drops the badge too. The reduced row height that rides along with
+     * `is-compact` is scoped to desktop in the stylesheet, so mobile keeps its touch targets.
+     */
+    private applyMetadataDisplayClasses(): void {
+        const display = this.settings.metadataDisplay;
+        this.container.classList.toggle('is-compact', display !== HEADING_METADATA_DISPLAY.full);
+        this.container.classList.toggle('hide-level-badges', display === HEADING_METADATA_DISPLAY.none);
     }
 
     /**

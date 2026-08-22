@@ -11,6 +11,11 @@
 import joplin from 'api';
 import { SettingItemType } from 'api/types';
 import logger from './logger';
+import {
+    DEFAULT_HEADING_METADATA_DISPLAY,
+    HEADING_METADATA_DISPLAY,
+    normalizeHeadingMetadataDisplay,
+} from './headingMetadataDisplay';
 import type { ContentScriptSettings } from './types';
 import {
     DEFAULT_PANEL_HEIGHT_PERCENTAGE,
@@ -31,7 +36,8 @@ const SECTION_ID = 'headingNavigator';
 const SETTING_PANEL_WIDTH = 'headingNavigator.panelWidth';
 const SETTING_PANEL_MAX_HEIGHT = 'headingNavigator.panelMaxHeightPercentage';
 const SETTING_PANEL_TOP_OFFSET = 'headingNavigator.panelTopOffset';
-const SETTING_COMPACT_MODE = 'headingNavigator.compactMode';
+const SETTING_HEADING_METADATA_DISPLAY = 'headingNavigator.headingMetadataDisplay';
+const LEGACY_SETTING_COMPACT_MODE = 'headingNavigator.compactMode';
 const SETTING_COPY_INTERNAL_ANCHOR_LINKS = 'headingNavigator.copyInternalAnchorLinks';
 const SETTING_PANEL_PINNED = 'headingNavigator.panelPinned';
 
@@ -90,13 +96,29 @@ export async function registerPanelSettings(): Promise<void> {
             maximum: MAX_PANEL_TOP_OFFSET,
             step: 4,
         },
-        [SETTING_COMPACT_MODE]: {
-            value: false,
-            type: SettingItemType.Bool,
+        [SETTING_HEADING_METADATA_DISPLAY]: {
+            value: DEFAULT_HEADING_METADATA_DISPLAY,
+            type: SettingItemType.String,
             public: true,
             section: SECTION_ID,
-            label: 'Compact mode',
-            description: '[Desktop Only] Hide heading metadata row and reduce list item height.',
+            isEnum: true,
+            options: {
+                [HEADING_METADATA_DISPLAY.full]: 'Full (heading level and line number)',
+                [HEADING_METADATA_DISPLAY.compact]: 'Compact (heading level badge)',
+                [HEADING_METADATA_DISPLAY.none]: 'None',
+            },
+            label: 'Heading metadata display',
+            description:
+                'What each heading row shows alongside its text. Compact and None also reduce row height on desktop; mobile keeps its larger touch targets.',
+        },
+        // Deprecated: replaced by headingMetadataDisplay. Kept hidden so an existing
+        // compact mode choice can be migrated once, then reset.
+        [LEGACY_SETTING_COMPACT_MODE]: {
+            value: false,
+            type: SettingItemType.Bool,
+            public: false,
+            section: SECTION_ID,
+            label: 'Compact mode (deprecated)',
         },
         [SETTING_COPY_INTERNAL_ANCHOR_LINKS]: {
             value: false,
@@ -116,6 +138,21 @@ export async function registerPanelSettings(): Promise<void> {
             label: 'Panel pinned',
         },
     });
+
+    await migrateLegacyCompactMode();
+}
+
+/**
+ * One-time migration: compactMode=true becomes headingMetadataDisplay='compact'.
+ *
+ * The legacy key stays registered (hidden) because `joplin.settings.value` throws on
+ * unregistered keys. Resetting it to its default afterwards makes this run at most once.
+ */
+async function migrateLegacyCompactMode(): Promise<void> {
+    if (await joplin.settings.value(LEGACY_SETTING_COMPACT_MODE)) {
+        await joplin.settings.setValue(SETTING_HEADING_METADATA_DISPLAY, HEADING_METADATA_DISPLAY.compact);
+        await joplin.settings.setValue(LEGACY_SETTING_COMPACT_MODE, false);
+    }
 }
 
 export async function loadContentScriptSettings(): Promise<ContentScriptSettings> {
@@ -123,7 +160,7 @@ export async function loadContentScriptSettings(): Promise<ContentScriptSettings
         SETTING_PANEL_WIDTH,
         SETTING_PANEL_MAX_HEIGHT,
         SETTING_PANEL_TOP_OFFSET,
-        SETTING_COMPACT_MODE,
+        SETTING_HEADING_METADATA_DISPLAY,
     ]);
 
     const widthResult = normalizePanelWidth(values[SETTING_PANEL_WIDTH]);
@@ -143,9 +180,11 @@ export async function loadContentScriptSettings(): Promise<ContentScriptSettings
         );
     }
 
-    const compactModeResult = normalizeBooleanSetting(values[SETTING_COMPACT_MODE], false);
-    if (compactModeResult.changed) {
-        logger.warn(`Invalid compact mode setting: ${values[SETTING_COMPACT_MODE]}. Using ${compactModeResult.value}.`);
+    const metadataDisplayResult = normalizeHeadingMetadataDisplay(values[SETTING_HEADING_METADATA_DISPLAY]);
+    if (metadataDisplayResult.changed) {
+        logger.warn(
+            `Invalid heading metadata display setting: ${values[SETTING_HEADING_METADATA_DISPLAY]}. Using ${metadataDisplayResult.value}.`
+        );
     }
 
     return {
@@ -153,7 +192,7 @@ export async function loadContentScriptSettings(): Promise<ContentScriptSettings
             width: widthResult.value,
             maxHeightRatio: heightResult.value / 100,
         },
-        compactMode: compactModeResult.value,
+        metadataDisplay: metadataDisplayResult.value,
         topOffset: topOffsetResult.value,
     };
 }

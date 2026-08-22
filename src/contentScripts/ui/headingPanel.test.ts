@@ -1,12 +1,24 @@
 import { EditorState } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
-import type { HeadingItem } from '../../types';
+import { HEADING_METADATA_DISPLAY, type HeadingMetadataDisplay } from '../../headingMetadataDisplay';
+import type { ContentScriptSettings, HeadingItem } from '../../types';
 import { HeadingPanel, type PanelCallbacks } from './headingPanel';
 
 const headings: HeadingItem[] = [
     { id: 'heading-0', text: 'One', level: 1, from: 0, to: 5, line: 0, anchor: 'one' },
     { id: 'heading-6', text: 'Two', level: 2, from: 6, to: 12, line: 1, anchor: 'two' },
 ];
+
+function panelSettings(
+    metadataDisplay: HeadingMetadataDisplay = HEADING_METADATA_DISPLAY.full,
+    topOffset = 40
+): ContentScriptSettings {
+    return { dimensions: { width: 320, maxHeightRatio: 0.75 }, metadataDisplay, topOffset };
+}
+
+function computedDisplay(selector: string): string {
+    return getComputedStyle(document.querySelector(selector)!).display;
+}
 
 class ResizeObserverMock {
     public observe(): void {}
@@ -41,11 +53,7 @@ describe('HeadingPanel pinned mode', () => {
         document.body.appendChild(parent);
         view = new EditorView({ state: EditorState.create({ doc: '# One\n## Two' }), parent });
         callbacks = createCallbacks();
-        panel = new HeadingPanel(view, callbacks, {
-            dimensions: { width: 320, maxHeightRatio: 0.75 },
-            compactMode: false,
-            topOffset: 40,
-        });
+        panel = new HeadingPanel(view, callbacks, panelSettings());
         panel.open(headings, headings[0].id);
     });
 
@@ -122,11 +130,7 @@ describe('HeadingPanel pinned mode', () => {
 
     it('does not focus the filter input when opened with focusInput disabled', () => {
         panel.destroy();
-        panel = new HeadingPanel(view, callbacks, {
-            dimensions: { width: 320, maxHeightRatio: 0.75 },
-            compactMode: false,
-            topOffset: 40,
-        });
+        panel = new HeadingPanel(view, callbacks, panelSettings());
         panel.open(headings, headings[0].id, false);
 
         expect(panel.isOpen()).toBe(true);
@@ -137,28 +141,66 @@ describe('HeadingPanel pinned mode', () => {
         const container = document.querySelector<HTMLDivElement>('.heading-navigator-panel')!;
         expect(container.style.getPropertyValue('--heading-navigator-top-offset')).toBe('40px');
 
-        panel.setSettings({
-            dimensions: { width: 320, maxHeightRatio: 0.75 },
-            compactMode: false,
-            topOffset: 88,
-        });
+        panel.setSettings(panelSettings(HEADING_METADATA_DISPLAY.full, 88));
 
         expect(container.style.getPropertyValue('--heading-navigator-top-offset')).toBe('88px');
     });
 
-    it('does not render pin controls on mobile', () => {
+    it('does not render pin controls on mobile but still applies the metadata display mode', () => {
         panel.destroy();
-        panel = new HeadingPanel(
-            view,
-            callbacks,
-            { dimensions: { width: 320, maxHeightRatio: 0.75 }, compactMode: true, topOffset: 40 },
-            true
-        );
+        panel = new HeadingPanel(view, callbacks, panelSettings(HEADING_METADATA_DISPLAY.none), true);
         panel.open(headings, headings[0].id);
 
+        const container = document.querySelector<HTMLDivElement>('.heading-navigator-panel')!;
         expect(document.querySelector('.heading-navigator-pin-button')).toBeNull();
-        expect(document.querySelector('.heading-navigator-panel')?.classList.contains('is-compact')).toBe(false);
+        expect(container.classList.contains('is-compact')).toBe(true);
+        expect(container.classList.contains('hide-level-badges')).toBe(true);
+        expect(computedDisplay('.heading-navigator-item-level')).toBe('none');
+        expect(computedDisplay('.heading-navigator-level-badge')).toBe('none');
+
         panel.setPinned(true);
         expect(panel.isPinned()).toBe(false);
+    });
+
+    it('keeps mobile touch-target padding even when the metadata row is hidden', () => {
+        panel.destroy();
+        panel = new HeadingPanel(view, callbacks, panelSettings(HEADING_METADATA_DISPLAY.compact), true);
+        panel.open(headings, headings[0].id);
+
+        const item = document.querySelector('.heading-navigator-item')!;
+        const style = getComputedStyle(item);
+        expect(style.paddingTop).toBe('14px');
+        expect(style.paddingBottom).toBe('14px');
+    });
+
+    it('switches row metadata between the full row, the level badge, and neither', () => {
+        const container = document.querySelector<HTMLDivElement>('.heading-navigator-panel')!;
+
+        expect(container.classList.contains('is-compact')).toBe(false);
+        expect(container.classList.contains('hide-level-badges')).toBe(false);
+        expect(computedDisplay('.heading-navigator-item-level')).not.toBe('none');
+        expect(computedDisplay('.heading-navigator-level-badge')).toBe('none');
+
+        panel.setSettings(panelSettings(HEADING_METADATA_DISPLAY.compact));
+
+        expect(container.classList.contains('is-compact')).toBe(true);
+        expect(container.classList.contains('hide-level-badges')).toBe(false);
+        expect(computedDisplay('.heading-navigator-item-level')).toBe('none');
+        expect(computedDisplay('.heading-navigator-level-badge')).toBe('flex');
+        expect(getComputedStyle(document.querySelector('.heading-navigator-item')!).paddingTop).toBe('6px');
+
+        panel.setSettings(panelSettings(HEADING_METADATA_DISPLAY.none));
+
+        expect(container.classList.contains('is-compact')).toBe(true);
+        expect(container.classList.contains('hide-level-badges')).toBe(true);
+        // Badges stay in the DOM so switching back does not require re-rendering rows.
+        expect(document.querySelectorAll('.heading-navigator-level-badge')).toHaveLength(headings.length);
+        expect(computedDisplay('.heading-navigator-level-badge')).toBe('none');
+
+        panel.setSettings(panelSettings(HEADING_METADATA_DISPLAY.full));
+
+        expect(container.classList.contains('is-compact')).toBe(false);
+        expect(computedDisplay('.heading-navigator-level-badge')).toBe('none');
+        expect(computedDisplay('.heading-navigator-item-level')).not.toBe('none');
     });
 });

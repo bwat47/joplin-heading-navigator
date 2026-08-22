@@ -207,7 +207,12 @@ export function createPanelCss(dimensions: PanelDimensions): string {
     display: none;
 }
 
-.heading-navigator-panel.is-compact .heading-navigator-item {
+/*
+ * Compact row geometry is desktop-only: mobile keeps the larger padding defined in the
+ * .is-mobile block below so touch targets and the long-press copy gesture stay usable.
+ * The :not(.is-mobile) guard makes that explicit rather than relying on source order.
+ */
+.heading-navigator-panel.is-compact:not(.is-mobile) .heading-navigator-item {
     gap: 0;
     padding-top: 6px;
     padding-bottom: 6px;
@@ -248,6 +253,10 @@ export function createPanelCss(dimensions: PanelDimensions): string {
     opacity: 1;
     pointer-events: none;
     transition: opacity 160ms ease-out, background-color 120ms ease-out, color 120ms ease-out;
+}
+
+.heading-navigator-panel.is-compact.hide-level-badges .heading-navigator-level-badge {
+    display: none;
 }
 
 .heading-navigator-panel.is-compact .heading-navigator-item.is-selected .heading-navigator-level-badge {
@@ -291,8 +300,9 @@ export function createPanelCss(dimensions: PanelDimensions): string {
     pointer-events: auto;
 }
 
-.heading-navigator-panel.is-compact .heading-navigator-item:hover .heading-navigator-level-badge,
-.heading-navigator-panel.is-compact .heading-navigator-item:focus-within .heading-navigator-level-badge {
+/* The badge yields to the copy button on hover, so this only applies where that button exists. */
+.heading-navigator-panel.is-compact:not(.is-mobile) .heading-navigator-item:hover .heading-navigator-level-badge,
+.heading-navigator-panel.is-compact:not(.is-mobile) .heading-navigator-item:focus-within .heading-navigator-level-badge {
     opacity: 0;
 }
 

@@ -1,5 +1,6 @@
 import { EditorState } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
+import { HEADING_METADATA_DISPLAY } from '../headingMetadataDisplay';
 import { DEFAULT_PANEL_TOP_OFFSET, MAX_PANEL_WIDTH, MIN_PANEL_HEIGHT_PERCENTAGE } from '../panelDimensions';
 import { DEFAULT_PANEL_DIMENSIONS } from '../types';
 import {
@@ -14,16 +15,16 @@ describe('content script settings', () => {
     it('falls back to defaults for malformed settings', () => {
         expect(normalizeContentScriptSettings(null)).toEqual(DEFAULT_CONTENT_SCRIPT_SETTINGS);
         expect(normalizeContentScriptSettings('bad')).toEqual(DEFAULT_CONTENT_SCRIPT_SETTINGS);
-        expect(normalizeContentScriptSettings({ dimensions: null, compactMode: 'true' })).toEqual(
+        expect(normalizeContentScriptSettings({ dimensions: null, metadataDisplay: 'tiny' })).toEqual(
             DEFAULT_CONTENT_SCRIPT_SETTINGS
         );
     });
 
-    it('normalizes dimensions and accepts only boolean compact mode', () => {
+    it('normalizes dimensions and accepts only known metadata display modes', () => {
         expect(
             normalizeContentScriptSettings({
                 dimensions: { width: 999, maxHeightRatio: 0.1 },
-                compactMode: true,
+                metadataDisplay: HEADING_METADATA_DISPLAY.none,
                 topOffset: 44,
             })
         ).toEqual({
@@ -31,13 +32,16 @@ describe('content script settings', () => {
                 width: MAX_PANEL_WIDTH,
                 maxHeightRatio: MIN_PANEL_HEIGHT_PERCENTAGE / 100,
             },
-            compactMode: true,
+            metadataDisplay: HEADING_METADATA_DISPLAY.none,
             topOffset: 44,
         });
 
         expect(
-            normalizeContentScriptSettings({ dimensions: DEFAULT_PANEL_DIMENSIONS, compactMode: 1 }).compactMode
-        ).toBe(false);
+            normalizeContentScriptSettings({ dimensions: DEFAULT_PANEL_DIMENSIONS, metadataDisplay: 1 }).metadataDisplay
+        ).toBe(HEADING_METADATA_DISPLAY.full);
+        expect(normalizeContentScriptSettings({ metadataDisplay: 'Compact' }).metadataDisplay).toBe(
+            HEADING_METADATA_DISPLAY.full
+        );
     });
 
     it('normalizes the top offset and falls back to default when invalid', () => {
@@ -58,7 +62,7 @@ describe('content script settings', () => {
 
         const applied = applyContentScriptSettings(view, {
             dimensions: { width: 480, maxHeightRatio: 0.6 },
-            compactMode: true,
+            metadataDisplay: HEADING_METADATA_DISPLAY.compact,
         });
         expect(getContentScriptSettings(view.state)).toEqual(applied);
 
