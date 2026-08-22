@@ -10,7 +10,7 @@ A Joplin plugin providing heading-based document navigation for CodeMirror 6.
 - **Pinned Navigation**: Desktop panel can remain visible and follow the editor cursor; pinned state persists across editor reloads
 - **Copy Heading Links**: Generate markdown anchor links
 - **Theme Integration**: Uses Joplin CSS variables
-- **Mobile Support**: Modal layout with long-press copy
+- **Mobile Support**: Modal layout with long-press copy (desktop uses right-click for the same action)
 
 ---
 

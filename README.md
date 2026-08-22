@@ -35,7 +35,7 @@ When selecting a heading with the keyboard, the editor will immediately scroll t
 
 - Navigate through headings with the keyboard
 - Search filter to filter list of headings
-- Copy link to heading
+- Copy link to heading: right-click a heading on desktop, long-press on mobile
 - Panel adapts to your Joplin theme
 - Adjustable panel size (desktop only)
 - Ability to pin panel so it stays open until you unpin it (desktop only)
@@ -65,4 +65,4 @@ Panel appearance settings take effect the next time the panel is opened. The cop
 
 - On mobile, the panel has a responsive design and appears centered with faded background.
 
-- On mobile, the copy link icon is hidden, and instead long-press on a heading will copy link.
+- Long-press a heading to copy its link.

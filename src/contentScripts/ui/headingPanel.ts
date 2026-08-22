@@ -2,7 +2,6 @@ import { EditorView } from '@codemirror/view';
 import { HEADING_METADATA_DISPLAY } from '../../headingMetadataDisplay';
 import type { ContentScriptSettings, HeadingItem, PanelDimensions } from '../../types';
 import { createPanelCss, PANEL_TOP_OFFSET_VAR } from '../theme/panelTheme';
-import { CopyButtonController } from './copyButtonController';
 import { fuzzyFilter, highlightMatch } from './fuzzyFilter';
 
 const PANEL_STYLE_ID = 'heading-navigator-styles';
@@ -11,6 +10,9 @@ const INDENT_PER_LEVEL_PX = 12;
 const FILTER_DEBOUNCE_MS = 100;
 const PREVIEW_DEBOUNCE_MS = 30;
 const PANEL_RIGHT_GAP_PX = 8;
+const LONG_PRESS_MS = 600;
+const COPY_FEEDBACK_MS = 300;
+const COPY_VIBRATION_MS = 50;
 
 export type PanelCloseReason = 'escape' | 'blur';
 
@@ -105,7 +107,7 @@ export class HeadingPanel {
 
     private readonly handleTouchEndListener: (e: TouchEvent) => void;
 
-    private readonly copyButtonController = new CopyButtonController();
+    private readonly handleContextMenuListener: ((event: MouseEvent) => void) | null;
 
     private scrollerObserver: ResizeObserver | null = null;
 
@@ -186,6 +188,10 @@ export class HeadingPanel {
             }
         };
 
+        // Right-click copies on desktop; mobile uses the long-press gesture below instead, and
+        // attaching both would double-fire because webviews raise `contextmenu` on long press.
+        this.handleContextMenuListener = this.isMobile ? null : (event: MouseEvent) => this.handleContextMenu(event);
+
         // Initialize touch listeners
         this.handleTouchStartListener = (e: TouchEvent) => this.handleTouchStart(e);
         this.handleTouchMoveListener = (e: TouchEvent) => this.handleTouchMove(e);
@@ -200,6 +206,8 @@ export class HeadingPanel {
             this.list.addEventListener('touchstart', this.handleTouchStartListener);
             this.list.addEventListener('touchmove', this.handleTouchMoveListener);
             this.list.addEventListener('touchend', this.handleTouchEndListener);
+        } else if (this.handleContextMenuListener) {
+            this.list.addEventListener('contextmenu', this.handleContextMenuListener);
         }
 
         this.view.dom.ownerDocument!.addEventListener('mousedown', this.handleDocumentMouseDownListener, true);
@@ -235,6 +243,8 @@ export class HeadingPanel {
     private longPressTimer: number | null = null;
     private touchStartCoords: { x: number; y: number } | null = null;
     private isLongPressTriggered = false;
+    private copyFeedbackTimer: number | null = null;
+    private copyFeedbackItem: HTMLLIElement | null = null;
 
     private handleTouchStart(event: TouchEvent): void {
         const touch = event.touches[0];
@@ -246,8 +256,8 @@ export class HeadingPanel {
 
         this.longPressTimer = window.setTimeout(() => {
             this.isLongPressTriggered = true;
-            this.triggerMobileCopy(item);
-        }, 600);
+            this.copyHeadingFromItem(item);
+        }, LONG_PRESS_MS);
     }
 
     private handleTouchMove(event: TouchEvent): void {
@@ -281,23 +291,69 @@ export class HeadingPanel {
         this.touchStartCoords = null;
     }
 
-    private triggerMobileCopy(item: HTMLLIElement): void {
+    /**
+     * Copies the heading link for a row and flashes the row to confirm it.
+     *
+     * Shared by the desktop right-click and the mobile long-press gestures, which are the only
+     * two ways to copy: the panel deliberately has no copy button competing for row width.
+     */
+    private copyHeadingFromItem(item: HTMLLIElement): void {
         const headingId = item.dataset.headingId;
         if (!headingId) return;
 
         const heading = this.headings.find((h) => h.id === headingId);
-        if (heading) {
-            this.onCopy(heading);
+        if (!heading) return;
 
-            // Visual feedback
-            item.classList.add('is-mobile-copied');
-            setTimeout(() => item.classList.remove('is-mobile-copied'), 300);
+        this.onCopy(heading);
+        this.showCopyFeedback(item);
 
-            // Haptic feedback if available
-            if (navigator.vibrate) {
-                navigator.vibrate(50);
-            }
+        // Haptic feedback if available
+        if (navigator.vibrate) {
+            navigator.vibrate(COPY_VIBRATION_MS);
         }
+    }
+
+    /**
+     * Flashes a row to confirm a copy.
+     *
+     * Only one row flashes at a time, so a single timer is enough: copying again restarts the
+     * animation on the new row and clears it from the previous one.
+     */
+    private showCopyFeedback(item: HTMLLIElement): void {
+        this.clearCopyFeedback();
+
+        item.classList.add('is-copied');
+        this.copyFeedbackItem = item;
+        this.copyFeedbackTimer = window.setTimeout(() => {
+            this.copyFeedbackTimer = null;
+            this.copyFeedbackItem = null;
+            item.classList.remove('is-copied');
+        }, COPY_FEEDBACK_MS);
+    }
+
+    private clearCopyFeedback(): void {
+        if (this.copyFeedbackTimer !== null) {
+            clearTimeout(this.copyFeedbackTimer);
+            this.copyFeedbackTimer = null;
+        }
+        this.copyFeedbackItem?.classList.remove('is-copied');
+        this.copyFeedbackItem = null;
+    }
+
+    /**
+     * Copies the heading link for the right-clicked row instead of opening a context menu.
+     *
+     * The default is suppressed so the browser's own menu never covers the panel.
+     */
+    private handleContextMenu(event: MouseEvent): void {
+        const item = (event.target as HTMLElement | null)?.closest<HTMLLIElement>('.heading-navigator-item');
+        if (!item) {
+            return;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+        this.copyHeadingFromItem(item);
     }
 
     /**
@@ -409,6 +465,8 @@ export class HeadingPanel {
             this.list.removeEventListener('touchstart', this.handleTouchStartListener);
             this.list.removeEventListener('touchmove', this.handleTouchMoveListener);
             this.list.removeEventListener('touchend', this.handleTouchEndListener);
+        } else if (this.handleContextMenuListener) {
+            this.list.removeEventListener('contextmenu', this.handleContextMenuListener);
         }
 
         this.view.dom.ownerDocument!.removeEventListener('mousedown', this.handleDocumentMouseDownListener, true);
@@ -424,7 +482,7 @@ export class HeadingPanel {
             this.scrollerObserver.disconnect();
             this.scrollerObserver = null;
         }
-        this.copyButtonController.destroy(this.list);
+        this.clearCopyFeedback();
         if (this.container.parentElement) {
             this.container.parentElement.removeChild(this.container);
         }
@@ -699,32 +757,6 @@ export class HeadingPanel {
     private handleListClick(event: MouseEvent): void {
         const target = event.target as HTMLElement | null;
 
-        // Handle copy button clicks via delegation
-        const copyButton = target?.closest<HTMLButtonElement>('.heading-navigator-copy-button');
-        if (copyButton) {
-            event.stopPropagation();
-            event.preventDefault();
-
-            const itemElement = copyButton.closest<HTMLLIElement>('.heading-navigator-item');
-            if (!itemElement) {
-                return;
-            }
-
-            const headingId = itemElement.dataset.headingId;
-            if (!headingId) {
-                return;
-            }
-
-            const heading = this.headings.find((item) => item.id === headingId);
-            if (heading) {
-                this.onCopy(heading);
-                this.copyButtonController.showCopyFeedback(copyButton);
-                this.input.focus();
-            }
-            return;
-        }
-
-        // Handle item selection clicks
         const itemElement = target?.closest<HTMLLIElement>('.heading-navigator-item');
         if (!itemElement) {
             return;
@@ -763,8 +795,7 @@ export class HeadingPanel {
      * Clears the list and displays a "No headings found" message.
      */
     private renderEmptyState(): void {
-        // Clean up all copy button timers before clearing
-        this.copyButtonController.destroy(this.list);
+        this.clearCopyFeedback();
         this.list.innerHTML = '';
         const empty = document.createElement('li');
         empty.className = 'heading-navigator-empty';
@@ -810,7 +841,7 @@ export class HeadingPanel {
     /**
      * Removes items that are no longer in the filtered list.
      *
-     * Cleans up copy button timers before removing items to prevent memory leaks.
+     * Cancels a pending copy flash on any row being removed so its timer cannot outlive the node.
      *
      * @param existingItems - Map of existing items that will be modified by removing stale entries
      */
@@ -818,10 +849,8 @@ export class HeadingPanel {
         const filteredIds = new Set(this.filtered.map((h) => h.id));
         existingItems.forEach((item, id) => {
             if (!filteredIds.has(id)) {
-                // Clean up copy button timer before removing
-                const copyButton = item.querySelector<HTMLButtonElement>('.heading-navigator-copy-button');
-                if (copyButton) {
-                    this.copyButtonController.clearButton(copyButton);
+                if (this.copyFeedbackItem === item) {
+                    this.clearCopyFeedback();
                 }
                 item.remove();
                 existingItems.delete(id);
@@ -886,12 +915,9 @@ export class HeadingPanel {
         levelBadge.className = 'heading-navigator-level-badge';
         levelBadge.textContent = `H${heading.level}`;
 
-        const copyButton = this.copyButtonController.createCopyButton();
-
         item.appendChild(level);
         item.appendChild(text);
         item.appendChild(levelBadge);
-        item.appendChild(copyButton);
 
         return item;
     }

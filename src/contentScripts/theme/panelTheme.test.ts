@@ -17,9 +17,7 @@ describe('createPanelCss', () => {
         expect(css).toContain('.heading-navigator-level-badge');
         expect(css).toContain('.heading-navigator-panel.is-compact .heading-navigator-level-badge');
         expect(css).toContain('.heading-navigator-panel.is-compact.hide-level-badges .heading-navigator-level-badge');
-        expect(css).toContain(
-            '.heading-navigator-panel.is-compact:not(.is-mobile) .heading-navigator-item:hover .heading-navigator-level-badge'
-        );
+        expect(css).toContain('.heading-navigator-panel.is-compact:not(.hide-level-badges) .heading-navigator-item');
         expect(css).toContain('.heading-navigator-input');
         expect(css).toContain('.heading-navigator-header');
         expect(css).toContain('.heading-navigator-header-button');
@@ -28,7 +26,7 @@ describe('createPanelCss', () => {
         expect(css).toContain('.heading-navigator-item');
         expect(css).toContain('.heading-navigator-item-level');
         expect(css).toContain('.heading-navigator-item-text');
-        expect(css).toContain('.heading-navigator-copy-button');
+        expect(css).toContain('.heading-navigator-item.is-copied');
         expect(css).toContain('.heading-navigator-empty');
     });
 
