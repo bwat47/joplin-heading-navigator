@@ -417,6 +417,11 @@ export class HeadingPanel {
      */
     public setActiveHeading(selectedId: string | null): void {
         if (this.selectedHeadingId === selectedId) {
+            // The highlight is already correct, but the caret arriving here still means the
+            // editor is showing this heading. Refresh the preview marker anyway: selecting a
+            // heading while previews are off moves the editor without emitting a preview, so
+            // skipping this would leave the marker pointing at a heading the editor has left.
+            this.updatePreviewMarker();
             return;
         }
 

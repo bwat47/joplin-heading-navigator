@@ -231,6 +231,29 @@ describe('HeadingPanel pinned mode', () => {
         expect(callbacks.onPreview).not.toHaveBeenCalled();
     });
 
+    it('keeps the preview marker aligned with the editor when the caret lands on the highlighted heading', () => {
+        panel.destroy();
+        panel = new HeadingPanel(view, callbacks, panelSettings(HEADING_METADATA_DISPLAY.full, 40, false));
+        panel.open(headings, headings[0].id);
+
+        const input = document.querySelector<HTMLInputElement>('.heading-navigator-input')!;
+        input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+        // Selecting the heading moves the editor without a preview; the caret-follow update
+        // reports the heading the panel already highlights.
+        panel.setActiveHeading(headings[1].id);
+        panel.setSettings(panelSettings(HEADING_METADATA_DISPLAY.full, 40, true));
+
+        vi.useFakeTimers();
+        try {
+            input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }));
+            vi.advanceTimersByTime(30);
+        } finally {
+            vi.useRealTimers();
+        }
+
+        expect(callbacks.onPreview).toHaveBeenCalledWith(headings[0]);
+    });
+
     it('applies the configured top offset as a CSS custom property and updates it live', () => {
         const container = document.querySelector<HTMLDivElement>('.heading-navigator-panel')!;
         expect(container.style.getPropertyValue('--heading-navigator-top-offset')).toBe('40px');
