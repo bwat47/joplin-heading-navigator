@@ -288,14 +288,16 @@ describe('HeadingPanel pinned mode', () => {
         panel = new HeadingPanel(view, callbacks, panelSettings());
     });
 
-    it('copies on mobile long-press and suppresses context menus without copying twice', () => {
+    it('copies on mobile long-press and ignores right-click there', () => {
         panel.destroy();
         panel = new HeadingPanel(view, callbacks, panelSettings(), true);
         panel.open(headings, headings[0].id);
 
+        // Mobile never attaches the row contextmenu listener: the `.is-mobile` stylesheet is what
+        // keeps the WebView's long-press callout out of the way.
         const event = rightClick(items()[0]);
         expect(callbacks.onCopy).not.toHaveBeenCalled();
-        expect(event.defaultPrevented).toBe(true);
+        expect(event.defaultPrevented).toBe(false);
 
         vi.useFakeTimers();
         try {

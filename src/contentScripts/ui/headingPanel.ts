@@ -214,8 +214,9 @@ export class HeadingPanel {
             this.list.addEventListener('touchstart', this.handleTouchStartListener);
             this.list.addEventListener('touchmove', this.handleTouchMoveListener);
             this.list.addEventListener('touchend', this.handleTouchEndListener);
+        } else {
+            this.list.addEventListener('contextmenu', this.handleContextMenuListener);
         }
-        this.list.addEventListener('contextmenu', this.handleContextMenuListener);
 
         this.view.dom.ownerDocument!.addEventListener('mousedown', this.handleDocumentMouseDownListener, true);
     }
@@ -348,10 +349,10 @@ export class HeadingPanel {
     }
 
     /**
-     * Suppresses the context menu on heading rows and copies the row on desktop.
+     * Copies the heading link for the right-clicked row instead of opening a context menu.
      *
-     * Mobile copying is handled by the long-press timer, so the context-menu event must not copy
-     * again when the WebView emits it for the same gesture.
+     * Desktop only: mobile copies via the long-press gesture, and the `.is-mobile` stylesheet
+     * suppresses the WebView's own selection callout for that gesture.
      */
     private handleContextMenu(event: MouseEvent): void {
         const item = (event.target as HTMLElement | null)?.closest<HTMLLIElement>('.heading-navigator-item');
@@ -361,9 +362,7 @@ export class HeadingPanel {
 
         event.preventDefault();
         event.stopPropagation();
-        if (!this.isMobile) {
-            this.copyHeadingFromItem(item);
-        }
+        this.copyHeadingFromItem(item);
     }
 
     /**
@@ -478,8 +477,9 @@ export class HeadingPanel {
             this.list.removeEventListener('touchstart', this.handleTouchStartListener);
             this.list.removeEventListener('touchmove', this.handleTouchMoveListener);
             this.list.removeEventListener('touchend', this.handleTouchEndListener);
+        } else {
+            this.list.removeEventListener('contextmenu', this.handleContextMenuListener);
         }
-        this.list.removeEventListener('contextmenu', this.handleContextMenuListener);
 
         this.view.dom.ownerDocument!.removeEventListener('mousedown', this.handleDocumentMouseDownListener, true);
         if (this.previewDebounceTimer !== null) {
