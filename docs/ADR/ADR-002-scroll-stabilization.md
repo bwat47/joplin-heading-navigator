@@ -23,6 +23,19 @@ The content script keeps the initial `EditorView.scrollIntoView(selection, { y: 
 uses `requestMeasure` to read the target heading position and dispatches one more CodeMirror `scrollIntoView`
 only when the heading drift exceeds the tolerance.
 
+The measurement takes the effective viewport top as `Math.max(0, scrollDOM.getBoundingClientRect().top)`
+rather than the scroller rectangle alone. Desktop constrains the editor height, so CodeMirror's scroller
+clips vertically and its rectangle top is the visible edge. Joplin mobile never sets that height: the
+scroller grows to the document height and the WebView page scrolls instead, making the rectangle top a
+document offset far above the viewport. Left unclamped it reported ~1900px of phantom drift and forced a
+correction on every mobile navigation.
+
+Clamping at zero also matches the baseline the corrector uses. CodeMirror's `scrollRectIntoView` walks past
+the non-clipping scroller up to the document, where `windowRect` reports a top of zero. Measuring against a
+different edge than the corrector aligns to reports drift that cannot be removed, which is the same failure
+in a different disguise; that rules out `visualViewport.offsetTop`, which diverges from zero under
+pinch-zoom.
+
 No code assigns `scrollDOM.scrollTop` directly, and no recursive retry is scheduled.
 
 ## Rationale

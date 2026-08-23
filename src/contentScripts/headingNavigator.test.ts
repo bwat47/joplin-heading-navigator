@@ -22,6 +22,21 @@ class ResizeObserverMock {
     public disconnect(): void {}
 }
 
+function captureMeasureRequests(view: EditorView): Array<() => void> {
+    const requests: Array<() => void> = [];
+    vi.spyOn(view, 'requestMeasure').mockImplementation((request) => {
+        if (!request) {
+            return;
+        }
+
+        requests.push(() => {
+            const measurement = request.read(view);
+            request.write?.(measurement, view);
+        });
+    });
+    return requests;
+}
+
 describe('heading navigator panel lifecycle', () => {
     let view: EditorView;
     let togglePanel: (isMobile?: boolean) => void;
@@ -197,6 +212,100 @@ describe('heading navigator panel lifecycle', () => {
         document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
         expect(document.querySelector('.heading-navigator-panel')).toBeNull();
         expect(document.activeElement).toBe(view.contentDOM);
+    });
+
+    // Joplin mobile leaves the editor height unconstrained, so the scroller grows to
+    // the document height and the WebView page scrolls instead. The scroller rectangle
+    // top is then a document offset far above the viewport rather than a visible edge.
+    it('measures mobile stabilization against the window when the editor scroller moves with the document', () => {
+        const scrollIntoViewSpy = vi.spyOn(EditorView, 'scrollIntoView');
+        const debugSpy = vi.spyOn(logger, 'debug');
+        const measureRequests = captureMeasureRequests(view);
+        vi.spyOn(view, 'coordsAtPos').mockReturnValue(new DOMRect(0, 5.21875, 1, 20));
+        vi.spyOn(view.scrollDOM, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, -1883.5, 400, 2000));
+
+        togglePanel(true);
+        document.querySelectorAll<HTMLLIElement>('.heading-navigator-item')[1].click();
+        vi.advanceTimersByTime(160);
+        expect(measureRequests).toHaveLength(1);
+        measureRequests[0]();
+
+        expect(debugSpy).toHaveBeenCalledWith('Scroll stabilization measurement', {
+            selectionFrom: 7,
+            selectionTo: 7,
+            viewportTop: 0,
+            offsetFromViewportTop: 5.21875,
+            needsScroll: false,
+        });
+        // Only the initial navigation scroll; stabilization found no drift to correct.
+        expect(scrollIntoViewSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('measures desktop stabilization against the editor scroller', () => {
+        const scrollIntoViewSpy = vi.spyOn(EditorView, 'scrollIntoView');
+        const debugSpy = vi.spyOn(logger, 'debug');
+        const measureRequests = captureMeasureRequests(view);
+        vi.spyOn(view, 'coordsAtPos').mockReturnValue(new DOMRect(0, 53, 1, 20));
+        vi.spyOn(view.scrollDOM, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 48, 400, 500));
+
+        togglePanel(false);
+        document.querySelectorAll<HTMLLIElement>('.heading-navigator-item')[1].click();
+        vi.advanceTimersByTime(160);
+        expect(measureRequests).toHaveLength(1);
+        measureRequests[0]();
+
+        expect(debugSpy).toHaveBeenCalledWith('Scroll stabilization measurement', {
+            selectionFrom: 7,
+            selectionTo: 7,
+            viewportTop: 48,
+            offsetFromViewportTop: 5,
+            needsScroll: false,
+        });
+        expect(scrollIntoViewSpy).toHaveBeenCalledTimes(1);
+    });
+
+    // A note shorter than the viewport leaves the desktop scroller non-overflowing, but its
+    // rectangle top is still the visible edge and must not fall back to the window top.
+    it('measures desktop stabilization against the editor scroller when the note fits without scrolling', () => {
+        const debugSpy = vi.spyOn(logger, 'debug');
+        const measureRequests = captureMeasureRequests(view);
+        vi.spyOn(view, 'coordsAtPos').mockReturnValue(new DOMRect(0, 53, 1, 20));
+        vi.spyOn(view.scrollDOM, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 48, 400, 500));
+        Object.defineProperties(view.scrollDOM, {
+            clientHeight: { configurable: true, value: 500 },
+            scrollHeight: { configurable: true, value: 500 },
+        });
+
+        togglePanel(false);
+        document.querySelectorAll<HTMLLIElement>('.heading-navigator-item')[1].click();
+        vi.advanceTimersByTime(160);
+        expect(measureRequests).toHaveLength(1);
+        measureRequests[0]();
+
+        expect(debugSpy).toHaveBeenCalledWith('Scroll stabilization measurement', {
+            selectionFrom: 7,
+            selectionTo: 7,
+            viewportTop: 48,
+            offsetFromViewportTop: 5,
+            needsScroll: false,
+        });
+    });
+
+    it('corrects drift measured against the effective viewport top', () => {
+        const scrollIntoViewSpy = vi.spyOn(EditorView, 'scrollIntoView');
+        const measureRequests = captureMeasureRequests(view);
+        vi.spyOn(view, 'coordsAtPos').mockReturnValue(new DOMRect(0, 420, 1, 20));
+        vi.spyOn(view.scrollDOM, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, -1883.5, 400, 2000));
+
+        togglePanel(true);
+        document.querySelectorAll<HTMLLIElement>('.heading-navigator-item')[1].click();
+        vi.advanceTimersByTime(160);
+        expect(measureRequests).toHaveLength(1);
+        measureRequests[0]();
+        vi.advanceTimersByTime(0);
+
+        // The initial navigation scroll plus one corrective pass.
+        expect(scrollIntoViewSpy).toHaveBeenCalledTimes(2);
     });
 });
 
