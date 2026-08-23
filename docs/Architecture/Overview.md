@@ -77,8 +77,4 @@ Panel appended to `view.scrollDOM.parentElement` to stay associated with specifi
 
 ## Build System
 
-Standard Joplin yo-joplin scaffold with Webpack:
-
-- `plugin.config.json`: Content script compilation config
-- `src/manifest.json`: Command and content script registration
-- Output: `./contentScripts/headingNavigator.js`
+Standard Joplin yo-joplin scaffold with Webpack
