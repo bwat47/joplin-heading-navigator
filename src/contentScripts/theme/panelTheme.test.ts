@@ -30,15 +30,23 @@ describe('createPanelCss', () => {
         expect(css).toContain('.heading-navigator-empty');
     });
 
-    it('prevents native text selection and callouts on mobile heading rows', () => {
+    it('prevents native text selection and callouts across the panel', () => {
         const css = createPanelCss({ width: 400, maxHeightRatio: 0.7 });
-        const mobileItemRule = css.match(
-            /\.heading-navigator-panel\.is-mobile \.heading-navigator-item \{[^}]*\}/s
-        )?.[0];
+        const panelRule = css.match(/\.heading-navigator-panel \{[^}]*\}/)?.[0];
 
-        expect(mobileItemRule).toContain('-webkit-touch-callout: none;');
-        expect(mobileItemRule).toContain('-webkit-user-select: none;');
-        expect(mobileItemRule).toMatch(/(?:^|\s)user-select: none;/);
+        expect(panelRule).toContain('-webkit-touch-callout: none;');
+        expect(panelRule).toContain('-webkit-user-select: none;');
+        // Anchored so the shorthand assertion cannot be satisfied by the -webkit- prefixed line.
+        expect(panelRule).toMatch(/(?:^|\s)user-select: none;/);
+    });
+
+    it('keeps the filter input selectable so clipboard actions still work', () => {
+        const css = createPanelCss({ width: 400, maxHeightRatio: 0.7 });
+        const inputRule = css.match(/(?:^|\n)\.heading-navigator-input \{[^}]*\}/)?.[0];
+
+        expect(inputRule).toContain('-webkit-touch-callout: default;');
+        expect(inputRule).toContain('-webkit-user-select: text;');
+        expect(inputRule).toMatch(/(?:^|\s)user-select: text;/);
     });
 
     it('positions the panel top via a CSS custom property so the offset can change without a restyle', () => {
