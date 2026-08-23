@@ -9,7 +9,7 @@ A Joplin plugin that provides a simple overlay panel allowing you to navigate an
 
 &nbsp;
 
-<img src="https://github.com/user-attachments/assets/b6dc9106-8b61-4d51-92d6-c8bc6357b9e1" alt="mobile_example" width="200" height="445" />
+![heading-navigator-mobile-demo](https://github.com/bwat47/joplin-heading-navigator/blob/main/images/heading_navigator_example_mobile.gif)
 
 &nbsp;
 
