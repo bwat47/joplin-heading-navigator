@@ -351,8 +351,8 @@ export class HeadingPanel {
     /**
      * Copies the heading link for the right-clicked row instead of opening a context menu.
      *
-     * Desktop only: mobile copies via the long-press gesture, and the `.is-mobile` stylesheet
-     * suppresses the WebView's own selection callout for that gesture.
+     * This handler is attached only on desktop. Mobile copies via long press; panel CSS suppresses
+     * native text selection and callouts outside the filter input on both platforms.
      */
     private handleContextMenu(event: MouseEvent): void {
         const item = (event.target as HTMLElement | null)?.closest<HTMLLIElement>('.heading-navigator-item');
