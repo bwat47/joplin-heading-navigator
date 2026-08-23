@@ -241,10 +241,20 @@ describe('HeadingPanel pinned mode', () => {
         expect(callbacks.onSelect).not.toHaveBeenCalled();
     });
 
-    it('leaves right-clicks outside a heading row alone', () => {
+    it('suppresses the context menu on the filter input without copying a heading', () => {
         const event = rightClick(document.querySelector('.heading-navigator-input')!);
 
         expect(callbacks.onCopy).not.toHaveBeenCalled();
+        expect(event.defaultPrevented).toBe(true);
+    });
+
+    it('leaves the filter context menu enabled on mobile', () => {
+        panel.destroy();
+        panel = new HeadingPanel(view, callbacks, panelSettings(), true);
+        panel.open(headings, headings[0].id);
+
+        const event = rightClick(document.querySelector('.heading-navigator-input')!);
+
         expect(event.defaultPrevented).toBe(false);
     });
 
@@ -283,6 +293,8 @@ describe('HeadingPanel pinned mode', () => {
         panel = new HeadingPanel(view, callbacks, panelSettings(), true);
         panel.open(headings, headings[0].id);
 
+        // Mobile never attaches the row contextmenu listener: the `.is-mobile` stylesheet is what
+        // keeps the WebView's long-press callout out of the way.
         const event = rightClick(items()[0]);
         expect(callbacks.onCopy).not.toHaveBeenCalled();
         expect(event.defaultPrevented).toBe(false);

@@ -51,6 +51,14 @@ export function createPanelCss(dimensions: PanelDimensions): string {
     transition: box-shadow 160ms ease-out;
     z-index: 2000;
     overflow: hidden;
+    /*
+     * The panel is a control surface, not document text: dragging across rows only ever produced
+     * stray selections. On mobile this is also what keeps the WebView from turning the long-press
+     * copy gesture into a text selection and callout. The filter input opts back in below.
+     */
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
 }
 
 /*
@@ -78,6 +86,9 @@ export function createPanelCss(dimensions: PanelDimensions): string {
     color: inherit;
     font-size: 14px;
     outline: none;
+    -webkit-touch-callout: default;
+    -webkit-user-select: text;
+    user-select: text;
 }
 
 .heading-navigator-panel > .heading-navigator-input {

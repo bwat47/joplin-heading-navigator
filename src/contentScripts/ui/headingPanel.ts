@@ -95,6 +95,8 @@ export class HeadingPanel {
 
     private readonly handleKeyDownListener: (event: KeyboardEvent) => void;
 
+    private readonly handleInputContextMenuListener: (event: MouseEvent) => void;
+
     private readonly handleListClickListener: (event: MouseEvent) => void;
 
     private readonly handlePinClickListener: () => void;
@@ -107,7 +109,7 @@ export class HeadingPanel {
 
     private readonly handleTouchEndListener: (e: TouchEvent) => void;
 
-    private readonly handleContextMenuListener: ((event: MouseEvent) => void) | null;
+    private readonly handleContextMenuListener: (event: MouseEvent) => void;
 
     private scrollerObserver: ResizeObserver | null = null;
 
@@ -168,6 +170,11 @@ export class HeadingPanel {
             this.handleKeyDown(event);
         };
 
+        this.handleInputContextMenuListener = (event: MouseEvent) => {
+            event.preventDefault();
+            event.stopPropagation();
+        };
+
         this.handleListClickListener = (event: MouseEvent) => {
             this.handleListClick(event);
         };
@@ -188,9 +195,7 @@ export class HeadingPanel {
             }
         };
 
-        // Right-click copies on desktop; mobile uses the long-press gesture below instead, and
-        // attaching both would double-fire because webviews raise `contextmenu` on long press.
-        this.handleContextMenuListener = this.isMobile ? null : (event: MouseEvent) => this.handleContextMenu(event);
+        this.handleContextMenuListener = (event: MouseEvent) => this.handleContextMenu(event);
 
         // Initialize touch listeners
         this.handleTouchStartListener = (e: TouchEvent) => this.handleTouchStart(e);
@@ -199,6 +204,9 @@ export class HeadingPanel {
 
         this.input.addEventListener('input', this.handleInputListener);
         this.input.addEventListener('keydown', this.handleKeyDownListener);
+        if (!this.isMobile) {
+            this.input.addEventListener('contextmenu', this.handleInputContextMenuListener);
+        }
         this.list.addEventListener('click', this.handleListClickListener);
         this.pinButton?.addEventListener('click', this.handlePinClickListener);
 
@@ -206,7 +214,7 @@ export class HeadingPanel {
             this.list.addEventListener('touchstart', this.handleTouchStartListener);
             this.list.addEventListener('touchmove', this.handleTouchMoveListener);
             this.list.addEventListener('touchend', this.handleTouchEndListener);
-        } else if (this.handleContextMenuListener) {
+        } else {
             this.list.addEventListener('contextmenu', this.handleContextMenuListener);
         }
 
@@ -343,7 +351,8 @@ export class HeadingPanel {
     /**
      * Copies the heading link for the right-clicked row instead of opening a context menu.
      *
-     * The default is suppressed so the browser's own menu never covers the panel.
+     * This handler is attached only on desktop. Mobile copies via long press; panel CSS suppresses
+     * native text selection and callouts outside the filter input on both platforms.
      */
     private handleContextMenu(event: MouseEvent): void {
         const item = (event.target as HTMLElement | null)?.closest<HTMLLIElement>('.heading-navigator-item');
@@ -458,6 +467,9 @@ export class HeadingPanel {
     public destroy(): void {
         this.input.removeEventListener('input', this.handleInputListener);
         this.input.removeEventListener('keydown', this.handleKeyDownListener);
+        if (!this.isMobile) {
+            this.input.removeEventListener('contextmenu', this.handleInputContextMenuListener);
+        }
         this.list.removeEventListener('click', this.handleListClickListener);
         this.pinButton?.removeEventListener('click', this.handlePinClickListener);
 
@@ -465,7 +477,7 @@ export class HeadingPanel {
             this.list.removeEventListener('touchstart', this.handleTouchStartListener);
             this.list.removeEventListener('touchmove', this.handleTouchMoveListener);
             this.list.removeEventListener('touchend', this.handleTouchEndListener);
-        } else if (this.handleContextMenuListener) {
+        } else {
             this.list.removeEventListener('contextmenu', this.handleContextMenuListener);
         }
 
