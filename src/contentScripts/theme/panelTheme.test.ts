@@ -30,6 +30,17 @@ describe('createPanelCss', () => {
         expect(css).toContain('.heading-navigator-empty');
     });
 
+    it('prevents native text selection and callouts on mobile heading rows', () => {
+        const css = createPanelCss({ width: 400, maxHeightRatio: 0.7 });
+        const mobileItemRule = css.match(
+            /\.heading-navigator-panel\.is-mobile \.heading-navigator-item \{[^}]*\}/s
+        )?.[0];
+
+        expect(mobileItemRule).toContain('-webkit-touch-callout: none;');
+        expect(mobileItemRule).toContain('-webkit-user-select: none;');
+        expect(mobileItemRule).toMatch(/(?:^|\s)user-select: none;/);
+    });
+
     it('positions the panel top via a CSS custom property so the offset can change without a restyle', () => {
         const css = createPanelCss({ width: 400, maxHeightRatio: 0.7 });
 

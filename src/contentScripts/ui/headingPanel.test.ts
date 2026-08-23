@@ -288,14 +288,14 @@ describe('HeadingPanel pinned mode', () => {
         panel = new HeadingPanel(view, callbacks, panelSettings());
     });
 
-    it('copies on mobile long-press and ignores right-click there', () => {
+    it('copies on mobile long-press and suppresses context menus without copying twice', () => {
         panel.destroy();
         panel = new HeadingPanel(view, callbacks, panelSettings(), true);
         panel.open(headings, headings[0].id);
 
         const event = rightClick(items()[0]);
         expect(callbacks.onCopy).not.toHaveBeenCalled();
-        expect(event.defaultPrevented).toBe(false);
+        expect(event.defaultPrevented).toBe(true);
 
         vi.useFakeTimers();
         try {

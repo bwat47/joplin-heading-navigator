@@ -301,6 +301,9 @@ export function createPanelCss(dimensions: PanelDimensions): string {
 .heading-navigator-panel.is-mobile .heading-navigator-item {
     padding: 14px 16px;
     gap: 4px;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
 }
 
 .heading-navigator-panel.is-mobile .heading-navigator-input {

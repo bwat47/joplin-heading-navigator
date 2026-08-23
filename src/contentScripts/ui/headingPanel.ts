@@ -109,7 +109,7 @@ export class HeadingPanel {
 
     private readonly handleTouchEndListener: (e: TouchEvent) => void;
 
-    private readonly handleContextMenuListener: ((event: MouseEvent) => void) | null;
+    private readonly handleContextMenuListener: (event: MouseEvent) => void;
 
     private scrollerObserver: ResizeObserver | null = null;
 
@@ -195,9 +195,7 @@ export class HeadingPanel {
             }
         };
 
-        // Right-click copies on desktop; mobile uses the long-press gesture below instead, and
-        // attaching both would double-fire because webviews raise `contextmenu` on long press.
-        this.handleContextMenuListener = this.isMobile ? null : (event: MouseEvent) => this.handleContextMenu(event);
+        this.handleContextMenuListener = (event: MouseEvent) => this.handleContextMenu(event);
 
         // Initialize touch listeners
         this.handleTouchStartListener = (e: TouchEvent) => this.handleTouchStart(e);
@@ -216,9 +214,8 @@ export class HeadingPanel {
             this.list.addEventListener('touchstart', this.handleTouchStartListener);
             this.list.addEventListener('touchmove', this.handleTouchMoveListener);
             this.list.addEventListener('touchend', this.handleTouchEndListener);
-        } else if (this.handleContextMenuListener) {
-            this.list.addEventListener('contextmenu', this.handleContextMenuListener);
         }
+        this.list.addEventListener('contextmenu', this.handleContextMenuListener);
 
         this.view.dom.ownerDocument!.addEventListener('mousedown', this.handleDocumentMouseDownListener, true);
     }
@@ -351,9 +348,10 @@ export class HeadingPanel {
     }
 
     /**
-     * Copies the heading link for the right-clicked row instead of opening a context menu.
+     * Suppresses the context menu on heading rows and copies the row on desktop.
      *
-     * The default is suppressed so the browser's own menu never covers the panel.
+     * Mobile copying is handled by the long-press timer, so the context-menu event must not copy
+     * again when the WebView emits it for the same gesture.
      */
     private handleContextMenu(event: MouseEvent): void {
         const item = (event.target as HTMLElement | null)?.closest<HTMLLIElement>('.heading-navigator-item');
@@ -363,7 +361,9 @@ export class HeadingPanel {
 
         event.preventDefault();
         event.stopPropagation();
-        this.copyHeadingFromItem(item);
+        if (!this.isMobile) {
+            this.copyHeadingFromItem(item);
+        }
     }
 
     /**
@@ -478,9 +478,8 @@ export class HeadingPanel {
             this.list.removeEventListener('touchstart', this.handleTouchStartListener);
             this.list.removeEventListener('touchmove', this.handleTouchMoveListener);
             this.list.removeEventListener('touchend', this.handleTouchEndListener);
-        } else if (this.handleContextMenuListener) {
-            this.list.removeEventListener('contextmenu', this.handleContextMenuListener);
         }
+        this.list.removeEventListener('contextmenu', this.handleContextMenuListener);
 
         this.view.dom.ownerDocument!.removeEventListener('mousedown', this.handleDocumentMouseDownListener, true);
         if (this.previewDebounceTimer !== null) {
