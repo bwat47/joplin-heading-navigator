@@ -25,6 +25,7 @@ describe('content script settings', () => {
             normalizeContentScriptSettings({
                 dimensions: { width: 999, maxHeightRatio: 0.1 },
                 metadataDisplay: HEADING_METADATA_DISPLAY.none,
+                previewHeadings: false,
                 topOffset: 44,
             })
         ).toEqual({
@@ -33,6 +34,7 @@ describe('content script settings', () => {
                 maxHeightRatio: MIN_PANEL_HEIGHT_PERCENTAGE / 100,
             },
             metadataDisplay: HEADING_METADATA_DISPLAY.none,
+            previewHeadings: false,
             topOffset: 44,
         });
 
@@ -42,6 +44,13 @@ describe('content script settings', () => {
         expect(normalizeContentScriptSettings({ metadataDisplay: 'Compact' }).metadataDisplay).toBe(
             HEADING_METADATA_DISPLAY.full
         );
+    });
+
+    it('accepts only boolean preview preferences and otherwise enables previews by default', () => {
+        expect(normalizeContentScriptSettings({ previewHeadings: false }).previewHeadings).toBe(false);
+        expect(normalizeContentScriptSettings({ previewHeadings: true }).previewHeadings).toBe(true);
+        expect(normalizeContentScriptSettings({ previewHeadings: 'false' }).previewHeadings).toBe(true);
+        expect(normalizeContentScriptSettings({}).previewHeadings).toBe(true);
     });
 
     it('normalizes the top offset and falls back to default when invalid', () => {
@@ -63,6 +72,7 @@ describe('content script settings', () => {
         const applied = applyContentScriptSettings(view, {
             dimensions: { width: 480, maxHeightRatio: 0.6 },
             metadataDisplay: HEADING_METADATA_DISPLAY.compact,
+            previewHeadings: false,
         });
         expect(getContentScriptSettings(view.state)).toEqual(applied);
 

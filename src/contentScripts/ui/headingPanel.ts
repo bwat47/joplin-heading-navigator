@@ -512,7 +512,7 @@ export class HeadingPanel {
     /**
      * Applies editor-facing settings to the mounted panel.
      *
-     * @param settings - New dimension and metadata-display configuration
+     * @param settings - New dimensions, metadata-display, preview, and offset configuration
      */
     public setSettings(settings: ContentScriptSettings): void {
         this.settings = settings;
@@ -657,6 +657,10 @@ export class HeadingPanel {
             this.previewDebounceTimer = null;
         }
 
+        if (!this.isPreviewEnabled()) {
+            return;
+        }
+
         if (!this.selectedHeadingId) {
             this.lastPreviewedId = null;
             return;
@@ -676,7 +680,7 @@ export class HeadingPanel {
         this.previewDebounceTimer = window.setTimeout(() => {
             this.previewDebounceTimer = null;
 
-            if (this.selectedHeadingId !== targetId) {
+            if (!this.isPreviewEnabled() || this.selectedHeadingId !== targetId) {
                 return;
             }
 
@@ -689,6 +693,10 @@ export class HeadingPanel {
             this.lastPreviewedId = currentHeading.id;
             this.onPreview(currentHeading);
         }, PREVIEW_DEBOUNCE_MS);
+    }
+
+    private isPreviewEnabled(): boolean {
+        return !this.isMobile && this.settings.previewHeadings;
     }
 
     private updatePreviewMarker(): void {
