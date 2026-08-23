@@ -4,12 +4,13 @@ import type { ContentScriptContext } from 'api/types';
 import type { ContentScriptToPluginMessage } from '../messages';
 import { DEFAULT_HEADING_METADATA_DISPLAY, normalizeHeadingMetadataDisplay } from '../headingMetadataDisplay';
 import { DEFAULT_PANEL_TOP_OFFSET, normalizePanelDimensions, normalizePanelTopOffset } from '../panelDimensions';
-import { DEFAULT_PANEL_DIMENSIONS, type ContentScriptSettings } from '../types';
+import { DEFAULT_PANEL_DIMENSIONS, DEFAULT_PREVIEW_HEADINGS, type ContentScriptSettings } from '../types';
 import logger from '../logger';
 
 export const DEFAULT_CONTENT_SCRIPT_SETTINGS: ContentScriptSettings = {
     dimensions: { ...DEFAULT_PANEL_DIMENSIONS },
     metadataDisplay: DEFAULT_HEADING_METADATA_DISPLAY,
+    previewHeadings: DEFAULT_PREVIEW_HEADINGS,
     topOffset: DEFAULT_PANEL_TOP_OFFSET,
 };
 
@@ -28,7 +29,12 @@ export function normalizeContentScriptSettings(value: unknown): ContentScriptSet
         return DEFAULT_CONTENT_SCRIPT_SETTINGS;
     }
 
-    const candidate = value as { dimensions?: unknown; metadataDisplay?: unknown; topOffset?: unknown };
+    const candidate = value as {
+        dimensions?: unknown;
+        metadataDisplay?: unknown;
+        previewHeadings?: unknown;
+        topOffset?: unknown;
+    };
     const dimensions =
         candidate.dimensions && typeof candidate.dimensions === 'object'
             ? normalizePanelDimensions(candidate.dimensions)
@@ -37,6 +43,8 @@ export function normalizeContentScriptSettings(value: unknown): ContentScriptSet
     return {
         dimensions,
         metadataDisplay: normalizeHeadingMetadataDisplay(candidate.metadataDisplay).value,
+        previewHeadings:
+            typeof candidate.previewHeadings === 'boolean' ? candidate.previewHeadings : DEFAULT_PREVIEW_HEADINGS,
         topOffset: normalizePanelTopOffset(candidate.topOffset).value,
     };
 }

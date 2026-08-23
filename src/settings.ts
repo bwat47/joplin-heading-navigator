@@ -16,7 +16,7 @@ import {
     HEADING_METADATA_DISPLAY,
     normalizeHeadingMetadataDisplay,
 } from './headingMetadataDisplay';
-import type { ContentScriptSettings } from './types';
+import { DEFAULT_PREVIEW_HEADINGS, type ContentScriptSettings } from './types';
 import {
     DEFAULT_PANEL_HEIGHT_PERCENTAGE,
     DEFAULT_PANEL_TOP_OFFSET,
@@ -37,6 +37,7 @@ const SETTING_PANEL_WIDTH = 'headingNavigator.panelWidth';
 const SETTING_PANEL_MAX_HEIGHT = 'headingNavigator.panelMaxHeightPercentage';
 const SETTING_PANEL_TOP_OFFSET = 'headingNavigator.panelTopOffset';
 const SETTING_HEADING_METADATA_DISPLAY = 'headingNavigator.headingMetadataDisplay';
+const SETTING_PREVIEW_HEADINGS = 'headingNavigator.previewHeadings';
 const LEGACY_SETTING_COMPACT_MODE = 'headingNavigator.compactMode';
 const SETTING_COPY_INTERNAL_ANCHOR_LINKS = 'headingNavigator.copyInternalAnchorLinks';
 const SETTING_PANEL_PINNED = 'headingNavigator.panelPinned';
@@ -111,6 +112,15 @@ export async function registerPanelSettings(): Promise<void> {
             description:
                 'What each heading row shows alongside its text. Compact and None also reduce row height on desktop; mobile keeps its larger touch targets.',
         },
+        [SETTING_PREVIEW_HEADINGS]: {
+            value: DEFAULT_PREVIEW_HEADINGS,
+            type: SettingItemType.Bool,
+            public: true,
+            section: SECTION_ID,
+            label: 'Preview headings while navigating',
+            description:
+                '[Desktop Only] Scroll the editor to the highlighted heading while filtering or using keyboard navigation.',
+        },
         // Deprecated: replaced by headingMetadataDisplay. Kept hidden so an existing
         // compact mode choice can be migrated once, then reset.
         [LEGACY_SETTING_COMPACT_MODE]: {
@@ -161,6 +171,7 @@ export async function loadContentScriptSettings(): Promise<ContentScriptSettings
         SETTING_PANEL_MAX_HEIGHT,
         SETTING_PANEL_TOP_OFFSET,
         SETTING_HEADING_METADATA_DISPLAY,
+        SETTING_PREVIEW_HEADINGS,
     ]);
 
     const widthResult = normalizePanelWidth(values[SETTING_PANEL_WIDTH]);
@@ -187,12 +198,20 @@ export async function loadContentScriptSettings(): Promise<ContentScriptSettings
         );
     }
 
+    const previewHeadingsResult = normalizeBooleanSetting(values[SETTING_PREVIEW_HEADINGS], DEFAULT_PREVIEW_HEADINGS);
+    if (previewHeadingsResult.changed) {
+        logger.warn(
+            `Invalid preview headings setting: ${values[SETTING_PREVIEW_HEADINGS]}. Using ${previewHeadingsResult.value}.`
+        );
+    }
+
     return {
         dimensions: {
             width: widthResult.value,
             maxHeightRatio: heightResult.value / 100,
         },
         metadataDisplay: metadataDisplayResult.value,
+        previewHeadings: previewHeadingsResult.value,
         topOffset: topOffsetResult.value,
     };
 }

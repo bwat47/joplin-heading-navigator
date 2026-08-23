@@ -11,9 +11,10 @@ const headings: HeadingItem[] = [
 
 function panelSettings(
     metadataDisplay: HeadingMetadataDisplay = HEADING_METADATA_DISPLAY.full,
-    topOffset = 40
+    topOffset = 40,
+    previewHeadings = true
 ): ContentScriptSettings {
-    return { dimensions: { width: 320, maxHeightRatio: 0.75 }, metadataDisplay, topOffset };
+    return { dimensions: { width: 320, maxHeightRatio: 0.75 }, metadataDisplay, previewHeadings, topOffset };
 }
 
 function computedDisplay(selector: string): string {
@@ -156,6 +157,101 @@ describe('HeadingPanel pinned mode', () => {
 
         expect(panel.isOpen()).toBe(true);
         expect(document.activeElement).not.toBe(document.querySelector('.heading-navigator-input'));
+    });
+
+    it('previews keyboard and filter navigation on desktop when enabled', () => {
+        vi.useFakeTimers();
+        try {
+            const input = document.querySelector<HTMLInputElement>('.heading-navigator-input')!;
+            input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+            vi.advanceTimersByTime(30);
+            expect(callbacks.onPreview).toHaveBeenLastCalledWith(headings[1]);
+
+            input.value = 'one';
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            vi.advanceTimersByTime(130);
+            expect(callbacks.onPreview).toHaveBeenLastCalledWith(headings[0]);
+            expect(callbacks.onPreview).toHaveBeenCalledTimes(2);
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
+    it('does not preview keyboard or filter navigation when the desktop preference is disabled', () => {
+        panel.destroy();
+        panel = new HeadingPanel(view, callbacks, panelSettings(HEADING_METADATA_DISPLAY.full, 40, false));
+        panel.open(headings, headings[0].id);
+
+        vi.useFakeTimers();
+        try {
+            const input = document.querySelector<HTMLInputElement>('.heading-navigator-input')!;
+            input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+            input.value = 'one';
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            vi.advanceTimersByTime(200);
+        } finally {
+            vi.useRealTimers();
+        }
+
+        expect(callbacks.onPreview).not.toHaveBeenCalled();
+    });
+
+    it('never previews keyboard or filter navigation on mobile', () => {
+        panel.destroy();
+        panel = new HeadingPanel(view, callbacks, panelSettings(), true);
+        panel.open(headings, headings[0].id);
+
+        vi.useFakeTimers();
+        try {
+            const input = document.querySelector<HTMLInputElement>('.heading-navigator-input')!;
+            input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+            input.value = 'one';
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            vi.advanceTimersByTime(200);
+        } finally {
+            vi.useRealTimers();
+        }
+
+        expect(callbacks.onPreview).not.toHaveBeenCalled();
+        items()[0].click();
+        expect(callbacks.onSelect).toHaveBeenCalledWith(headings[0]);
+    });
+
+    it('suppresses a pending preview when synchronized settings disable it', () => {
+        vi.useFakeTimers();
+        try {
+            const input = document.querySelector<HTMLInputElement>('.heading-navigator-input')!;
+            input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+            panel.setSettings(panelSettings(HEADING_METADATA_DISPLAY.full, 40, false));
+            vi.advanceTimersByTime(30);
+        } finally {
+            vi.useRealTimers();
+        }
+
+        expect(callbacks.onPreview).not.toHaveBeenCalled();
+    });
+
+    it('keeps the preview marker aligned with the editor when the caret lands on the highlighted heading', () => {
+        panel.destroy();
+        panel = new HeadingPanel(view, callbacks, panelSettings(HEADING_METADATA_DISPLAY.full, 40, false));
+        panel.open(headings, headings[0].id);
+
+        const input = document.querySelector<HTMLInputElement>('.heading-navigator-input')!;
+        input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+        // Selecting the heading moves the editor without a preview; the caret-follow update
+        // reports the heading the panel already highlights.
+        panel.setActiveHeading(headings[1].id);
+        panel.setSettings(panelSettings(HEADING_METADATA_DISPLAY.full, 40, true));
+
+        vi.useFakeTimers();
+        try {
+            input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }));
+            vi.advanceTimersByTime(30);
+        } finally {
+            vi.useRealTimers();
+        }
+
+        expect(callbacks.onPreview).toHaveBeenCalledWith(headings[0]);
     });
 
     it('applies the configured top offset as a CSS custom property and updates it live', () => {

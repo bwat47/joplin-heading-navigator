@@ -270,6 +270,7 @@ describe('pinned panel restoration', () => {
             {
                 dimensions: { width: 480, maxHeightRatio: 0.6 },
                 metadataDisplay: HEADING_METADATA_DISPLAY.none,
+                previewHeadings: true,
                 topOffset: 12,
             }
         );
@@ -327,6 +328,7 @@ describe('pinned panel restoration', () => {
             {
                 dimensions: { width: 500, maxHeightRatio: 0.65 },
                 metadataDisplay: HEADING_METADATA_DISPLAY.none,
+                previewHeadings: true,
                 topOffset: 12,
             },
             settingsGate

@@ -59,7 +59,7 @@ Panel appended to `view.scrollDOM.parentElement` to stay associated with specifi
 1. **Settings Sync**: Each editor installs a settings facet with safe defaults, then requests normalized panel settings from the plugin host
 2. **Command Trigger**: User invokes "Go to Heading" → plugin host forwards the platform flag to the content script
 3. **Panel Display**: Content script reads settings from the facet, extracts headings from the editor's live syntax tree (bounded `ensureSyntaxTree` pass; pathologically large documents open with a partial list that fills in as scrolling or background parsing extends the tree), and opens an unpinned panel with the active heading highlighted
-4. **Navigation**: Filter/navigate updates editor selection and scrolls the heading into view
+4. **Navigation**: On desktop with previews enabled, filter/keyboard navigation updates editor selection and scrolls the heading into view; mobile and preview-disabled desktop sessions only update the panel highlight until selection
 5. **Transient Selection**: Selection closes the panel; Escape restores the original state if the panel was never pinned
 6. **Pinned Selection**: Selection returns focus to the editor while the mounted panel follows cursor movement
 7. **Copy**: Request sent to plugin host → reads copy-link setting → formats markdown link → writes to clipboard
@@ -69,7 +69,7 @@ Panel appended to `view.scrollDOM.parentElement` to stay associated with specifi
 ## State Management
 
 - **Panel State**: `HeadingPanel` class (pin state, filtered list, active heading, debounce timers)
-- **Content Script Settings**: CodeMirror facet and compartment containing normalized panel dimensions, heading metadata display mode, and top offset
+- **Content Script Settings**: CodeMirror facet and compartment containing normalized panel dimensions, heading metadata display mode, preview preference, and top offset
 - **Pinned Persistence**: Private `headingNavigator.panelPinned` setting written by the plugin host on user pin/unpin; read back on editor creation to restore a pinned panel (desktop only)
 - **Editor State**: Selection/scroll snapshots support transient cancellation and are discarded when pinning
 - **Heading Cache**: Recomputed 150 ms after document changes stop while the panel is open

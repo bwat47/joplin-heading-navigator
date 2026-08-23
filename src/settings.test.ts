@@ -18,6 +18,7 @@ import { HEADING_METADATA_DISPLAY } from './headingMetadataDisplay';
 import { loadContentScriptSettings, registerPanelSettings } from './settings';
 
 const METADATA_DISPLAY_KEY = 'headingNavigator.headingMetadataDisplay';
+const PREVIEW_HEADINGS_KEY = 'headingNavigator.previewHeadings';
 const LEGACY_COMPACT_MODE_KEY = 'headingNavigator.compactMode';
 
 function registeredSettings(): Record<string, Record<string, unknown>> {
@@ -58,6 +59,18 @@ describe('panel settings', () => {
         });
     });
 
+    it('registers heading previews as an enabled desktop preference', async () => {
+        await registerPanelSettings();
+
+        expect(registeredSettings()[PREVIEW_HEADINGS_KEY]).toMatchObject({
+            value: true,
+            type: SettingItemType.Bool,
+            public: true,
+            section: 'headingNavigator',
+            label: 'Preview headings while navigating',
+        });
+    });
+
     it('migrates an existing compact mode opt-in and resets the legacy key', async () => {
         joplinSettingsMocks.value.mockResolvedValue(true);
 
@@ -83,11 +96,13 @@ describe('panel settings', () => {
             'headingNavigator.panelMaxHeightPercentage': 80,
             'headingNavigator.panelTopOffset': 24,
             [METADATA_DISPLAY_KEY]: HEADING_METADATA_DISPLAY.none,
+            [PREVIEW_HEADINGS_KEY]: false,
         });
 
         await expect(loadContentScriptSettings()).resolves.toEqual({
             dimensions: { width: 400, maxHeightRatio: 0.8 },
             metadataDisplay: HEADING_METADATA_DISPLAY.none,
+            previewHeadings: false,
             topOffset: 24,
         });
     });
@@ -98,10 +113,12 @@ describe('panel settings', () => {
             'headingNavigator.panelMaxHeightPercentage': 80,
             'headingNavigator.panelTopOffset': 24,
             [METADATA_DISPLAY_KEY]: 'compact-ish',
+            [PREVIEW_HEADINGS_KEY]: 'yes',
         });
 
         await expect(loadContentScriptSettings()).resolves.toMatchObject({
             metadataDisplay: HEADING_METADATA_DISPLAY.full,
+            previewHeadings: true,
         });
     });
 });

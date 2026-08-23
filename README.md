@@ -26,7 +26,7 @@ You can navigate through headings using tab key (goes to next heading), shift ta
 
 You can filter the list of headings using the search filter at the top of the panel.
 
-When selecting a heading with the keyboard, the editor will immediately scroll to the selected heading. Hitting enter in the panel (or clicking somewhere else) will close the panel. Hitting escape will close the panel & return to your original scroll/cursor position.
+On desktop, selecting a heading with the keyboard previews it by immediately scrolling the editor to that heading. Hitting enter in the panel (or clicking somewhere else) will close the panel. Hitting escape will close the panel & return to your original scroll/cursor position. Previewing is disabled on mobile and can be disabled in the plugin settings on desktop.
 
 > [!note]
 > When the panel is pinned, clicking outside of the panel will not close the panel, and hitting escape will move focus to the editor without closing the panel or restoring previous scroll position.
@@ -55,6 +55,7 @@ The plugin can be customized via Tools | Options | Heading Navigator:
     - **Compact**: an `H#` level badge instead of the metadata row
     - **None**: no level indicator at all
     - Compact and None also reduce heading row height on desktop, so more headings fit in the panel. Mobile keeps its larger touch targets.
+- **Preview headings while navigating**: Scroll the editor to the highlighted heading while filtering or using keyboard navigation (default: on, desktop only)
 - **Copy internal anchor links**: Copy `[Heading](#heading-anchor)` instead of `[Heading @ Note](:/noteId#heading-anchor)` (default: off)
 
 Panel appearance settings take effect the next time the panel is opened. The copy link setting applies to the next copied link.
@@ -66,3 +67,5 @@ Panel appearance settings take effect the next time the panel is opened. The cop
 - On mobile, the panel has a responsive design and appears centered with faded background.
 
 - Long-press a heading to copy its link.
+
+- Filtering and keyboard navigation highlight headings in the panel without scrolling the note behind the modal. Selecting a heading still navigates to it.
