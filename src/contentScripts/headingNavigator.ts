@@ -65,9 +65,29 @@ const HEADING_REPARSE_DEBOUNCE_MS = 150;
 type ScrollStabilizationMeasurement = {
     selectionFrom: number;
     selectionTo: number;
+    viewportTop: number;
     offsetFromViewportTop: number | null;
     needsScroll: boolean;
 };
+
+/**
+ * Resolves the top edge that corrective scrolling will align the heading with.
+ *
+ * Desktop constrains the editor height, so CodeMirror's own scroller clips
+ * vertically and its rectangle top is the visible edge. Joplin mobile never sets
+ * that height: the scroller grows to the document height and the WebView page
+ * scrolls instead, so the scroller rectangle top becomes a document offset well
+ * above the viewport.
+ *
+ * Clamping at zero covers both. It also matches the baseline CodeMirror itself
+ * corrects against: `scrollRectIntoView` walks past the non-clipping scroller up
+ * to the document, where `windowRect` reports a top of zero. Measuring against a
+ * different edge than the corrector uses would report drift it cannot remove, so
+ * every navigation would dispatch a pointless correction.
+ */
+function getVisibleViewportTop(scrollDOM: HTMLElement): number {
+    return Math.max(0, scrollDOM.getBoundingClientRect().top);
+}
 
 function ensureEditorFocus(view: EditorView, shouldFocus: boolean): void {
     if (!shouldFocus) {
@@ -108,18 +128,19 @@ function scheduleScrollStabilization(options: {
                     }
 
                     const scrollDOM = measureView.scrollDOM;
-                    const scrollRect = scrollDOM.getBoundingClientRect();
+                    const viewportTop = getVisibleViewportTop(scrollDOM);
                     const start = measureView.coordsAtPos(selection.from);
                     if (!start) {
                         return {
                             selectionFrom: selection.from,
                             selectionTo: selection.to,
+                            viewportTop,
                             offsetFromViewportTop: null,
                             needsScroll: true,
                         };
                     }
 
-                    const offsetFromViewportTop = start.top - scrollRect.top;
+                    const offsetFromViewportTop = start.top - viewportTop;
                     const needsScroll =
                         offsetFromViewportTop < 0
                             ? Math.abs(offsetFromViewportTop) > SCROLL_STABILIZE_NEGATIVE_TOLERANCE_PX
@@ -128,6 +149,7 @@ function scheduleScrollStabilization(options: {
                     return {
                         selectionFrom: selection.from,
                         selectionTo: selection.to,
+                        viewportTop,
                         offsetFromViewportTop,
                         needsScroll,
                     };
