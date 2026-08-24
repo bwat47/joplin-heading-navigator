@@ -5,7 +5,7 @@
     "version": "0.9.1",
     "platforms": ["desktop", "mobile"],
     "name": "Heading Navigator",
-    "description": "VS Code/Sublime text style overlay panel to navigate through headings (table of contents) in the markdown editor",
+    "description": "VS Code/Sublime text style overlay panel to navigate through headings (toc/table of contents) in the markdown editor",
     "author": "bwat47",
     "homepage_url": "https://github.com/bwat47/joplin-heading-navigator",
     "repository_url": "https://github.com/bwat47/joplin-heading-navigator",
@@ -14,7 +14,9 @@
     "screenshots": [
         { "src": "images/screenshot1.png", "label": "Heading Navigator screenshot 1" },
         { "src": "images/screenshot2.png", "label": "Heading Navigator screenshot 2" },
-        { "src": "images/screenshot3.png", "label": "Heading Navigator screenshot 3" }
+        { "src": "images/screenshot3.png", "label": "Heading Navigator screenshot 3" },
+        { "src": "images/screenshot_full_mode.png", "label": "Heading Navigator screenshot full mode" },
+        { "src": "images/screenshot_none_mode.png", "label": "Heading Navigator screenshot none mode" }
     ],
     "icons": {
         "128": "images/128.png",
