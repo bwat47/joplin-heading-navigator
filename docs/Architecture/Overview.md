@@ -66,6 +66,17 @@ Panel appended to `view.scrollDOM.parentElement` to stay associated with specifi
 8. **Pin Persistence**: Pin toggles are persisted to a private Joplin setting; at editor startup the content script independently requests the pinned/platform restore state and reopens the panel without stealing focus
 9. **Settings Changes**: There is no live push. Joplin recreates the editor (and content script) after the settings screen closes, so the startup settings fetch in step 1 always delivers current values.
 
+## Heading Anchor Compatibility
+
+Panel labels and copied-link anchors intentionally use different heading representations:
+
+- Labels are cleaned from the Lezer tree for readability, including image alt text.
+- Anchors slug the raw heading content using the same normalization as Joplin's CodeMirror `jumpToHash` command.
+- Duplicate suffixes are retained because they make later duplicates addressable in the Markdown viewer, even though CodeMirror itself cannot distinguish duplicate headings.
+- Headings whose raw content produces an empty slug remain navigable in the panel, but their unusable empty anchor is not copied.
+
+Joplin's Markdown viewer can generate different IDs when renderer plugins such as KaTeX replace raw source with custom tokens. The plugin prioritizes editor navigation because it is a CodeMirror content script; it does not claim that copied anchors are compatible with every viewer-plugin configuration.
+
 ## State Management
 
 - **Panel State**: `HeadingPanel` class (pin state, filtered list, active heading, debounce timers)
