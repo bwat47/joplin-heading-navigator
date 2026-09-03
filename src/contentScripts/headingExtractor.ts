@@ -2,13 +2,13 @@
  * Markdown heading extraction from a Lezer syntax tree.
  *
  * Reads ATX (`# Heading`) and Setext (underlined) headings from the editor's live
- * syntax tree, strips inline formatting (bold, italic, links, code), and generates
- * stable IDs and GitHub-compatible anchor slugs.
+ * syntax tree, strips inline formatting (bold, italic, links, code) for display,
+ * and generates anchors from the raw heading source used by Joplin's editor.
  *
  * Implementation details:
  * - Consumes the incrementally-maintained tree from @codemirror/language instead of
  *   re-parsing the document, with a bounded ensureSyntaxTree pass for completeness
- * - Stable IDs based on byte position (`heading-{from}`)
+ * - Positional IDs based on CodeMirror UTF-16 document offsets (`heading-{from}`)
  * - Anchor deduplication (e.g., "intro" → "intro-2" → "intro-3")
  * - CodeMirror Text class for position → line number conversion and slicing
  * - Preserves snake_case in headings (doesn't break on underscores)
@@ -24,6 +24,12 @@ import { HeadingItem } from '../types';
 import uslug from '@joplin/fork-uslug';
 
 const UNSUPPORTED_INLINE_FORMATTING_PATTERN = /(==|\+\+)(?=\S)([\s\S]*?\S)\1/g;
+const UNTITLED_HEADING_LABEL = 'Untitled heading';
+
+interface InlineExtractionContext {
+    doc: Text;
+    definedLinkLabels: ReadonlySet<string>;
+}
 
 /**
  * Nodes whose source text is copied verbatim instead of being walked.
@@ -45,17 +51,15 @@ const VERBATIM_NODE_NAMES = new Set(['InlineMath', 'BlockMath']);
  * matched by suffix instead of being listed here.
  */
 const SKIPPED_NODE_NAMES = new Set([
-    'Image', // Skip images entirely (no alt text extraction)
     'LinkLabel',
     'LinkTitle',
     'HTMLTag', // Skip HTML tags (matches behavior of Obsidian and other apps)
 ]);
 
 /**
- * Leaf nodes whose source text is heading content. `URL` is included because an autolink
- * target (`<https://...>`) is visible heading text; link destinations are filtered out
- * earlier by {@link isSkippedNode}. `Emoji` covers shortcodes like `:fire:`, which stay
- * visible text for anchor stability.
+ * Leaf nodes whose source text contributes to the panel label. `URL` is included because an
+ * autolink target (`<https://...>`) is visible; link destinations are filtered out earlier by
+ * {@link isSkippedNode}. `Emoji` covers visible shortcodes like `:fire:`.
  */
 const TEXT_NODE_NAMES = new Set(['Text', 'CodeText', 'URL', 'Emoji']);
 
@@ -97,7 +101,7 @@ function parseHeadingLevel(nodeName: string): number | null {
  * underlines), the nodes in {@link SKIPPED_NODE_NAMES}, and hidden link destinations.
  * A URL node is a hidden destination only inside a Link/Image (e.g. `[text](url)` /
  * `![alt](url)`); an autolink target (`<https://...>`) is visible heading text, so it must
- * be kept (matches Joplin's heading IDs).
+ * be kept in the panel label.
  */
 function isSkippedNode(node: SyntaxNode): boolean {
     const name = node.name;
@@ -110,18 +114,78 @@ function isSkippedNode(node: SyntaxNode): boolean {
     return name === 'URL' && (parentName === 'Link' || parentName === 'Image');
 }
 
+function normalizeReferenceLabel(label: string): string {
+    return label.trim().replace(/\s+/g, ' ').toUpperCase();
+}
+
+function extractBracketContents(node: SyntaxNode, doc: Text): string {
+    const openingLength = node.name === 'Image' ? 2 : 1;
+    const cursor = node.cursor();
+    if (!cursor.firstChild()) {
+        return '';
+    }
+
+    do {
+        if (cursor.name === 'LinkMark' && doc.sliceString(cursor.from, cursor.to) === ']') {
+            return doc.sliceString(node.from + openingLength, cursor.from);
+        }
+    } while (cursor.nextSibling());
+
+    return '';
+}
+
+/**
+ * Returns the normalized reference label for a reference-style link/image.
+ * Returns null for inline links/images, which have a parenthesized destination.
+ */
+function extractReferenceLabel(node: SyntaxNode, doc: Text): string | null {
+    const cursor = node.cursor();
+    if (!cursor.firstChild()) {
+        return normalizeReferenceLabel(extractBracketContents(node, doc));
+    }
+
+    let explicitLabel: string | null = null;
+    do {
+        const source = doc.sliceString(cursor.from, cursor.to);
+        if (cursor.name === 'LinkMark' && source === '(') {
+            return null;
+        }
+        if (cursor.name === 'LinkLabel') {
+            explicitLabel = source.slice(1, -1);
+        }
+    } while (cursor.nextSibling());
+
+    const label = explicitLabel || extractBracketContents(node, doc);
+    return normalizeReferenceLabel(label);
+}
+
+function isUndefinedReference(node: SyntaxNode, context: InlineExtractionContext): boolean {
+    if (node.name !== 'Link' && node.name !== 'Image') {
+        return false;
+    }
+
+    const referenceLabel = extractReferenceLabel(node, context.doc);
+    return referenceLabel !== null && !context.definedLinkLabels.has(referenceLabel);
+}
+
 /**
  * Extracts the heading text contributed by a single child node.
  *
  * @param node - Child of the node being walked by {@link extractInlineText}
- * @param doc - Source markdown document
+ * @param context - Source document and the link-reference definitions it contains
  * @returns Text to append, or '' for nodes that carry no heading text
  */
-function extractChildText(node: SyntaxNode, doc: Text): string {
+function extractChildText(node: SyntaxNode, context: InlineExtractionContext): string {
     const name = node.name;
+    const { doc } = context;
 
     // --- Keep math regions exactly as written (see VERBATIM_NODE_NAMES) ---
     if (VERBATIM_NODE_NAMES.has(name)) {
+        return doc.sliceString(node.from, node.to);
+    }
+
+    // Undefined references remain literal text in Joplin instead of rendering as links/images.
+    if (isUndefinedReference(node, context)) {
         return doc.sliceString(node.from, node.to);
     }
 
@@ -140,11 +204,11 @@ function extractChildText(node: SyntaxNode, doc: Text): string {
     }
 
     // --- Recurse into inline containers (Emphasis, Link, InlineCode, etc.) ---
-    return extractInlineText(node, doc);
+    return extractInlineText(node, context);
 }
 
 /**
- * Extracts readable inline text from a Lezer node.
+ * Extracts readable inline text for the panel label from a Lezer node.
  * - Recursively collects Text + CodeText
  * - Skips syntax marks and heading markers
  * - Handles "gaps" (ranges not covered by any child nodes)
@@ -152,7 +216,7 @@ function extractChildText(node: SyntaxNode, doc: Text): string {
  * - Copies math regions verbatim
  *
  * @param node - Lezer syntax node (heading or inline element)
- * @param doc - Source markdown document
+ * @param context - Source document and the link-reference definitions it contains
  * @returns Cleaned text content without markdown formatting
  *
  * @example
@@ -161,8 +225,9 @@ function extractChildText(node: SyntaxNode, doc: Text): string {
  * // Returns: "bold and code"
  * ```
  */
-function extractInlineText(node: SyntaxNode, doc: Text): string {
+function extractInlineText(node: SyntaxNode, context: InlineExtractionContext): string {
     let out = '';
+    const { doc } = context;
     const cursor = node.cursor();
 
     if (!cursor.firstChild()) {
@@ -181,7 +246,7 @@ function extractInlineText(node: SyntaxNode, doc: Text): string {
             out += doc.sliceString(lastPos, cursor.from);
         }
 
-        out += extractChildText(cursor.node, doc);
+        out += extractChildText(cursor.node, context);
         lastPos = cursor.to;
     } while (cursor.nextSibling());
 
@@ -208,15 +273,24 @@ function stripUnsupportedInlineFormatting(text: string): string {
  * Normalizes heading text using Lezer AST to extract clean text.
  *
  * @param node - Lezer heading node (ATXHeading or SetextHeading)
- * @param doc - Source markdown document
+ * @param context - Source document and the link-reference definitions it contains
  * @returns Cleaned heading text without markdown formatting
  */
-function normalizeHeadingText(node: SyntaxNode, doc: Text): string {
-    return stripUnsupportedInlineFormatting(extractInlineText(node, doc)).replace(/\s+/g, ' ').trim();
+function normalizeHeadingText(node: SyntaxNode, context: InlineExtractionContext): string {
+    return stripUnsupportedInlineFormatting(extractInlineText(node, context)).replace(/\s+/g, ' ').trim();
 }
 
-function createUniqueAnchor(text: string, fallback: string, counts: Map<string, number>): string {
-    const anchorBase = (typeof text === 'string' ? uslug(text) : '') || fallback;
+/**
+ * Mirrors the raw heading normalization in Joplin's CodeMirror `jumpToHash` command.
+ * Inline Markdown is deliberately retained because editor navigation slugs the source,
+ * not the rendered token text.
+ */
+function extractEditorSlugSource(node: SyntaxNode, doc: Text): string {
+    return doc.sliceString(node.from, node.to).replace(/^#+\s/, '').replace(/\n-+$/, '');
+}
+
+function createUniqueAnchor(slugSource: string, counts: Map<string, number>): string {
+    const anchorBase = uslug(slugSource);
     const previousCount = counts.get(anchorBase);
     if (previousCount === undefined) {
         counts.set(anchorBase, 1);
@@ -224,6 +298,35 @@ function createUniqueAnchor(text: string, fallback: string, counts: Map<string, 
     }
     counts.set(anchorBase, previousCount + 1);
     return `${anchorBase}-${previousCount + 1}`;
+}
+
+function collectDefinedLinkLabels(tree: Tree, doc: Text): ReadonlySet<string> {
+    const labels = new Set<string>();
+
+    tree.iterate({
+        enter(node) {
+            if (node.name !== 'LinkReference') {
+                return;
+            }
+
+            const cursor = node.node.cursor();
+            if (!cursor.firstChild()) {
+                return false;
+            }
+
+            do {
+                if (cursor.name === 'LinkLabel') {
+                    const source = doc.sliceString(cursor.from, cursor.to);
+                    labels.add(normalizeReferenceLabel(source.slice(1, -1)));
+                    break;
+                }
+            } while (cursor.nextSibling());
+
+            return false;
+        },
+    });
+
+    return labels;
 }
 
 /**
@@ -237,6 +340,10 @@ export function extractHeadingsFromTree(tree: Tree, doc: Text): HeadingItem[] {
     try {
         const headings: HeadingItem[] = [];
         const anchorCounts = new Map<string, number>();
+        const inlineContext: InlineExtractionContext = {
+            doc,
+            definedLinkLabels: collectDefinedLinkLabels(tree, doc),
+        };
 
         tree.iterate({
             enter(node) {
@@ -247,13 +354,10 @@ export function extractHeadingsFromTree(tree: Tree, doc: Text): HeadingItem[] {
 
                 const from = node.from;
                 const to = node.to;
-                const text = normalizeHeadingText(node.node, doc);
-
-                if (!text) {
-                    return;
-                }
-
-                const anchor = createUniqueAnchor(text, `heading-${from}`, anchorCounts);
+                const displayText = normalizeHeadingText(node.node, inlineContext);
+                const text = displayText || UNTITLED_HEADING_LABEL;
+                const slugSource = extractEditorSlugSource(node.node, doc);
+                const anchor = createUniqueAnchor(slugSource, anchorCounts);
 
                 headings.push({
                     id: `heading-${from}`,

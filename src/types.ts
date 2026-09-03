@@ -1,12 +1,15 @@
 import type { HeadingMetadataDisplay } from './headingMetadataDisplay';
 
 export interface HeadingItem {
+    /** Internal positional ID for panel selection and DOM reconciliation. */
     id: string;
+    /** Cleaned, readable panel and copied-link label. */
     text: string;
     level: number;
     from: number;
     to: number;
     line: number;
+    /** Editor-oriented Markdown link fragment; empty when no usable fragment exists. */
     anchor: string;
 }
 

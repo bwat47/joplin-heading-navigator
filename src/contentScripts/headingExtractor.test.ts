@@ -50,7 +50,7 @@ describe('heading extraction', () => {
             line: 10,
         });
 
-        // Ensure ids are stable offsets
+        // IDs deterministically identify the current heading positions.
         headings.forEach((heading) => {
             expect(heading.id).toBe(`heading-${heading.from}`);
             expect(heading.to).toBeGreaterThan(heading.from);
@@ -121,12 +121,14 @@ describe('heading extraction', () => {
         expect(headings[2].anchor).toBe('test-section');
     });
 
-    it('generates fallback anchor for empty slug', () => {
-        const content = '# !!!';
+    it('preserves empty anchor bases and applies duplicate suffixes', () => {
+        const content = `# !!!
+## ???`;
         const headings = extractHeadingsFromMarkdown(content);
 
-        expect(headings).toHaveLength(1);
-        expect(headings[0].anchor).toMatch(/^heading-\d+$/);
+        expect(headings).toHaveLength(2);
+        expect(headings[0].anchor).toBe('');
+        expect(headings[1].anchor).toBe('-2');
     });
 
     it('generates anchors with mixed case normalized to lowercase', () => {
@@ -186,7 +188,12 @@ describe('heading extraction', () => {
         expect(headings[1].text).toBe('Italic Text');
         expect(headings[2].text).toBe('code section');
         expect(headings[3].text).toBe('Link Text');
-        expect(headings[4].text).toBe('Image');
+        expect(headings[4].text).toBe('Alt Text Image');
+
+        // The panel labels are cleaned for readability, while anchors follow Joplin's
+        // CodeMirror navigation and slug the raw heading source.
+        expect(headings[3].anchor).toBe('link-texthttpsexamplecom');
+        expect(headings[4].anchor).toBe('alt-textimagepng-image');
     });
 
     it('strips mark and insert formatting while preserving text', () => {
@@ -262,16 +269,32 @@ describe('heading extraction', () => {
         expect(headings[1].anchor).toBe('6-resources-test-mailtobwat47gmailcom');
     });
 
-    it('handles reference-style links', () => {
+    it('keeps undefined reference-style links literal', () => {
         const content = `# [Reference Link][ref]
 ## [Another][1]`;
         const headings = extractHeadingsFromMarkdown(content);
 
-        expect(headings[0].text).toBe('Reference Link');
-        expect(headings[1].text).toBe('Another');
+        expect(headings[0].text).toBe('[Reference Link][ref]');
+        expect(headings[0].anchor).toBe('reference-linkref');
+        expect(headings[1].text).toBe('[Another][1]');
+        expect(headings[1].anchor).toBe('another1');
     });
 
-    it('keeps inline math verbatim so anchors match Joplin heading links', () => {
+    it('uses cleaned labels and raw editor anchors for defined references', () => {
+        const content = `# [Reference Link][ref]
+## [Collapsed][]
+### [Shortcut]
+
+[ref]: https://example.com
+[collapsed]: /collapsed
+[shortcut]: /shortcut`;
+        const headings = extractHeadingsFromMarkdown(content);
+
+        expect(headings.map((heading) => heading.text)).toEqual(['Reference Link', 'Collapsed', 'Shortcut']);
+        expect(headings.map((heading) => heading.anchor)).toEqual(['reference-linkref', 'collapsed', 'shortcut']);
+    });
+
+    it('keeps inline math verbatim so anchors match Joplin editor navigation', () => {
         const content = `# Maxwell $E=mc^2$
 ## Decay of $\\alpha$ particles
 ### Price is 5$ or 10$`;
@@ -293,6 +316,18 @@ describe('heading extraction', () => {
         const headings = extractHeadingsFromMarkdown(content);
 
         expect(headings[0].text).toBe('Icon');
+        expect(headings[0].anchor).toBe('imagepng-icon');
+    });
+
+    it('keeps image-only headings using alt text or a UI-only fallback label', () => {
+        const content = `# ![Diagram **bold**](image.png)
+## ![](empty.png)`;
+        const headings = extractHeadingsFromMarkdown(content);
+
+        expect(headings[0].text).toBe('Diagram bold');
+        expect(headings[0].anchor).toBe('diagram-boldimagepng');
+        expect(headings[1].text).toBe('Untitled heading');
+        expect(headings[1].anchor).toBe('emptypng');
     });
 });
 
