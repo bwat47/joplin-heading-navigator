@@ -310,7 +310,7 @@ export class HeadingPanel {
         if (!headingId) return;
 
         const heading = this.headings.find((h) => h.id === headingId);
-        if (!heading) return;
+        if (!heading || !heading.anchor) return;
 
         this.onCopy(heading);
         this.showCopyFeedback(item);

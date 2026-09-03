@@ -337,6 +337,22 @@ describe('HeadingPanel pinned mode', () => {
         expect(callbacks.onSelect).not.toHaveBeenCalled();
     });
 
+    it('does not report or request a copy when the heading has no usable anchor', () => {
+        const emptyAnchorHeading: HeadingItem = {
+            ...headings[0],
+            id: 'heading-empty-anchor',
+            text: '!!!',
+            anchor: '',
+        };
+        panel.open([emptyAnchorHeading], emptyAnchorHeading.id);
+
+        const event = rightClick(items()[0]);
+
+        expect(event.defaultPrevented).toBe(true);
+        expect(callbacks.onCopy).not.toHaveBeenCalled();
+        expect(items()[0].classList.contains('is-copied')).toBe(false);
+    });
+
     it('suppresses the context menu on the filter input without copying a heading', () => {
         const event = rightClick(document.querySelector('.heading-navigator-input')!);
 
