@@ -25,6 +25,8 @@ import uslug from '@joplin/fork-uslug';
 
 // Match paired ==highlight== or ++insert++ with non-whitespace content edges.
 const UNSUPPORTED_INLINE_FORMATTING_PATTERN = /(==|\+\+)(?=\S)([\s\S]*?\S)\1/g;
+const NON_WHITESPACE_PATTERN = /\S/g;
+const FORMATTING_MASK_CHARACTER = 'x';
 
 /**
  * Nodes whose source text is copied verbatim instead of being walked.
@@ -217,6 +219,16 @@ function extractInlineText(node: SyntaxNode, doc: Text): InlineTextPart[] {
 }
 
 /**
+ * Hides delimiter characters from matching without changing UTF-16 offsets or
+ * whitespace boundaries. For example, "==a b==" becomes "xxx xxx". The mask is
+ * a non-whitespace, non-delimiter character; the regex intentionally omits the
+ * Unicode flag so each UTF-16 code unit is replaced by exactly one mask character.
+ */
+function maskFormattingDelimiters(text: string): string {
+    return text.replace(NON_WHITESPACE_PATTERN, FORMATTING_MASK_CHARACTER);
+}
+
+/**
  * Strips unsupported delimiters only in prose, retaining the tree's literal context.
  * Masking preserves UTF-16 offsets and whitespace while preventing code, math, URLs,
  * and escaped characters from acting as delimiters. Formatting may still surround
@@ -225,7 +237,7 @@ function extractInlineText(node: SyntaxNode, doc: Text): InlineTextPart[] {
 function stripUnsupportedInlineFormatting(parts: InlineTextPart[]): string {
     const text = parts.map((part) => part.text).join('');
     const formattingText = parts
-        .map((part) => (part.protectFormatting ? part.text.replace(/\S/g, 'x') : part.text))
+        .map((part) => (part.protectFormatting ? maskFormattingDelimiters(part.text) : part.text))
         .join('');
     let out = '';
     let lastPos = 0;
