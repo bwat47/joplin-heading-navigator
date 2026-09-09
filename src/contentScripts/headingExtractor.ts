@@ -23,6 +23,7 @@ import logger from '../logger';
 import { HeadingItem } from '../types';
 import uslug from '@joplin/fork-uslug';
 
+// Match paired ==highlight== or ++insert++ with non-whitespace content edges.
 const UNSUPPORTED_INLINE_FORMATTING_PATTERN = /(==|\+\+)(?=\S)([\s\S]*?\S)\1/g;
 
 /**
@@ -110,33 +111,38 @@ function isSkippedNode(node: SyntaxNode): boolean {
     return name === 'URL' && (parentName === 'Link' || parentName === 'Image');
 }
 
+interface InlineTextPart {
+    text: string;
+    literal: boolean;
+}
+
 /**
  * Extracts the heading text contributed by a single child node.
  *
  * @param node - Child of the node being walked by {@link extractInlineText}
  * @param doc - Source markdown document
- * @returns Text to append, or '' for nodes that carry no heading text
+ * @returns Text parts with literal context, or an empty array for skipped nodes
  */
-function extractChildText(node: SyntaxNode, doc: Text): string {
+function extractChildText(node: SyntaxNode, doc: Text): InlineTextPart[] {
     const name = node.name;
 
     // --- Keep math regions exactly as written (see VERBATIM_NODE_NAMES) ---
     if (VERBATIM_NODE_NAMES.has(name)) {
-        return doc.sliceString(node.from, node.to);
+        return [{ text: doc.sliceString(node.from, node.to), literal: true }];
     }
 
     if (isSkippedNode(node)) {
-        return '';
+        return [];
     }
 
     // --- Handle escaped characters (e.g., \* → *) ---
     // Escape node contains both backslash and character, extract just the character
     if (name === 'Escape') {
-        return doc.sliceString(node.from + 1, node.to);
+        return [{ text: doc.sliceString(node.from + 1, node.to), literal: true }];
     }
 
     if (TEXT_NODE_NAMES.has(name)) {
-        return doc.sliceString(node.from, node.to);
+        return [{ text: doc.sliceString(node.from, node.to), literal: name !== 'Text' }];
     }
 
     // --- Recurse into inline containers (Emphasis, Link, InlineCode, etc.) ---
@@ -153,22 +159,23 @@ function extractChildText(node: SyntaxNode, doc: Text): string {
  *
  * @param node - Lezer syntax node (heading or inline element)
  * @param doc - Source markdown document
- * @returns Cleaned text content without markdown formatting
+ * @returns Text parts without parsed markdown delimiters, retaining literal context
  *
  * @example
  * ```typescript
  * // For heading: "## **bold** and `code`"
- * // Returns: "bold and code"
+ * // Returns prose and literal text parts that combine to "bold and code"
  * ```
  */
-function extractInlineText(node: SyntaxNode, doc: Text): string {
-    let out = '';
+function extractInlineText(node: SyntaxNode, doc: Text): InlineTextPart[] {
+    const out: InlineTextPart[] = [];
+    const literal = node.name === 'InlineCode';
     const cursor = node.cursor();
 
     if (!cursor.firstChild()) {
         // Text-bearing leaves are returned by extractChildText before it recurses here,
         // so a childless node at this point contributes no heading text.
-        return '';
+        return [];
     }
 
     // Start from node beginning to capture Setext heading text before underlines.
@@ -178,30 +185,42 @@ function extractInlineText(node: SyntaxNode, doc: Text): string {
     do {
         // --- Handle gaps (plain unformatted text between inline elements) ---
         if (cursor.from > lastPos) {
-            out += doc.sliceString(lastPos, cursor.from);
+            out.push({ text: doc.sliceString(lastPos, cursor.from), literal });
         }
 
-        out += extractChildText(cursor.node, doc);
+        out.push(...extractChildText(cursor.node, doc));
         lastPos = cursor.to;
     } while (cursor.nextSibling());
 
     // Include any trailing gap. Whitespace is normalized by trim() in normalizeHeadingText.
     if (lastPos < node.to) {
-        out += doc.sliceString(lastPos, node.to);
+        out.push({ text: doc.sliceString(lastPos, node.to), literal });
     }
 
     return out;
 }
 
 /**
- * Strips inline formatting that Joplin supports but the markdown grammar may not parse.
- *
- * Examples:
- * - "==highlight==" -> "highlight"
- * - "++insert++" -> "insert"
+ * Strips unsupported delimiters only in prose, retaining the tree's literal context.
+ * Masking preserves UTF-16 offsets and whitespace while preventing code, math, URLs,
+ * and escaped characters from acting as delimiters. Formatting may still surround
+ * literal content or span parsed children, e.g. "==**bold** and `code`==".
  */
-function stripUnsupportedInlineFormatting(text: string): string {
-    return text.replace(UNSUPPORTED_INLINE_FORMATTING_PATTERN, '$2');
+function stripUnsupportedInlineFormatting(parts: InlineTextPart[]): string {
+    const text = parts.map((part) => part.text).join('');
+    const formattingText = parts.map((part) => (part.literal ? part.text.replace(/\S/g, 'x') : part.text)).join('');
+    let out = '';
+    let lastPos = 0;
+
+    for (const match of formattingText.matchAll(UNSUPPORTED_INLINE_FORMATTING_PATTERN)) {
+        const start = match.index;
+        const end = start + match[0].length;
+        const delimiterLength = match[1].length;
+        out += text.slice(lastPos, start) + text.slice(start + delimiterLength, end - delimiterLength);
+        lastPos = end;
+    }
+
+    return out + text.slice(lastPos);
 }
 
 /**

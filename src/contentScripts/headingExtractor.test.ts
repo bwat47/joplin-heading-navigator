@@ -202,6 +202,27 @@ describe('heading extraction', () => {
         expect(headings[3].text).toBe('Comparison a == b and c ++ d');
     });
 
+    it.each([
+        ['`==code== ++literal++`', '==code== ++literal++'],
+        ['**`==code==`** and ==prose==', '==code== and prose'],
+        ['==**bold** and `++code++`==', 'bold and ++code++'],
+        ['++[label](https://example.com)++', 'label'],
+        ['[==label==](https://example.com)', 'label'],
+        ['$a==b==c$ and ++prose++', '$a==b==c$ and prose'],
+        ['<https://example.com/==literal==>', 'https://example.com/==literal=='],
+        [String.raw`\=\=literal== and \+\+literal++`, '==literal== and ++literal++'],
+        ['==prose `==code==` end==', 'prose ==code== end'],
+        ['==a`==`', '==a=='],
+        ['++`++`a', '++++a'],
+        ['==**bold**==', 'bold'],
+        ['**==highlight==**', 'highlight'],
+        ['`==\u{1F600}==` and ==highlight==', '==\u{1F600}== and highlight'],
+    ])('preserves literal context when extracting %s', (source, expected) => {
+        const headings = extractHeadingsFromMarkdown(`# ${source}\n\n${source}\n---`);
+
+        expect(headings.map((heading) => heading.text)).toEqual([expected, expected]);
+    });
+
     it('handles nested and mixed inline formatting', () => {
         const content = `# **_Bold and Italic_** Text
 ## [**Bold Link**](url)
