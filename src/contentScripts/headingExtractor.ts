@@ -61,6 +61,21 @@ const SKIPPED_NODE_NAMES = new Set([
 const TEXT_NODE_NAMES = new Set(['Text', 'CodeText', 'URL', 'Emoji']);
 
 /**
+ * Nodes whose text cannot supply unsupported formatting delimiters. This is separate
+ * from verbatim extraction: inline code still loses its backticks, and escapes lose
+ * their backslash. Plain Text nodes remain eligible for formatting cleanup.
+ * InlineCode is included because its content can occupy gaps between CodeMark nodes.
+ */
+const PROTECTED_FORMATTING_NODE_NAMES = new Set([
+    ...VERBATIM_NODE_NAMES,
+    'InlineCode',
+    'CodeText',
+    'URL',
+    'Emoji',
+    'Escape',
+]);
+
+/**
  * Time budget for the synchronous ensureSyntaxTree pass in computeHeadingState.
  * Covers multi-megabyte documents in one shot (@lezer/markdown parses roughly
  * 1 MB in under 100 ms); exceeded only by pathological documents, which then
@@ -113,7 +128,7 @@ function isSkippedNode(node: SyntaxNode): boolean {
 
 interface InlineTextPart {
     text: string;
-    literal: boolean;
+    protectFormatting: boolean;
 }
 
 /**
@@ -125,10 +140,11 @@ interface InlineTextPart {
  */
 function extractChildText(node: SyntaxNode, doc: Text): InlineTextPart[] {
     const name = node.name;
+    const protectFormatting = PROTECTED_FORMATTING_NODE_NAMES.has(name);
 
     // --- Keep math regions exactly as written (see VERBATIM_NODE_NAMES) ---
     if (VERBATIM_NODE_NAMES.has(name)) {
-        return [{ text: doc.sliceString(node.from, node.to), literal: true }];
+        return [{ text: doc.sliceString(node.from, node.to), protectFormatting }];
     }
 
     if (isSkippedNode(node)) {
@@ -138,11 +154,11 @@ function extractChildText(node: SyntaxNode, doc: Text): InlineTextPart[] {
     // --- Handle escaped characters (e.g., \* → *) ---
     // Escape node contains both backslash and character, extract just the character
     if (name === 'Escape') {
-        return [{ text: doc.sliceString(node.from + 1, node.to), literal: true }];
+        return [{ text: doc.sliceString(node.from + 1, node.to), protectFormatting }];
     }
 
     if (TEXT_NODE_NAMES.has(name)) {
-        return [{ text: doc.sliceString(node.from, node.to), literal: name !== 'Text' }];
+        return [{ text: doc.sliceString(node.from, node.to), protectFormatting }];
     }
 
     // --- Recurse into inline containers (Emphasis, Link, InlineCode, etc.) ---
@@ -169,7 +185,7 @@ function extractChildText(node: SyntaxNode, doc: Text): InlineTextPart[] {
  */
 function extractInlineText(node: SyntaxNode, doc: Text): InlineTextPart[] {
     const out: InlineTextPart[] = [];
-    const literal = node.name === 'InlineCode';
+    const protectFormatting = PROTECTED_FORMATTING_NODE_NAMES.has(node.name);
     const cursor = node.cursor();
 
     if (!cursor.firstChild()) {
@@ -185,7 +201,7 @@ function extractInlineText(node: SyntaxNode, doc: Text): InlineTextPart[] {
     do {
         // --- Handle gaps (plain unformatted text between inline elements) ---
         if (cursor.from > lastPos) {
-            out.push({ text: doc.sliceString(lastPos, cursor.from), literal });
+            out.push({ text: doc.sliceString(lastPos, cursor.from), protectFormatting });
         }
 
         out.push(...extractChildText(cursor.node, doc));
@@ -194,7 +210,7 @@ function extractInlineText(node: SyntaxNode, doc: Text): InlineTextPart[] {
 
     // Include any trailing gap. Whitespace is normalized by trim() in normalizeHeadingText.
     if (lastPos < node.to) {
-        out.push({ text: doc.sliceString(lastPos, node.to), literal });
+        out.push({ text: doc.sliceString(lastPos, node.to), protectFormatting });
     }
 
     return out;
@@ -208,7 +224,9 @@ function extractInlineText(node: SyntaxNode, doc: Text): InlineTextPart[] {
  */
 function stripUnsupportedInlineFormatting(parts: InlineTextPart[]): string {
     const text = parts.map((part) => part.text).join('');
-    const formattingText = parts.map((part) => (part.literal ? part.text.replace(/\S/g, 'x') : part.text)).join('');
+    const formattingText = parts
+        .map((part) => (part.protectFormatting ? part.text.replace(/\S/g, 'x') : part.text))
+        .join('');
     let out = '';
     let lastPos = 0;
 
