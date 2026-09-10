@@ -141,6 +141,7 @@ function extractChildText(node: SyntaxNode, doc: Text): string {
     }
 
     // Decode only entity nodes so code spans and escaped references remain literal.
+    // Use strict (semicolon required) to align with typical commonmark behavior.
     if (name === 'Entity') {
         return decodeHTMLStrict(doc.sliceString(node.from, node.to));
     }
@@ -154,7 +155,7 @@ function extractChildText(node: SyntaxNode, doc: Text): string {
  * - Recursively collects Text + CodeText
  * - Skips syntax marks and heading markers
  * - Handles "gaps" (ranges not covered by any child nodes)
- * - Processes escape sequences and HTML tags
+ * - Processes escape sequences, HTML tags and HTML entities
  * - Copies math regions verbatim
  *
  * @param node - Lezer syntax node (heading or inline element)
