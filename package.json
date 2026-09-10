@@ -52,6 +52,7 @@
     },
     "dependencies": {
         "@joplin/fork-uslug": "^2.0.6",
+        "entities": "^8.1.0",
         "fuzzysort": "^3.1.0"
     },
     "overrides": {
