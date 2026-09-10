@@ -23,8 +23,6 @@ import logger from '../logger';
 import { HeadingItem } from '../types';
 import uslug from '@joplin/fork-uslug';
 
-const UNSUPPORTED_INLINE_FORMATTING_PATTERN = /(==|\+\+)(?=\S)([\s\S]*?\S)\1/g;
-
 /**
  * Nodes whose source text is copied verbatim instead of being walked.
  *
@@ -45,6 +43,8 @@ const VERBATIM_NODE_NAMES = new Set(['InlineMath', 'BlockMath']);
  * matched by suffix instead of being listed here.
  */
 const SKIPPED_NODE_NAMES = new Set([
+    'HighlightMarker', // Joplin's optional ==highlight== syntax
+    'InsertMarker', // Joplin's optional ++insert++ syntax
     'Image', // Skip images entirely (no alt text extraction)
     'LinkLabel',
     'LinkTitle',
@@ -194,17 +194,6 @@ function extractInlineText(node: SyntaxNode, doc: Text): string {
 }
 
 /**
- * Strips inline formatting that Joplin supports but the markdown grammar may not parse.
- *
- * Examples:
- * - "==highlight==" -> "highlight"
- * - "++insert++" -> "insert"
- */
-function stripUnsupportedInlineFormatting(text: string): string {
-    return text.replace(UNSUPPORTED_INLINE_FORMATTING_PATTERN, '$2');
-}
-
-/**
  * Normalizes heading text using Lezer AST to extract clean text.
  *
  * @param node - Lezer heading node (ATXHeading or SetextHeading)
@@ -212,7 +201,7 @@ function stripUnsupportedInlineFormatting(text: string): string {
  * @returns Cleaned heading text without markdown formatting
  */
 function normalizeHeadingText(node: SyntaxNode, doc: Text): string {
-    return stripUnsupportedInlineFormatting(extractInlineText(node, doc)).replace(/\s+/g, ' ').trim();
+    return extractInlineText(node, doc).replace(/\s+/g, ' ').trim();
 }
 
 function createUniqueAnchor(text: string, fallback: string, counts: Map<string, number>): string {

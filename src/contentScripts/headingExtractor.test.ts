@@ -1,3 +1,5 @@
+import { EditorState } from '@codemirror/state';
+import { markdown } from '@codemirror/lang-markdown';
 import { computeHeadingState } from './headingExtractor';
 import { createMarkdownState, extractHeadingsFromMarkdown } from '../testing/markdownState';
 
@@ -200,6 +202,27 @@ describe('heading extraction', () => {
         expect(headings[1].text).toBe('Inserted Text');
         expect(headings[2].text).toBe('Mixed highlight and insert syntax');
         expect(headings[3].text).toBe('Comparison a == b and c ++ d');
+    });
+
+    it.each([
+        ['# ==**Bold** and ++inserted++==', 'Bold and inserted'],
+        ['==Highlighted== and ++inserted++\n---', 'Highlighted and inserted'],
+        ['# ==a== ++b++', 'a b'],
+        ['# `==literal== ++literal++`', '==literal== ++literal++'],
+        [String.raw`# \==literal\== \++literal\++`, '==literal== ++literal++'],
+        ['# $a==b==c$ and $a++b++c$', '$a==b==c$ and $a++b++c$'],
+        ['# ==unclosed and ++unclosed', '==unclosed and ++unclosed'],
+    ])('uses syntax boundaries for %s', (content, expected) => {
+        expect(extractHeadingsFromMarkdown(content)[0].text).toBe(expected);
+    });
+
+    it('preserves literal delimiters when highlight and insert extensions are disabled', () => {
+        const state = EditorState.create({
+            doc: '# ==literal== and ++literal++',
+            extensions: [markdown()],
+        });
+
+        expect(computeHeadingState(state).headings[0].text).toBe('==literal== and ++literal++');
     });
 
     it('handles nested and mixed inline formatting', () => {
