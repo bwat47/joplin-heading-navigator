@@ -22,6 +22,7 @@ import type { SyntaxNode, Tree } from '@lezer/common';
 import logger from '../logger';
 import { HeadingItem } from '../types';
 import uslug from '@joplin/fork-uslug';
+import { decodeHTMLStrict } from 'entities';
 
 /**
  * Nodes whose source text is copied verbatim instead of being walked.
@@ -137,6 +138,11 @@ function extractChildText(node: SyntaxNode, doc: Text): string {
 
     if (TEXT_NODE_NAMES.has(name)) {
         return doc.sliceString(node.from, node.to);
+    }
+
+    // Decode only entity nodes so code spans and escaped references remain literal.
+    if (name === 'Entity') {
+        return decodeHTMLStrict(doc.sliceString(node.from, node.to));
     }
 
     // --- Recurse into inline containers (Emphasis, Link, InlineCode, etc.) ---

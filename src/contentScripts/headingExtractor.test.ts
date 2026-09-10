@@ -4,6 +4,27 @@ import { computeHeadingState } from './headingExtractor';
 import { createMarkdownState, extractHeadingsFromMarkdown } from '../testing/markdownState';
 
 describe('heading extraction', () => {
+    it.each(['&amp;', '&#38;', '&#x26;', '&'])('preserves ampersand text and anchors for %s', (entity) => {
+        expect(extractHeadingsFromMarkdown(`# A ${entity} B`)).toMatchObject([{ text: 'A & B', anchor: 'a-b' }]);
+    });
+
+    it('decodes entities inside formatted Setext headings', () => {
+        expect(extractHeadingsFromMarkdown('**Caf&eacute;**\n===')).toMatchObject([{ text: 'Café', anchor: 'café' }]);
+    });
+
+    it.each(['`&amp;`', '\\&amp;', '&MadeUpEntity;', '&amp'])('preserves literal reference %s', (source) => {
+        const expected = source === '`&amp;`' || source === '\\&amp;' ? '&amp;' : source;
+        expect(extractHeadingsFromMarkdown(`# ${source}`)[0].text).toBe(expected);
+    });
+
+    it('decodes entities once and deduplicates equivalent anchors', () => {
+        expect(extractHeadingsFromMarkdown('# &amp;amp;\n# A &amp; B\n# A &#38; B')).toMatchObject([
+            { text: '&amp;' },
+            { text: 'A & B', anchor: 'a-b' },
+            { text: 'A & B', anchor: 'a-b-2' },
+        ]);
+    });
+
     it('parses ATX and Setext headings including nested structures', () => {
         const content = [
             '# Title',
