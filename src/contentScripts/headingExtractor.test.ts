@@ -12,8 +12,12 @@ describe('heading extraction', () => {
         expect(extractHeadingsFromMarkdown('**Caf&eacute;**\n===')).toMatchObject([{ text: 'Café', anchor: 'café' }]);
     });
 
-    it.each(['`&amp;`', '\\&amp;', '&MadeUpEntity;', '&amp'])('preserves literal reference %s', (source) => {
-        const expected = source === '`&amp;`' || source === '\\&amp;' ? '&amp;' : source;
+    it.each([
+        ['`&amp;`', '&amp;'], // code span
+        ['\\&amp;', '&amp;'], // escaped ampersand
+        ['&MadeUpEntity;', '&MadeUpEntity;'], // unknown entity name
+        ['&amp', '&amp'], // missing terminating semicolon
+    ])('preserves literal reference %s', (source, expected) => {
         expect(extractHeadingsFromMarkdown(`# ${source}`)[0].text).toBe(expected);
     });
 
