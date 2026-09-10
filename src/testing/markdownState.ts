@@ -5,7 +5,7 @@
  * markdown language configuration, which is not published to npm (`@joplin/editor` is
  * app-internal). Tests use the closest published approximation instead:
  * `markdownLanguage` from @codemirror/lang-markdown, i.e. GFM plus subscript,
- * superscript and emoji extensions, plus an approximation of Joplin's inline math extension.
+ * superscript and emoji extensions, plus approximations of Joplin's math, highlight and insert extensions.
  * This file is the single place that prod-vs-test grammar divergence lives; keep any
  * grammar tweaks here.
  */
@@ -22,6 +22,32 @@ const FULL_PARSE_BUDGET_MS = 10_000;
 
 const DOLLAR_SIGN_CHARCODE = 36;
 const BACKSLASH_CHARCODE = 92;
+const EQUALS_SIGN_CHARCODE = 61;
+const PLUS_SIGN_CHARCODE = 43;
+
+/** Mirrors Joplin's double-character inline parser, as used by Rich Tables' test grammar. */
+function doubleCharConfig(charCode: number, name: string, markName: string): MarkdownConfig {
+    const delimiter = { resolve: name, mark: markName };
+    return {
+        defineNodes: [{ name }, { name: markName }],
+        parseInline: [
+            {
+                name,
+                parse(cx: InlineContext, current: number, pos: number): number {
+                    if (current !== charCode || cx.char(pos + 1) !== charCode || cx.char(pos + 2) === charCode) {
+                        return -1;
+                    }
+                    const canStart = /\S/.test(cx.slice(pos + 2, pos + 3));
+                    const canEnd = /\S/.test(cx.slice(pos - 1, pos));
+                    if (!canStart && !canEnd) {
+                        return -1;
+                    }
+                    return cx.addDelimiter(delimiter, pos, pos + 2, canStart, canEnd);
+                },
+            },
+        ],
+    };
+}
 
 /**
  * Joplin marks `$...$` as an `InlineMath` node wrapping an `InlineMathContent` node, and
@@ -74,7 +100,14 @@ const inlineMathConfig: MarkdownConfig = {
 
 /** Markdown language extension approximating Joplin's editor grammar. */
 export function markdownEditorExtension(): Extension {
-    return markdown({ base: markdownLanguage, extensions: [inlineMathConfig] });
+    return markdown({
+        base: markdownLanguage,
+        extensions: [
+            inlineMathConfig,
+            doubleCharConfig(EQUALS_SIGN_CHARCODE, 'Highlight', 'HighlightMarker'),
+            doubleCharConfig(PLUS_SIGN_CHARCODE, 'Insert', 'InsertMarker'),
+        ],
+    });
 }
 
 /** Creates a headless editor state carrying the markdown syntax tree. */
