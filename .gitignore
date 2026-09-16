@@ -11,4 +11,4 @@ publish/
 *.diff
 .codex
 gemini/
-prompts/
+.prompts/
