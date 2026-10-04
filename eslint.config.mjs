@@ -11,7 +11,7 @@ import vitest from '@vitest/eslint-plugin';
 
 export default [
     {
-        ignores: ['api/**', 'dist/**'],
+        ignores: ['api/**', 'dist/**', 'webpack.config.js'],
     },
 
     js.configs.recommended,
@@ -48,7 +48,7 @@ export default [
         },
     },
 
-    // Root JS config files (webpack, prettier) aren't part of the typed source; lint them untyped.
+    // Root JS config files (e.g. .prettierrc.js) aren't part of the typed source; lint them untyped.
     {
         files: ['**/*.js'],
         ...tsPlugin.configs['flat/disable-type-checked'],
