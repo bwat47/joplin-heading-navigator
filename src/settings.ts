@@ -159,6 +159,7 @@ export async function registerPanelSettings(): Promise<void> {
  * unregistered keys. Resetting it to its default afterwards makes this run at most once.
  */
 async function migrateLegacyCompactMode(): Promise<void> {
+    // eslint-disable-next-line sonarjs/deprecation -- settings.value is no longer deprecated; bundled Joplin API types are outdated.
     if (await joplin.settings.value(LEGACY_SETTING_COMPACT_MODE)) {
         await joplin.settings.setValue(SETTING_HEADING_METADATA_DISPLAY, HEADING_METADATA_DISPLAY.compact);
         await joplin.settings.setValue(LEGACY_SETTING_COMPACT_MODE, false);
@@ -176,32 +177,36 @@ export async function loadContentScriptSettings(): Promise<ContentScriptSettings
 
     const widthResult = normalizePanelWidth(values[SETTING_PANEL_WIDTH]);
     if (widthResult.changed) {
-        logger.warn(`Invalid panel width setting: ${values[SETTING_PANEL_WIDTH]}. Using ${widthResult.value}px.`);
+        logger.warn(
+            `Invalid panel width setting: ${String(values[SETTING_PANEL_WIDTH])}. Using ${widthResult.value}px.`
+        );
     }
 
     const heightResult = normalizePanelHeightPercentage(values[SETTING_PANEL_MAX_HEIGHT]);
     if (heightResult.changed) {
-        logger.warn(`Invalid panel height setting: ${values[SETTING_PANEL_MAX_HEIGHT]}. Using ${heightResult.value}%.`);
+        logger.warn(
+            `Invalid panel height setting: ${String(values[SETTING_PANEL_MAX_HEIGHT])}. Using ${heightResult.value}%.`
+        );
     }
 
     const topOffsetResult = normalizePanelTopOffset(values[SETTING_PANEL_TOP_OFFSET]);
     if (topOffsetResult.changed) {
         logger.warn(
-            `Invalid panel top offset setting: ${values[SETTING_PANEL_TOP_OFFSET]}. Using ${topOffsetResult.value}px.`
+            `Invalid panel top offset setting: ${String(values[SETTING_PANEL_TOP_OFFSET])}. Using ${topOffsetResult.value}px.`
         );
     }
 
     const metadataDisplayResult = normalizeHeadingMetadataDisplay(values[SETTING_HEADING_METADATA_DISPLAY]);
     if (metadataDisplayResult.changed) {
         logger.warn(
-            `Invalid heading metadata display setting: ${values[SETTING_HEADING_METADATA_DISPLAY]}. Using ${metadataDisplayResult.value}.`
+            `Invalid heading metadata display setting: ${String(values[SETTING_HEADING_METADATA_DISPLAY])}. Using ${metadataDisplayResult.value}.`
         );
     }
 
     const previewHeadingsResult = normalizeBooleanSetting(values[SETTING_PREVIEW_HEADINGS], DEFAULT_PREVIEW_HEADINGS);
     if (previewHeadingsResult.changed) {
         logger.warn(
-            `Invalid preview headings setting: ${values[SETTING_PREVIEW_HEADINGS]}. Using ${previewHeadingsResult.value}.`
+            `Invalid preview headings setting: ${String(values[SETTING_PREVIEW_HEADINGS])}. Using ${previewHeadingsResult.value}.`
         );
     }
 
@@ -221,7 +226,9 @@ export async function loadPinnedState(): Promise<boolean> {
     const pinnedResult = normalizeBooleanSetting(values[SETTING_PANEL_PINNED], false);
 
     if (pinnedResult.changed) {
-        logger.warn(`Invalid panel pinned setting: ${values[SETTING_PANEL_PINNED]}. Using ${pinnedResult.value}.`);
+        logger.warn(
+            `Invalid panel pinned setting: ${String(values[SETTING_PANEL_PINNED])}. Using ${pinnedResult.value}.`
+        );
     }
 
     return pinnedResult.value;
@@ -232,12 +239,13 @@ export async function savePinnedState(pinned: boolean): Promise<void> {
 }
 
 export async function loadCopyLinkSettings(): Promise<CopyLinkSettings> {
-    const value = await joplin.settings.value(SETTING_COPY_INTERNAL_ANCHOR_LINKS);
+    // eslint-disable-next-line sonarjs/deprecation -- settings.value is no longer deprecated; bundled Joplin API types are outdated.
+    const value: unknown = await joplin.settings.value(SETTING_COPY_INTERNAL_ANCHOR_LINKS);
     const copyInternalAnchorLinksResult = normalizeBooleanSetting(value, false);
 
     if (copyInternalAnchorLinksResult.changed) {
         logger.warn(
-            `Invalid copy internal anchor links setting: ${value}. Using ${copyInternalAnchorLinksResult.value}.`
+            `Invalid copy internal anchor links setting: ${String(value)}. Using ${copyInternalAnchorLinksResult.value}.`
         );
     }
 

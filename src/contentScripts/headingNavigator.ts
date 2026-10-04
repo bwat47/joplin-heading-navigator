@@ -24,7 +24,7 @@
  * - ui/headingPanel.ts - Floating panel UI implementation
  */
 
-import { EditorSelection } from '@codemirror/state';
+import { EditorSelection, type FacetReader } from '@codemirror/state';
 import { EditorView, ViewPlugin, ViewUpdate } from '@codemirror/view';
 import { syntaxTree } from '@codemirror/language';
 import type { CodeMirrorControl, ContentScriptContext, MarkdownEditorContentScriptModule } from 'api/types';
@@ -297,7 +297,7 @@ export default function headingNavigator(context: ContentScriptContext): Markdow
             // Set on editor teardown so the async startup restore cannot mount a panel
             // (and leak its document-level listeners) against a destroyed view.
             let editorDestroyed = false;
-            const noteIdFacet = editorControl.joplinExtensions?.noteIdFacet;
+            const noteIdFacet = editorControl.joplinExtensions?.noteIdFacet as FacetReader<unknown> | undefined;
 
             const resolveNoteId = (): string | null => {
                 if (!noteIdFacet) {
@@ -306,7 +306,7 @@ export default function headingNavigator(context: ContentScriptContext): Markdow
                 try {
                     const value = view.state.facet(noteIdFacet);
                     if (Array.isArray(value)) {
-                        const candidate = value[0];
+                        const candidate: unknown = value[0];
                         return typeof candidate === 'string' && candidate ? candidate : null;
                     }
                     return typeof value === 'string' && value ? value : null;

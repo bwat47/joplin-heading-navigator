@@ -44,14 +44,14 @@ async function handleCopyHeadingLink(message: CopyHeadingLinkMessage): Promise<v
             return;
         }
 
-        const note = await joplin.data.get(['notes', noteId], { fields: ['id', 'title'] });
+        const note: unknown = await joplin.data.get(['notes', noteId], { fields: ['id', 'title'] });
 
-        if (!note || typeof note.id !== 'string') {
+        if (!note || typeof note !== 'object' || !('id' in note) || typeof note.id !== 'string') {
             logger.warn('Unable to copy heading link because note could not be resolved', { noteId, headingAnchor });
             return;
         }
 
-        const noteTitle = typeof note.title === 'string' && note.title ? note.title : 'Untitled';
+        const noteTitle = 'title' in note && typeof note.title === 'string' && note.title ? note.title : 'Untitled';
         const markdown = formatExternalHeadingLink(headingText, noteTitle, noteId, headingAnchor);
 
         await joplin.clipboard.writeText(markdown);
@@ -132,13 +132,17 @@ async function registerToolbarButton(): Promise<void> {
     );
 }
 
-joplin.plugins.register({
-    onStart: async () => {
-        logger.info('Heading Navigator plugin starting');
-        await registerPanelSettings();
-        await registerContentScripts();
-        await registerCommands();
-        await registerMenuItems();
-        await registerToolbarButton();
-    },
-});
+joplin.plugins
+    .register({
+        onStart: async () => {
+            logger.info('Heading Navigator plugin starting');
+            await registerPanelSettings();
+            await registerContentScripts();
+            await registerCommands();
+            await registerMenuItems();
+            await registerToolbarButton();
+        },
+    })
+    .catch((error: unknown) => {
+        logger.error('Failed to register Heading Navigator plugin', error);
+    });

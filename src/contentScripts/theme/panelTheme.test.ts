@@ -32,7 +32,7 @@ describe('createPanelCss', () => {
 
     it('prevents native text selection and callouts across the panel', () => {
         const css = createPanelCss({ width: 400, maxHeightRatio: 0.7 });
-        const panelRule = css.match(/\.heading-navigator-panel \{[^}]*\}/)?.[0];
+        const panelRule = /\.heading-navigator-panel \{[^}]*\}/.exec(css)?.[0];
 
         expect(panelRule).toContain('-webkit-touch-callout: none;');
         expect(panelRule).toContain('-webkit-user-select: none;');
@@ -42,7 +42,7 @@ describe('createPanelCss', () => {
 
     it('keeps the filter input selectable so clipboard actions still work', () => {
         const css = createPanelCss({ width: 400, maxHeightRatio: 0.7 });
-        const inputRule = css.match(/(?:^|\n)\.heading-navigator-input \{[^}]*\}/)?.[0];
+        const inputRule = /(?:^|\n)\.heading-navigator-input \{[^}]*\}/.exec(css)?.[0];
 
         expect(inputRule).toContain('-webkit-touch-callout: default;');
         expect(inputRule).toContain('-webkit-user-select: text;');
