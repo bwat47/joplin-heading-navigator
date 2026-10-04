@@ -132,13 +132,17 @@ async function registerToolbarButton(): Promise<void> {
     );
 }
 
-joplin.plugins.register({
-    onStart: async () => {
-        logger.info('Heading Navigator plugin starting');
-        await registerPanelSettings();
-        await registerContentScripts();
-        await registerCommands();
-        await registerMenuItems();
-        await registerToolbarButton();
-    },
-});
+joplin.plugins
+    .register({
+        onStart: async () => {
+            logger.info('Heading Navigator plugin starting');
+            await registerPanelSettings();
+            await registerContentScripts();
+            await registerCommands();
+            await registerMenuItems();
+            await registerToolbarButton();
+        },
+    })
+    .catch((error: unknown) => {
+        logger.error('Failed to register Heading Navigator plugin', error);
+    });
