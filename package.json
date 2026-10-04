@@ -47,7 +47,7 @@
         "tar": "^7.5.16",
         "ts-loader": "^9.5.7",
         "typescript": "^6.0.3",
-        "vitest": "^4.1.10",
+        "vitest": "^5.0.3",
         "webpack": "^5.106.2",
         "webpack-cli": "^7.0.2"
     },
