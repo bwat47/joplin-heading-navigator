@@ -48,6 +48,12 @@ export default [
         },
     },
 
+    // Root JS config files (webpack, prettier) aren't part of the typed source; lint them untyped.
+    {
+        files: ['**/*.js'],
+        ...tsPlugin.configs['flat/disable-type-checked'],
+    },
+
     // Vitest tests use an assertion-aware version of the unbound-method rule.
     {
         files: ['src/**/*.test.ts'],
