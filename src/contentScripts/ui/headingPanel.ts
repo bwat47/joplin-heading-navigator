@@ -218,7 +218,7 @@ export class HeadingPanel {
             this.list.addEventListener('contextmenu', this.handleContextMenuListener);
         }
 
-        this.view.dom.ownerDocument!.addEventListener('mousedown', this.handleDocumentMouseDownListener, true);
+        this.view.dom.ownerDocument.addEventListener('mousedown', this.handleDocumentMouseDownListener, true);
     }
 
     private createHeaderButton(className: string, label: string): HTMLButtonElement {
@@ -486,7 +486,7 @@ export class HeadingPanel {
             this.list.removeEventListener('contextmenu', this.handleContextMenuListener);
         }
 
-        this.view.dom.ownerDocument!.removeEventListener('mousedown', this.handleDocumentMouseDownListener, true);
+        this.view.dom.ownerDocument.removeEventListener('mousedown', this.handleDocumentMouseDownListener, true);
         if (this.previewDebounceTimer !== null) {
             clearTimeout(this.previewDebounceTimer);
             this.previewDebounceTimer = null;
@@ -1039,7 +1039,7 @@ export class HeadingPanel {
 }
 
 function ensurePanelStyles(view: EditorView, options: PanelDimensions): void {
-    const doc = view.dom.ownerDocument!;
+    const doc = view.dom.ownerDocument;
     // Cache key based only on dimensions since CSS variables handle theme changes automatically
     const signature = [options.width.toString(), options.maxHeightRatio.toFixed(4)].join('|');
 
