@@ -159,6 +159,7 @@ export async function registerPanelSettings(): Promise<void> {
  * unregistered keys. Resetting it to its default afterwards makes this run at most once.
  */
 async function migrateLegacyCompactMode(): Promise<void> {
+    // eslint-disable-next-line sonarjs/deprecation -- settings.value is no longer deprecated; bundled Joplin API types are outdated.
     if (await joplin.settings.value(LEGACY_SETTING_COMPACT_MODE)) {
         await joplin.settings.setValue(SETTING_HEADING_METADATA_DISPLAY, HEADING_METADATA_DISPLAY.compact);
         await joplin.settings.setValue(LEGACY_SETTING_COMPACT_MODE, false);
@@ -238,6 +239,7 @@ export async function savePinnedState(pinned: boolean): Promise<void> {
 }
 
 export async function loadCopyLinkSettings(): Promise<CopyLinkSettings> {
+    // eslint-disable-next-line sonarjs/deprecation -- settings.value is no longer deprecated; bundled Joplin API types are outdated.
     const value: unknown = await joplin.settings.value(SETTING_COPY_INTERNAL_ANCHOR_LINKS);
     const copyInternalAnchorLinksResult = normalizeBooleanSetting(value, false);
 
