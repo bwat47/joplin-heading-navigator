@@ -980,7 +980,8 @@ export class HeadingPanel {
     private updateSelection(): void {
         const items = this.list.querySelectorAll<HTMLLIElement>('.heading-navigator-item');
         items.forEach((item) => {
-            if (item.dataset.headingId === this.selectedHeadingId) {
+            const headingId = item.dataset.headingId;
+            if (typeof headingId === 'string' && headingId === this.selectedHeadingId) {
                 item.classList.add('is-selected');
             } else {
                 item.classList.remove('is-selected');
