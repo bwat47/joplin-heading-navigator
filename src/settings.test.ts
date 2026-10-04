@@ -1,8 +1,8 @@
-import { SettingItemType } from 'api/types';
+import { SettingItemType, type SettingItem } from 'api/types';
 
 const joplinSettingsMocks = vi.hoisted(() => ({
     registerSection: vi.fn(),
-    registerSettings: vi.fn(),
+    registerSettings: vi.fn<(settings: Record<string, SettingItem>) => Promise<void>>(),
     values: vi.fn(),
     value: vi.fn(),
     setValue: vi.fn(),
@@ -21,7 +21,7 @@ const METADATA_DISPLAY_KEY = 'headingNavigator.headingMetadataDisplay';
 const PREVIEW_HEADINGS_KEY = 'headingNavigator.previewHeadings';
 const LEGACY_COMPACT_MODE_KEY = 'headingNavigator.compactMode';
 
-function registeredSettings(): Record<string, Record<string, unknown>> {
+function registeredSettings(): Record<string, SettingItem> {
     return joplinSettingsMocks.registerSettings.mock.calls[0][0];
 }
 

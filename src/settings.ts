@@ -232,7 +232,7 @@ export async function savePinnedState(pinned: boolean): Promise<void> {
 }
 
 export async function loadCopyLinkSettings(): Promise<CopyLinkSettings> {
-    const value = await joplin.settings.value(SETTING_COPY_INTERNAL_ANCHOR_LINKS);
+    const value: unknown = await joplin.settings.value(SETTING_COPY_INTERNAL_ANCHOR_LINKS);
     const copyInternalAnchorLinksResult = normalizeBooleanSetting(value, false);
 
     if (copyInternalAnchorLinksResult.changed) {

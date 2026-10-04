@@ -70,7 +70,7 @@ export async function syncInitialContentScriptSettings(
         const message = {
             type: 'getContentScriptSettings',
         } satisfies ContentScriptToPluginMessage;
-        const response = await context.postMessage(message);
+        const response: unknown = await context.postMessage(message);
         if (!shouldApply()) {
             return null;
         }
