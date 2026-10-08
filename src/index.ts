@@ -143,18 +143,14 @@ async function registerToolbarButton(isMobile: boolean): Promise<void> {
     await joplin.views.toolbarButtons.create('headingNavigatorToolbarButton', COMMAND_GO_TO_HEADING, location);
 }
 
-joplin.plugins
-    .register({
-        onStart: async () => {
-            logger.info('Heading Navigator plugin starting');
-            const isMobile = await isMobilePlatform();
-            await registerPanelSettings();
-            await registerContentScripts();
-            await registerCommands(isMobile);
-            await registerMenuItems();
-            await registerToolbarButton(isMobile);
-        },
-    })
-    .catch((error: unknown) => {
-        logger.error('Failed to register Heading Navigator plugin', error);
-    });
+void joplin.plugins.register({
+    onStart: async () => {
+        logger.info('Heading Navigator plugin starting');
+        const isMobile = await isMobilePlatform();
+        await registerPanelSettings();
+        await registerContentScripts();
+        await registerCommands(isMobile);
+        await registerMenuItems();
+        await registerToolbarButton(isMobile);
+    },
+});
