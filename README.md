@@ -18,7 +18,7 @@ A Joplin plugin that provides a simple overlay panel allowing you to navigate an
 
 ## How to use
 
-In the markdown editor, click the Heading Navigator toolbar button, or use the assigned keyboard shortcut.
+In the markdown editor, click the Heading Navigator button in the note toolbar, or use the assigned keyboard shortcut. The button is grayed out when the markdown editor isn't visible (Rich Text editor or viewer-only layout).
 
 There isn't a default keyboard shortcut, you can assign one under Tools | Options | Keyboard Shortcuts | "Go to Heading" command.
 

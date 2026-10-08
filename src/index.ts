@@ -32,6 +32,21 @@ import type { ContentScriptToPluginMessage, CopyHeadingLinkMessage, PanelRestore
 import { formatExternalHeadingLink, formatInternalHeadingLink } from './linkFormatting';
 import type { ContentScriptSettings } from './types';
 
+/**
+ * Desktop when-clause: true only when the CodeMirror (markdown) editor pane is shown,
+ * i.e. not in the Rich Text editor and not in viewer-only layout.
+ *
+ * Not used on mobile: the mobile note toolbar menu caches its enabled state and doesn't
+ * refresh it when switching between the viewer and editor, so the button is placed in
+ * the editor toolbar there instead (which only shows in the markdown editor).
+ */
+const DESKTOP_ENABLED_CONDITION = 'markdownEditorPaneVisible';
+
+async function isMobilePlatform(): Promise<boolean> {
+    const versionInfo = await joplin.versionInfo();
+    return versionInfo.platform === 'mobile';
+}
+
 async function handleCopyHeadingLink(message: CopyHeadingLinkMessage): Promise<void> {
     const { noteId, headingText, headingAnchor } = message;
 
@@ -62,11 +77,11 @@ async function handleCopyHeadingLink(message: CopyHeadingLinkMessage): Promise<v
 }
 
 async function handleGetPanelRestoreState(): Promise<PanelRestoreState> {
-    const [pinned, versionInfo] = await Promise.all([loadPinnedState(), joplin.versionInfo()]);
+    const [pinned, isMobile] = await Promise.all([loadPinnedState(), isMobilePlatform()]);
 
     return {
         pinned,
-        isMobile: versionInfo.platform === 'mobile',
+        isMobile,
     };
 }
 
@@ -102,15 +117,14 @@ async function registerContentScripts(): Promise<void> {
     );
 }
 
-async function registerCommands(): Promise<void> {
+async function registerCommands(isMobile: boolean): Promise<void> {
     await joplin.commands.register({
         name: COMMAND_GO_TO_HEADING,
         label: 'Go to Heading',
         iconName: 'fas fa-heading',
+        enabledCondition: isMobile ? undefined : DESKTOP_ENABLED_CONDITION,
         execute: async () => {
             logger.info('Go to Heading command triggered');
-            const versionInfo = await joplin.versionInfo();
-            const isMobile = versionInfo.platform === 'mobile';
 
             await joplin.commands.execute('editor.execCommand', {
                 name: EDITOR_COMMAND_TOGGLE_PANEL,
@@ -124,23 +138,21 @@ async function registerMenuItems(): Promise<void> {
     await joplin.views.menuItems.create('headingNavigatorMenuItem', COMMAND_GO_TO_HEADING, MenuItemLocation.Edit);
 }
 
-async function registerToolbarButton(): Promise<void> {
-    await joplin.views.toolbarButtons.create(
-        'headingNavigatorToolbarButton',
-        COMMAND_GO_TO_HEADING,
-        ToolbarButtonLocation.EditorToolbar
-    );
+async function registerToolbarButton(isMobile: boolean): Promise<void> {
+    const location = isMobile ? ToolbarButtonLocation.EditorToolbar : ToolbarButtonLocation.NoteToolbar;
+    await joplin.views.toolbarButtons.create('headingNavigatorToolbarButton', COMMAND_GO_TO_HEADING, location);
 }
 
 joplin.plugins
     .register({
         onStart: async () => {
             logger.info('Heading Navigator plugin starting');
+            const isMobile = await isMobilePlatform();
             await registerPanelSettings();
             await registerContentScripts();
-            await registerCommands();
+            await registerCommands(isMobile);
             await registerMenuItems();
-            await registerToolbarButton();
+            await registerToolbarButton(isMobile);
         },
     })
     .catch((error: unknown) => {
