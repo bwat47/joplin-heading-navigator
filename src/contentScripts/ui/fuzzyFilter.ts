@@ -10,7 +10,7 @@
 import fuzzysort from 'fuzzysort';
 import type { HeadingItem } from '../../types';
 
-const FUZZY_THRESHOLD = -10000;
+const FUZZY_THRESHOLD = 0; // Accept any match on fuzzysort's 0–1 score scale.
 const FUZZY_LIMIT = 100;
 
 /**
