@@ -16,11 +16,11 @@
  * @see extractInlineText - Recursive tree walker for extracting clean text
  */
 
-import { EditorState, Text } from '@codemirror/state';
+import type { EditorState, Text } from '@codemirror/state';
 import { ensureSyntaxTree, syntaxTree } from '@codemirror/language';
 import type { SyntaxNode, Tree } from '@lezer/common';
 import logger from '../logger';
-import { HeadingItem } from '../types';
+import type { HeadingItem } from '../types';
 import uslug from '@joplin/fork-uslug';
 import { decodeHTMLStrict } from 'entities';
 

@@ -1,4 +1,4 @@
-import { EditorView } from '@codemirror/view';
+import type { EditorView } from '@codemirror/view';
 import { HEADING_METADATA_DISPLAY } from '../../headingMetadataDisplay';
 import type { ContentScriptSettings, HeadingItem, PanelDimensions } from '../../types';
 import { createPanelCss, PANEL_TOP_OFFSET_VAR } from '../theme/panelTheme';

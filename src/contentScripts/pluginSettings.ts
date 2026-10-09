@@ -1,5 +1,5 @@
 import { Compartment, Facet, type EditorState, type Extension } from '@codemirror/state';
-import { EditorView } from '@codemirror/view';
+import type { EditorView } from '@codemirror/view';
 import type { ContentScriptContext } from 'api/types';
 import type { ContentScriptToPluginMessage } from '../messages';
 import { DEFAULT_HEADING_METADATA_DISPLAY, normalizeHeadingMetadataDisplay } from '../headingMetadataDisplay';

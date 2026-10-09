@@ -540,7 +540,7 @@ describe('heading fill-in on large documents', () => {
 
         // Force the opening computation to a zero parse budget so the partial path
         // is taken deterministically regardless of machine speed.
-        const actual = await vi.importActual<typeof import('./headingExtractor')>('./headingExtractor');
+        const actual = await vi.importActual<typeof headingExtractor>('./headingExtractor');
         computeHeadingStateSpy.mockImplementationOnce((state) => actual.computeHeadingState(state, 0));
     });
 
