@@ -1,7 +1,7 @@
 import { EditorSelection, EditorState, StateEffect, type Extension } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import type { CodeMirrorControl, ContentScriptContext } from 'api/types';
-import { EDITOR_COMMAND_TOGGLE_PANEL } from '../constants';
+import { EDITOR_COMMAND_TOGGLE_PANEL } from '../commandIds';
 import { HEADING_METADATA_DISPLAY } from '../headingMetadataDisplay';
 import type { ContentScriptSettings } from '../types';
 import type { PanelRestoreState } from '../messages';
