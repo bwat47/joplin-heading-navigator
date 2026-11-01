@@ -225,7 +225,8 @@ function isSameSelection(a: SelectionLike, b: SelectionLike): boolean {
 }
 
 function findActiveHeadingId(headings: HeadingItem[], position: number): string | null {
-    if (!headings.length) {
+    const firstHeading = headings[0];
+    if (!firstHeading) {
         return null;
     }
 
@@ -238,7 +239,7 @@ function findActiveHeadingId(headings: HeadingItem[], position: number): string 
         }
     }
 
-    return candidate?.id ?? headings[0].id;
+    return candidate?.id ?? firstHeading.id;
 }
 
 function setEditorSelection(view: EditorView, heading: HeadingItem, focusEditor: boolean): void {

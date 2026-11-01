@@ -10,6 +10,7 @@
         "isolatedModules": true,
         "noImplicitOverride": true,
         "noFallthroughCasesInSwitch": true,
+        "noUncheckedIndexedAccess": true,
         "allowUnreachableCode": false,
         "types": ["node", "vitest/globals"],
         "paths": {

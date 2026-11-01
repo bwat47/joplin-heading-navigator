@@ -21,7 +21,7 @@ const PREVIEW_HEADINGS_KEY = 'headingNavigator.previewHeadings';
 const LEGACY_COMPACT_MODE_KEY = 'headingNavigator.compactMode';
 
 function registeredSettings(): Record<string, SettingItem> {
-    return joplinSettingsMocks.registerSettings.mock.calls[0][0];
+    return joplinSettingsMocks.registerSettings.mock.calls[0]![0];
 }
 
 describe('panel settings', () => {
@@ -41,7 +41,7 @@ describe('panel settings', () => {
             section: 'headingNavigator',
             isEnum: true,
         });
-        expect(Object.keys(setting.options as Record<string, string>)).toEqual([
+        expect(Object.keys(setting?.options as Record<string, string>)).toEqual([
             HEADING_METADATA_DISPLAY.full,
             HEADING_METADATA_DISPLAY.compact,
             HEADING_METADATA_DISPLAY.none,

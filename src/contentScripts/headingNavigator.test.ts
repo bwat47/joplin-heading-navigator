@@ -122,7 +122,7 @@ describe('heading navigator panel lifecycle', () => {
         const itemsAfter = Array.from(document.querySelectorAll<HTMLLIElement>('.heading-navigator-item'));
         expect(computeHeadingStateSpy).toHaveBeenCalledTimes(1);
         expect(itemsAfter).toEqual(itemsBefore);
-        expect(itemsAfter[1].classList.contains('is-selected')).toBe(true);
+        expect(itemsAfter[1]?.classList.contains('is-selected')).toBe(true);
     });
 
     it('focuses the filter instead of closing when the command is invoked while pinned', () => {
@@ -196,7 +196,7 @@ describe('heading navigator panel lifecycle', () => {
         const pinButton = document.querySelector<HTMLButtonElement>('.heading-navigator-pin-button')!;
         pinButton.click();
 
-        document.querySelectorAll<HTMLLIElement>('.heading-navigator-item')[1].click();
+        document.querySelectorAll<HTMLLIElement>('.heading-navigator-item')[1]!.click();
         expect(view.state.selection.main.head).toBe(7);
         expect(document.querySelector('.heading-navigator-panel')).not.toBeNull();
         expect(document.activeElement).toBe(view.contentDOM);
@@ -226,10 +226,10 @@ describe('heading navigator panel lifecycle', () => {
         vi.spyOn(view.scrollDOM, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, -1883.5, 400, 2000));
 
         togglePanel(true);
-        document.querySelectorAll<HTMLLIElement>('.heading-navigator-item')[1].click();
+        document.querySelectorAll<HTMLLIElement>('.heading-navigator-item')[1]!.click();
         vi.advanceTimersByTime(160);
         expect(measureRequests).toHaveLength(1);
-        measureRequests[0]();
+        measureRequests[0]!();
 
         expect(debugSpy).toHaveBeenCalledWith('Scroll stabilization measurement', {
             selectionFrom: 7,
@@ -250,10 +250,10 @@ describe('heading navigator panel lifecycle', () => {
         vi.spyOn(view.scrollDOM, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 48, 400, 500));
 
         togglePanel(false);
-        document.querySelectorAll<HTMLLIElement>('.heading-navigator-item')[1].click();
+        document.querySelectorAll<HTMLLIElement>('.heading-navigator-item')[1]!.click();
         vi.advanceTimersByTime(160);
         expect(measureRequests).toHaveLength(1);
-        measureRequests[0]();
+        measureRequests[0]!();
 
         expect(debugSpy).toHaveBeenCalledWith('Scroll stabilization measurement', {
             selectionFrom: 7,
@@ -278,10 +278,10 @@ describe('heading navigator panel lifecycle', () => {
         });
 
         togglePanel(false);
-        document.querySelectorAll<HTMLLIElement>('.heading-navigator-item')[1].click();
+        document.querySelectorAll<HTMLLIElement>('.heading-navigator-item')[1]!.click();
         vi.advanceTimersByTime(160);
         expect(measureRequests).toHaveLength(1);
-        measureRequests[0]();
+        measureRequests[0]!();
 
         expect(debugSpy).toHaveBeenCalledWith('Scroll stabilization measurement', {
             selectionFrom: 7,
@@ -299,10 +299,10 @@ describe('heading navigator panel lifecycle', () => {
         vi.spyOn(view.scrollDOM, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, -1883.5, 400, 2000));
 
         togglePanel(true);
-        document.querySelectorAll<HTMLLIElement>('.heading-navigator-item')[1].click();
+        document.querySelectorAll<HTMLLIElement>('.heading-navigator-item')[1]!.click();
         vi.advanceTimersByTime(160);
         expect(measureRequests).toHaveLength(1);
-        measureRequests[0]();
+        measureRequests[0]!();
         vi.advanceTimersByTime(0);
 
         // The initial navigation scroll plus one corrective pass.

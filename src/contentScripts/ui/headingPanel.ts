@@ -257,6 +257,8 @@ export class HeadingPanel {
 
     private handleTouchStart(event: TouchEvent): void {
         const touch = event.touches[0];
+        if (!touch) return;
+
         this.touchStartCoords = { x: touch.clientX, y: touch.clientY };
         this.isLongPressTriggered = false;
 
@@ -270,9 +272,9 @@ export class HeadingPanel {
     }
 
     private handleTouchMove(event: TouchEvent): void {
-        if (!this.touchStartCoords) return;
-
         const touch = event.touches[0];
+        if (!this.touchStartCoords || !touch) return;
+
         const moveX = Math.abs(touch.clientX - this.touchStartCoords.x);
         const moveY = Math.abs(touch.clientY - this.touchStartCoords.y);
 
@@ -605,8 +607,9 @@ export class HeadingPanel {
         this.previousFilterText = normalized;
 
         this.filtered = fuzzyFilter(normalized, this.headings);
+        const firstMatch = this.filtered[0];
 
-        if (this.filtered.length === 0) {
+        if (!firstMatch) {
             this.selectedHeadingId = null;
         } else if (!normalized && restoreInitialWhenCleared) {
             // When filter is completely cleared by user input, restore the initial selection
@@ -614,17 +617,17 @@ export class HeadingPanel {
             const initialHeading = this.initialSelectedHeadingId
                 ? this.filtered.find((h) => h.id === this.initialSelectedHeadingId)
                 : null;
-            this.selectedHeadingId = initialHeading ? initialHeading.id : this.filtered[0].id;
+            this.selectedHeadingId = initialHeading ? initialHeading.id : firstMatch.id;
         } else if (normalized && filterChanged) {
             // When filter text changed, always select the first matching heading
             // This matches VS Code/Sublime Text behavior: as you type or backspace,
             // the selection follows the first match in document order
-            this.selectedHeadingId = this.filtered[0].id;
+            this.selectedHeadingId = firstMatch.id;
         } else if (!this.selectedHeadingId || !this.filtered.find((h) => h.id === this.selectedHeadingId)) {
             // Otherwise this is a programmatic update (keyboard navigation) or a repeat of the
             // same filter text (debounce firing after arrow keys): preserve the current selection
             // unless it is no longer in the filtered list
-            this.selectedHeadingId = this.filtered[0].id;
+            this.selectedHeadingId = firstMatch.id;
         }
 
         this.render();
@@ -760,7 +763,7 @@ export class HeadingPanel {
         const currentIndex = this.filtered.findIndex((heading) => heading.id === this.selectedHeadingId);
         // Wrap around list: adding filtered.length ensures negative deltas wrap correctly
         const nextIndex = currentIndex >= 0 ? (currentIndex + delta + this.filtered.length) % this.filtered.length : 0;
-        this.selectedHeadingId = this.filtered[nextIndex].id;
+        this.selectedHeadingId = this.filtered[nextIndex]?.id ?? null;
         this.updateSelection();
         this.scrollActiveItemIntoView();
         this.notifyPreview();
