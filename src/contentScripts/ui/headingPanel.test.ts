@@ -77,7 +77,7 @@ describe('HeadingPanel pinned mode', () => {
         view = new EditorView({ state: EditorState.create({ doc: '# One\n## Two' }), parent });
         callbacks = createCallbacks();
         panel = new HeadingPanel(view, callbacks, panelSettings());
-        panel.open(headings, headings[0].id);
+        panel.open(headings, headings[0]!.id);
     });
 
     afterEach(() => {
@@ -131,7 +131,7 @@ describe('HeadingPanel pinned mode', () => {
         expect(callbacks.onRequestEditorFocus).toHaveBeenCalledOnce();
         expect(callbacks.onClose).not.toHaveBeenCalled();
 
-        document.querySelectorAll<HTMLLIElement>('.heading-navigator-item')[1].click();
+        document.querySelectorAll<HTMLLIElement>('.heading-navigator-item')[1]!.click();
         expect(callbacks.onSelect).toHaveBeenCalledWith(headings[1]);
         expect(panel.isOpen()).toBe(true);
         const selectedItems = document.querySelectorAll<HTMLLIElement>('.heading-navigator-item.is-selected');
@@ -143,18 +143,18 @@ describe('HeadingPanel pinned mode', () => {
         document.querySelector<HTMLButtonElement>('.heading-navigator-pin-button')?.click();
         const itemsBefore = Array.from(document.querySelectorAll<HTMLLIElement>('.heading-navigator-item'));
 
-        panel.setActiveHeading(headings[1].id);
+        panel.setActiveHeading(headings[1]!.id);
 
         const itemsAfter = Array.from(document.querySelectorAll<HTMLLIElement>('.heading-navigator-item'));
         expect(itemsAfter).toEqual(itemsBefore);
-        expect(itemsAfter[0].classList.contains('is-selected')).toBe(false);
-        expect(itemsAfter[1].classList.contains('is-selected')).toBe(true);
+        expect(itemsAfter[0]?.classList.contains('is-selected')).toBe(false);
+        expect(itemsAfter[1]?.classList.contains('is-selected')).toBe(true);
     });
 
     it('does not focus the filter input when opened with focusInput disabled', () => {
         panel.destroy();
         panel = new HeadingPanel(view, callbacks, panelSettings());
-        panel.open(headings, headings[0].id, false);
+        panel.open(headings, headings[0]!.id, false);
 
         expect(panel.isOpen()).toBe(true);
         expect(document.activeElement).not.toBe(document.querySelector('.heading-navigator-input'));
@@ -181,7 +181,7 @@ describe('HeadingPanel pinned mode', () => {
     it('does not preview keyboard or filter navigation when the desktop preference is disabled', () => {
         panel.destroy();
         panel = new HeadingPanel(view, callbacks, panelSettings(HEADING_METADATA_DISPLAY.full, 40, false));
-        panel.open(headings, headings[0].id);
+        panel.open(headings, headings[0]!.id);
 
         vi.useFakeTimers();
         try {
@@ -200,7 +200,7 @@ describe('HeadingPanel pinned mode', () => {
     it('never previews keyboard or filter navigation on mobile', () => {
         panel.destroy();
         panel = new HeadingPanel(view, callbacks, panelSettings(), true);
-        panel.open(headings, headings[0].id);
+        panel.open(headings, headings[0]!.id);
 
         vi.useFakeTimers();
         try {
@@ -214,7 +214,7 @@ describe('HeadingPanel pinned mode', () => {
         }
 
         expect(callbacks.onPreview).not.toHaveBeenCalled();
-        items()[0].click();
+        items()[0]!.click();
         expect(callbacks.onSelect).toHaveBeenCalledWith(headings[0]);
     });
 
@@ -235,13 +235,13 @@ describe('HeadingPanel pinned mode', () => {
     it('keeps the preview marker aligned with the editor when the caret lands on the highlighted heading', () => {
         panel.destroy();
         panel = new HeadingPanel(view, callbacks, panelSettings(HEADING_METADATA_DISPLAY.full, 40, false));
-        panel.open(headings, headings[0].id);
+        panel.open(headings, headings[0]!.id);
 
         const input = document.querySelector<HTMLInputElement>('.heading-navigator-input')!;
         input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
         // Selecting the heading moves the editor without a preview; the caret-follow update
         // reports the heading the panel already highlights.
-        panel.setActiveHeading(headings[1].id);
+        panel.setActiveHeading(headings[1]!.id);
         panel.setSettings(panelSettings(HEADING_METADATA_DISPLAY.full, 40, true));
 
         vi.useFakeTimers();
@@ -267,7 +267,7 @@ describe('HeadingPanel pinned mode', () => {
     it('does not render pin controls on mobile but still applies the metadata display mode', () => {
         panel.destroy();
         panel = new HeadingPanel(view, callbacks, panelSettings(HEADING_METADATA_DISPLAY.none), true);
-        panel.open(headings, headings[0].id);
+        panel.open(headings, headings[0]!.id);
 
         const container = document.querySelector<HTMLDivElement>('.heading-navigator-panel')!;
         expect(document.querySelector('.heading-navigator-pin-button')).toBeNull();
@@ -283,7 +283,7 @@ describe('HeadingPanel pinned mode', () => {
     it('keeps mobile touch-target padding even when the metadata row is hidden', () => {
         panel.destroy();
         panel = new HeadingPanel(view, callbacks, panelSettings(HEADING_METADATA_DISPLAY.compact), true);
-        panel.open(headings, headings[0].id);
+        panel.open(headings, headings[0]!.id);
 
         const item = document.querySelector('.heading-navigator-item')!;
         const style = getComputedStyle(item);
@@ -330,11 +330,11 @@ describe('HeadingPanel pinned mode', () => {
     });
 
     it('copies the heading link on right-click and suppresses the default context menu', () => {
-        const event = rightClick(items()[1].querySelector('.heading-navigator-item-text')!);
+        const event = rightClick(items()[1]!.querySelector('.heading-navigator-item-text')!);
 
         expect(callbacks.onCopy).toHaveBeenCalledWith(headings[1]);
         expect(event.defaultPrevented).toBe(true);
-        expect(items()[1].classList.contains('is-copied')).toBe(true);
+        expect(items()[1]?.classList.contains('is-copied')).toBe(true);
         expect(callbacks.onSelect).not.toHaveBeenCalled();
     });
 
@@ -348,7 +348,7 @@ describe('HeadingPanel pinned mode', () => {
     it('leaves the filter context menu enabled on mobile', () => {
         panel.destroy();
         panel = new HeadingPanel(view, callbacks, panelSettings(), true);
-        panel.open(headings, headings[0].id);
+        panel.open(headings, headings[0]!.id);
 
         const event = rightClick(document.querySelector('.heading-navigator-input')!);
 
@@ -360,18 +360,18 @@ describe('HeadingPanel pinned mode', () => {
     });
 
     it('moves the copy confirmation to the most recently copied row', () => {
-        rightClick(items()[0]);
-        expect(items()[0].classList.contains('is-copied')).toBe(true);
+        rightClick(items()[0]!);
+        expect(items()[0]?.classList.contains('is-copied')).toBe(true);
 
-        rightClick(items()[1]);
-        expect(items()[0].classList.contains('is-copied')).toBe(false);
-        expect(items()[1].classList.contains('is-copied')).toBe(true);
+        rightClick(items()[1]!);
+        expect(items()[0]?.classList.contains('is-copied')).toBe(false);
+        expect(items()[1]?.classList.contains('is-copied')).toBe(true);
     });
 
     it('clears the copy confirmation timer when the panel is destroyed', () => {
         vi.useFakeTimers();
         try {
-            rightClick(items()[0]);
+            rightClick(items()[0]!);
             expect(vi.getTimerCount()).toBeGreaterThan(0);
 
             panel.destroy();
@@ -388,35 +388,35 @@ describe('HeadingPanel pinned mode', () => {
     it('copies on mobile long-press and ignores right-click there', () => {
         panel.destroy();
         panel = new HeadingPanel(view, callbacks, panelSettings(), true);
-        panel.open(headings, headings[0].id);
+        panel.open(headings, headings[0]!.id);
 
         // Mobile never attaches the row contextmenu listener: the `.is-mobile` stylesheet is what
         // keeps the WebView's long-press callout out of the way.
-        const event = rightClick(items()[0]);
+        const event = rightClick(items()[0]!);
         expect(callbacks.onCopy).not.toHaveBeenCalled();
         expect(event.defaultPrevented).toBe(false);
 
         vi.useFakeTimers();
         try {
-            dispatchTouch(items()[1], 'touchstart');
+            dispatchTouch(items()[1]!, 'touchstart');
             vi.advanceTimersByTime(600);
         } finally {
             vi.useRealTimers();
         }
 
         expect(callbacks.onCopy).toHaveBeenCalledWith(headings[1]);
-        expect(items()[1].classList.contains('is-copied')).toBe(true);
+        expect(items()[1]?.classList.contains('is-copied')).toBe(true);
     });
 
     it('cancels a mobile long-press once the touch turns into a scroll', () => {
         panel.destroy();
         panel = new HeadingPanel(view, callbacks, panelSettings(), true);
-        panel.open(headings, headings[0].id);
+        panel.open(headings, headings[0]!.id);
 
         vi.useFakeTimers();
         try {
-            dispatchTouch(items()[1], 'touchstart', 10, 10);
-            dispatchTouch(items()[1], 'touchmove', 10, 40);
+            dispatchTouch(items()[1]!, 'touchstart', 10, 10);
+            dispatchTouch(items()[1]!, 'touchmove', 10, 40);
             vi.advanceTimersByTime(600);
         } finally {
             vi.useRealTimers();

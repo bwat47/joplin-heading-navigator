@@ -19,7 +19,7 @@ describe('heading extraction', () => {
         ['&MadeUpEntity;', '&MadeUpEntity;'], // unknown entity name
         ['&amp', '&amp'], // missing terminating semicolon
     ])('preserves literal reference %s', (source, expected) => {
-        expect(extractHeadingsFromMarkdown(`# ${source}`)[0].text).toBe(expected);
+        expect(extractHeadingsFromMarkdown(`# ${source}`)[0]?.text).toBe(expected);
     });
 
     it('decodes entities once and deduplicates equivalent anchors', () => {
@@ -133,9 +133,9 @@ describe('heading extraction', () => {
 ### Introduction`;
         const headings = extractHeadingsFromMarkdown(content);
 
-        expect(headings[0].anchor).toBe('introduction');
-        expect(headings[1].anchor).toBe('introduction-2');
-        expect(headings[2].anchor).toBe('introduction-3');
+        expect(headings[0]?.anchor).toBe('introduction');
+        expect(headings[1]?.anchor).toBe('introduction-2');
+        expect(headings[2]?.anchor).toBe('introduction-3');
     });
 
     it('generates anchors with special characters', () => {
@@ -144,9 +144,9 @@ describe('heading extraction', () => {
 ### Test-Section`;
         const headings = extractHeadingsFromMarkdown(content);
 
-        expect(headings[0].anchor).toBe('hello-world');
-        expect(headings[1].anchor).toBe('api-configuration');
-        expect(headings[2].anchor).toBe('test-section');
+        expect(headings[0]?.anchor).toBe('hello-world');
+        expect(headings[1]?.anchor).toBe('api-configuration');
+        expect(headings[2]?.anchor).toBe('test-section');
     });
 
     it('generates fallback anchor for empty slug', () => {
@@ -154,7 +154,7 @@ describe('heading extraction', () => {
         const headings = extractHeadingsFromMarkdown(content);
 
         expect(headings).toHaveLength(1);
-        expect(headings[0].anchor).toMatch(/^heading-\d+$/);
+        expect(headings[0]?.anchor).toMatch(/^heading-\d+$/);
     });
 
     it('generates anchors with mixed case normalized to lowercase', () => {
@@ -163,9 +163,9 @@ describe('heading extraction', () => {
 ### MixedCase`;
         const headings = extractHeadingsFromMarkdown(content);
 
-        expect(headings[0].anchor).toBe('hello-world');
-        expect(headings[1].anchor).toBe('uppercase-heading');
-        expect(headings[2].anchor).toBe('mixedcase');
+        expect(headings[0]?.anchor).toBe('hello-world');
+        expect(headings[1]?.anchor).toBe('uppercase-heading');
+        expect(headings[2]?.anchor).toBe('mixedcase');
     });
 
     it('generates unique anchors for similar headings with different punctuation', () => {
@@ -173,8 +173,8 @@ describe('heading extraction', () => {
 ## Test Example`;
         const headings = extractHeadingsFromMarkdown(content);
 
-        expect(headings[0].anchor).toBe('test-example');
-        expect(headings[1].anchor).toBe('test-example-2');
+        expect(headings[0]?.anchor).toBe('test-example');
+        expect(headings[1]?.anchor).toBe('test-example-2');
     });
 
     it('preserves underscores in emoji shortcodes and similar text', () => {
@@ -183,14 +183,14 @@ describe('heading extraction', () => {
 #### :fire: hot_topic`;
         const headings = extractHeadingsFromMarkdown(content);
 
-        expect(headings[0].text).toBe(':white_check_mark: Features');
-        expect(headings[0].anchor).toBe('white_check_mark-features');
+        expect(headings[0]?.text).toBe(':white_check_mark: Features');
+        expect(headings[0]?.anchor).toBe('white_check_mark-features');
 
-        expect(headings[1].text).toBe('snake_case_heading');
-        expect(headings[1].anchor).toBe('snake_case_heading');
+        expect(headings[1]?.text).toBe('snake_case_heading');
+        expect(headings[1]?.anchor).toBe('snake_case_heading');
 
-        expect(headings[2].text).toBe(':fire: hot_topic');
-        expect(headings[2].anchor).toBe('fire-hot_topic');
+        expect(headings[2]?.text).toBe(':fire: hot_topic');
+        expect(headings[2]?.anchor).toBe('fire-hot_topic');
     });
 
     it('removes italic underscores but preserves content underscores', () => {
@@ -198,8 +198,8 @@ describe('heading extraction', () => {
 ## _Entire heading italic_`;
         const headings = extractHeadingsFromMarkdown(content);
 
-        expect(headings[0].text).toBe('This is italic text with snake_case');
-        expect(headings[1].text).toBe('Entire heading italic');
+        expect(headings[0]?.text).toBe('This is italic text with snake_case');
+        expect(headings[1]?.text).toBe('Entire heading italic');
     });
 
     it('strips inline markdown formatting while preserving text', () => {
@@ -210,11 +210,11 @@ describe('heading extraction', () => {
 ##### ![Alt Text](image.png) Image`;
         const headings = extractHeadingsFromMarkdown(content);
 
-        expect(headings[0].text).toBe('Bold Heading');
-        expect(headings[1].text).toBe('Italic Text');
-        expect(headings[2].text).toBe('code section');
-        expect(headings[3].text).toBe('Link Text');
-        expect(headings[4].text).toBe('Image');
+        expect(headings[0]?.text).toBe('Bold Heading');
+        expect(headings[1]?.text).toBe('Italic Text');
+        expect(headings[2]?.text).toBe('code section');
+        expect(headings[3]?.text).toBe('Link Text');
+        expect(headings[4]?.text).toBe('Image');
     });
 
     it('strips mark and insert formatting while preserving text', () => {
@@ -224,10 +224,10 @@ describe('heading extraction', () => {
 #### Comparison a == b and c ++ d`;
         const headings = extractHeadingsFromMarkdown(content);
 
-        expect(headings[0].text).toBe('Highlighted Heading');
-        expect(headings[1].text).toBe('Inserted Text');
-        expect(headings[2].text).toBe('Mixed highlight and insert syntax');
-        expect(headings[3].text).toBe('Comparison a == b and c ++ d');
+        expect(headings[0]?.text).toBe('Highlighted Heading');
+        expect(headings[1]?.text).toBe('Inserted Text');
+        expect(headings[2]?.text).toBe('Mixed highlight and insert syntax');
+        expect(headings[3]?.text).toBe('Comparison a == b and c ++ d');
     });
 
     it.each([
@@ -239,7 +239,7 @@ describe('heading extraction', () => {
         ['# $a==b==c$ and $a++b++c$', '$a==b==c$ and $a++b++c$'],
         ['# ==unclosed and ++unclosed', '==unclosed and ++unclosed'],
     ])('uses syntax boundaries for %s', (content, expected) => {
-        expect(extractHeadingsFromMarkdown(content)[0].text).toBe(expected);
+        expect(extractHeadingsFromMarkdown(content)[0]?.text).toBe(expected);
     });
 
     it('preserves literal delimiters when highlight and insert extensions are disabled', () => {
@@ -248,7 +248,7 @@ describe('heading extraction', () => {
             extensions: [markdown()],
         });
 
-        expect(computeHeadingState(state).headings[0].text).toBe('==literal== and ++literal++');
+        expect(computeHeadingState(state).headings[0]?.text).toBe('==literal== and ++literal++');
     });
 
     it('handles nested and mixed inline formatting', () => {
@@ -257,9 +257,9 @@ describe('heading extraction', () => {
 ### \`code with_underscore\``;
         const headings = extractHeadingsFromMarkdown(content);
 
-        expect(headings[0].text).toBe('Bold and Italic Text');
-        expect(headings[1].text).toBe('Bold Link');
-        expect(headings[2].text).toBe('code with_underscore');
+        expect(headings[0]?.text).toBe('Bold and Italic Text');
+        expect(headings[1]?.text).toBe('Bold Link');
+        expect(headings[2]?.text).toBe('code with_underscore');
     });
 
     it('handles escaped characters in headings', () => {
@@ -268,9 +268,9 @@ describe('heading extraction', () => {
 ### Escaped \\# hash`;
         const headings = extractHeadingsFromMarkdown(content);
 
-        expect(headings[0].text).toBe('Escaped * asterisk');
-        expect(headings[1].text).toBe('Escaped _ underscore');
-        expect(headings[2].text).toBe('Escaped # hash');
+        expect(headings[0]?.text).toBe('Escaped * asterisk');
+        expect(headings[1]?.text).toBe('Escaped _ underscore');
+        expect(headings[2]?.text).toBe('Escaped # hash');
     });
 
     it('handles double underscores as bold markdown (matches Joplin rendering)', () => {
@@ -283,9 +283,9 @@ describe('heading extraction', () => {
         // so we strip the underscores to match what users see in the rendered note.
         // This behavior is consistent with Joplin's markdown viewer and other plugins.
         // While CommonMark has nuanced rules, we mirror Joplin's actual rendering.
-        expect(headings[0].text).toBe('Using init.py files');
-        expect(headings[1].text).toBe('The name variable');
-        expect(headings[2].text).toBe('file_name_with_many_underscores');
+        expect(headings[0]?.text).toBe('Using init.py files');
+        expect(headings[1]?.text).toBe('The name variable');
+        expect(headings[2]?.text).toBe('file_name_with_many_underscores');
     });
 
     it('collapses whitespace after stripping formatting', () => {
@@ -293,8 +293,8 @@ describe('heading extraction', () => {
 ## Text  with  **bold**  gaps`;
         const headings = extractHeadingsFromMarkdown(content);
 
-        expect(headings[0].text).toBe('Multiple spaces preserved');
-        expect(headings[1].text).toBe('Text with bold gaps');
+        expect(headings[0]?.text).toBe('Multiple spaces preserved');
+        expect(headings[1]?.text).toBe('Text with bold gaps');
     });
 
     it('keeps autolink targets and bare URLs as visible heading text', () => {
@@ -303,12 +303,12 @@ describe('heading extraction', () => {
         const headings = extractHeadingsFromMarkdown(content);
 
         // Angle-bracket autolink: the URL is visible text (only the < > marks are stripped).
-        expect(headings[0].text).toBe('Visit https://example.com');
-        expect(headings[0].anchor).toBe('visit-httpsexamplecom');
+        expect(headings[0]?.text).toBe('Visit https://example.com');
+        expect(headings[0]?.anchor).toBe('visit-httpsexamplecom');
 
         // Bare URL/email: autolinked under GFM, but the URL node stays visible text.
-        expect(headings[1].text).toBe('6. Resources test mailto:bwat47@gmail.com');
-        expect(headings[1].anchor).toBe('6-resources-test-mailtobwat47gmailcom');
+        expect(headings[1]?.text).toBe('6. Resources test mailto:bwat47@gmail.com');
+        expect(headings[1]?.anchor).toBe('6-resources-test-mailtobwat47gmailcom');
     });
 
     it('handles reference-style links', () => {
@@ -316,8 +316,8 @@ describe('heading extraction', () => {
 ## [Another][1]`;
         const headings = extractHeadingsFromMarkdown(content);
 
-        expect(headings[0].text).toBe('Reference Link');
-        expect(headings[1].text).toBe('Another');
+        expect(headings[0]?.text).toBe('Reference Link');
+        expect(headings[1]?.text).toBe('Another');
     });
 
     it('keeps inline math verbatim so anchors match Joplin heading links', () => {
@@ -326,22 +326,22 @@ describe('heading extraction', () => {
 ### Price is 5$ or 10$`;
         const headings = extractHeadingsFromMarkdown(content);
 
-        expect(headings[0].text).toBe('Maxwell $E=mc^2$');
-        expect(headings[0].anchor).toBe('maxwell-emc2');
+        expect(headings[0]?.text).toBe('Maxwell $E=mc^2$');
+        expect(headings[0]?.anchor).toBe('maxwell-emc2');
 
-        expect(headings[1].text).toBe('Decay of $\\alpha$ particles');
-        expect(headings[1].anchor).toBe('decay-of-alpha-particles');
+        expect(headings[1]?.text).toBe('Decay of $\\alpha$ particles');
+        expect(headings[1]?.anchor).toBe('decay-of-alpha-particles');
 
         // Lone dollar signs are not math and stay plain text.
-        expect(headings[2].text).toBe('Price is 5$ or 10$');
-        expect(headings[2].anchor).toBe('price-is-5-or-10');
+        expect(headings[2]?.text).toBe('Price is 5$ or 10$');
+        expect(headings[2]?.anchor).toBe('price-is-5-or-10');
     });
 
     it('handles images without alt text', () => {
         const content = '# ![](image.png) Icon';
         const headings = extractHeadingsFromMarkdown(content);
 
-        expect(headings[0].text).toBe('Icon');
+        expect(headings[0]?.text).toBe('Icon');
     });
 });
 

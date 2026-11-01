@@ -30,7 +30,7 @@ describe('fuzzyFilter', () => {
     it('filters headings by fuzzy match', () => {
         const results = fuzzyFilter('api', headings);
         expect(results).toHaveLength(1);
-        expect(results[0].text).toBe('API Reference');
+        expect(results[0]?.text).toBe('API Reference');
     });
 
     it.each([
@@ -40,7 +40,7 @@ describe('fuzzyFilter', () => {
     ])('%s', (_behavior, query, expectedFirstHeading) => {
         const results = fuzzyFilter(query, headings);
         expect(results.length).toBeGreaterThan(0);
-        expect(results[0].text).toBe(expectedFirstHeading);
+        expect(results[0]?.text).toBe(expectedFirstHeading);
     });
 
     it('orders equal-scoring matches by document order', () => {
