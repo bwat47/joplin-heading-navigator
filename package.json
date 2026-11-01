@@ -38,6 +38,7 @@
         "eslint-import-resolver-typescript": "^4.4.5",
         "eslint-plugin-import-x": "^4.16.2",
         "eslint-plugin-sonarjs": "^4.2.0",
+        "eslint-plugin-tsdoc": "^0.5.4",
         "fs-extra": "^10.1.0",
         "glob": "^8.0.3",
         "globals": "^17.7.0",
@@ -47,7 +48,7 @@
         "tar": "^7.5.16",
         "ts-loader": "^9.5.7",
         "typescript": "^6.0.3",
-        "typescript-eslint": "^8.59.2",
+        "typescript-eslint": "8.72.1",
         "vitest": "^5.0.3",
         "webpack": "^5.106.2",
         "webpack-cli": "^7.0.2"
@@ -56,5 +57,10 @@
         "@joplin/fork-uslug": "^2.0.6",
         "entities": "^9.0.0",
         "fuzzysort": "^4.0.2"
+    },
+    "overrides": {
+        "eslint-plugin-tsdoc": {
+            "@typescript-eslint/utils": "8.72.1"
+        }
     }
 }

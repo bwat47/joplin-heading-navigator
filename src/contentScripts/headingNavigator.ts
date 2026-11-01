@@ -63,6 +63,16 @@ const SCROLL_STABILIZE_TOLERANCE_PX = 12;
 const SCROLL_STABILIZE_NEGATIVE_TOLERANCE_PX = 1.5;
 const HEADING_REPARSE_DEBOUNCE_MS = 150;
 
+/** Options for {@link scheduleScrollStabilization}. */
+type ScrollStabilizationOptions = {
+    /** CodeMirror editor view instance. */
+    view: EditorView;
+    /** Target selection range to stabilize (from/to positions). */
+    targetRange: { from: number; to: number };
+    /** Whether to restore editor focus after stabilization. */
+    focusEditor: boolean;
+};
+
 type ScrollStabilizationMeasurement = {
     selectionFrom: number;
     selectionTo: number;
@@ -106,15 +116,8 @@ function ensureEditorFocus(view: EditorView, shouldFocus: boolean): void {
  * catches common drift without maintaining a recursive retry system.
  *
  * @param options - Configuration for scroll stabilization
- * @param options.view - CodeMirror editor view instance
- * @param options.targetRange - Target selection range to stabilize (from/to positions)
- * @param options.focusEditor - Whether to restore editor focus after stabilization
  */
-function scheduleScrollStabilization(options: {
-    view: EditorView;
-    targetRange: { from: number; to: number };
-    focusEditor: boolean;
-}): void {
+function scheduleScrollStabilization(options: ScrollStabilizationOptions): void {
     const { view, targetRange, focusEditor } = options;
 
     cancelPendingScrollStabilization(view);

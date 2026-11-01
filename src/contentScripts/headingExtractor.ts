@@ -6,7 +6,7 @@
  * stable IDs and GitHub-compatible anchor slugs.
  *
  * Implementation details:
- * - Consumes the incrementally-maintained tree from @codemirror/language instead of
+ * - Consumes the incrementally-maintained tree from `@codemirror/language` instead of
  *   re-parsing the document, with a bounded ensureSyntaxTree pass for completeness
  * - Stable IDs based on byte position (`heading-{from}`)
  * - Anchor deduplication (e.g., "intro" → "intro-2" → "intro-3")
@@ -63,7 +63,7 @@ const TEXT_NODE_NAMES = new Set(['Text', 'CodeText', 'URL', 'Emoji']);
 
 /**
  * Time budget for the synchronous ensureSyntaxTree pass in computeHeadingState.
- * Covers multi-megabyte documents in one shot (@lezer/markdown parses roughly
+ * Covers multi-megabyte documents in one shot (`@lezer/markdown` parses roughly
  * 1 MB in under 100 ms); exceeded only by pathological documents, which then
  * fall back to the partial tree. Parse progress persists in CodeMirror's parse
  * context, so the budget is effectively a one-time cost per document.

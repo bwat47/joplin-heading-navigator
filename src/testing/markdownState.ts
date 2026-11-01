@@ -4,7 +4,7 @@
  * In production the heading extractor reads the live tree maintained by Joplin's own
  * markdown language configuration, which is not published to npm (`@joplin/editor` is
  * app-internal). Tests use the closest published approximation instead:
- * `markdownLanguage` from @codemirror/lang-markdown, i.e. GFM plus subscript,
+ * `markdownLanguage` from `@codemirror/lang-markdown`, i.e. GFM plus subscript,
  * superscript and emoji extensions, plus approximations of Joplin's math, highlight and insert extensions.
  * This file is the single place that prod-vs-test grammar divergence lives; keep any
  * grammar tweaks here.
