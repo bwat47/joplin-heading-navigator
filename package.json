@@ -53,7 +53,7 @@
     },
     "dependencies": {
         "@joplin/fork-uslug": "^2.0.6",
-        "entities": "^8.1.0",
+        "entities": "^9.0.0",
         "fuzzysort": "^4.0.2"
     }
 }
