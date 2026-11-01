@@ -72,7 +72,7 @@ export function highlightMatch(text: string, query: string): DocumentFragment {
 
     const result = fuzzysort.single(normalized, text);
 
-    if (!result || !result.indexes || result.indexes.length === 0) {
+    if (!result || result.indexes.length === 0) {
         fragment.appendChild(document.createTextNode(text));
         return fragment;
     }

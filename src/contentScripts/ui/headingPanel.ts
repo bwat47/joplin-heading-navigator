@@ -319,7 +319,7 @@ export class HeadingPanel {
         this.showCopyFeedback(item);
 
         // Haptic feedback if available
-        if (navigator.vibrate) {
+        if ('vibrate' in navigator) {
             navigator.vibrate(COPY_VIBRATION_MS);
         }
     }
@@ -1052,7 +1052,7 @@ function ensurePanelStyles(view: EditorView, options: PanelDimensions): void {
     if (!style) {
         style = doc.createElement('style');
         style.id = PANEL_STYLE_ID;
-        (doc.head ?? doc.body).appendChild(style);
+        doc.head.appendChild(style);
     }
 
     if (style.getAttribute('data-dimensions-signature') === signature) {
