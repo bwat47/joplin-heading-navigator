@@ -95,10 +95,6 @@ async function registerContentScripts(): Promise<void> {
     await joplin.contentScripts.onMessage(
         CODEMIRROR_CONTENT_SCRIPT_ID,
         async (message: ContentScriptToPluginMessage): Promise<ContentScriptSettings | PanelRestoreState | void> => {
-            if (!message || typeof message !== 'object') {
-                return;
-            }
-
             switch (message.type) {
                 case 'copyHeadingLink':
                     await handleCopyHeadingLink(message);
