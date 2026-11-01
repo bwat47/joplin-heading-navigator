@@ -299,7 +299,7 @@ export default function headingNavigator(context: ContentScriptContext): Markdow
             // Set on editor teardown so the async startup restore cannot mount a panel
             // (and leak its document-level listeners) against a destroyed view.
             let editorDestroyed = false;
-            const noteIdFacet = editorControl.joplinExtensions?.noteIdFacet as FacetReader<unknown> | undefined;
+            const noteIdFacet = editorControl.joplinExtensions.noteIdFacet as FacetReader<unknown> | undefined;
 
             const resolveNoteId = (): string | null => {
                 if (!noteIdFacet) {

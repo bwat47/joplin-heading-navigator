@@ -61,6 +61,7 @@ describe('heading navigator panel lifecycle', () => {
 
         const editorControl = {
             editor: view,
+            joplinExtensions: { noteIdFacet: undefined },
             addExtension: (extension: Extension) => {
                 view.dispatch({ effects: StateEffect.appendConfig.of(extension) });
             },
@@ -330,6 +331,7 @@ describe('pinned panel restoration', () => {
 
         const editorControl = {
             editor: view,
+            joplinExtensions: { noteIdFacet: undefined },
             addExtension: (extension: Extension) => {
                 view.dispatch({ effects: StateEffect.appendConfig.of(extension) });
             },
@@ -528,6 +530,7 @@ describe('heading fill-in on large documents', () => {
 
         const editorControl = {
             editor: view,
+            joplinExtensions: { noteIdFacet: undefined },
             addExtension: (extension: Extension) => {
                 view.dispatch({ effects: StateEffect.appendConfig.of(extension) });
             },
@@ -606,6 +609,7 @@ describe('opening without a markdown parser', () => {
 
         const editorControl = {
             editor: view,
+            joplinExtensions: { noteIdFacet: undefined },
             addExtension: (extension: Extension) => {
                 view.dispatch({ effects: StateEffect.appendConfig.of(extension) });
             },
