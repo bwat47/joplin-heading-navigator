@@ -1,15 +1,15 @@
 // Flat config (ESM). Adds ignores, Node globals, and TS-friendly rule tweaks.
 
-import { defineConfig, globalIgnores } from 'eslint/config';
 import js from '@eslint/js';
-import tseslint from 'typescript-eslint';
-import importPlugin from 'eslint-plugin-import-x';
+import vitest from '@vitest/eslint-plugin';
+import prettier from 'eslint-config-prettier';
 import { createTypeScriptImportResolver } from 'eslint-import-resolver-typescript';
+import importPlugin from 'eslint-plugin-import-x';
 import sonarjs from 'eslint-plugin-sonarjs';
 import tsdoc from 'eslint-plugin-tsdoc';
-import prettier from 'eslint-config-prettier';
+import { defineConfig, globalIgnores } from 'eslint/config';
 import globals from 'globals';
-import vitest from '@vitest/eslint-plugin';
+import tseslint from 'typescript-eslint';
 
 export default defineConfig([
     globalIgnores(['api/**', 'dist/**', 'webpack.config.js']),
@@ -55,6 +55,7 @@ export default defineConfig([
             '@typescript-eslint/no-inferrable-types': 'error',
             '@typescript-eslint/no-unnecessary-condition': 'error',
             '@typescript-eslint/explicit-module-boundary-types': 'error',
+            eqeqeq: ['error', 'always', { null: 'ignore' }],
             'tsdoc/syntax': 'error',
         },
     },
