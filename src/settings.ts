@@ -10,13 +10,12 @@
 
 import joplin from 'api';
 import { SettingItemType } from 'api/types';
-import logger from './logger';
 import {
     DEFAULT_HEADING_METADATA_DISPLAY,
     HEADING_METADATA_DISPLAY,
     normalizeHeadingMetadataDisplay,
 } from './headingMetadataDisplay';
-import { DEFAULT_PREVIEW_HEADINGS, type ContentScriptSettings } from './types';
+import logger from './logger';
 import {
     DEFAULT_PANEL_HEIGHT_PERCENTAGE,
     DEFAULT_PANEL_TOP_OFFSET,
@@ -31,6 +30,7 @@ import {
     normalizePanelTopOffset,
     normalizePanelWidth,
 } from './panelDimensions';
+import { DEFAULT_PREVIEW_HEADINGS, type ContentScriptSettings } from './types';
 
 const SECTION_ID = 'headingNavigator';
 const SETTING_PANEL_WIDTH = 'headingNavigator.panelWidth';

@@ -10,10 +10,11 @@
  * grammar tweaks here.
  */
 
-import { EditorState, type Extension } from '@codemirror/state';
-import { ensureSyntaxTree } from '@codemirror/language';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
+import { ensureSyntaxTree } from '@codemirror/language';
+import { EditorState, type Extension } from '@codemirror/state';
 import type { InlineContext, MarkdownConfig } from '@lezer/markdown';
+
 import { extractHeadingsFromTree } from '../contentScripts/headingExtractor';
 import type { HeadingItem } from '../types';
 

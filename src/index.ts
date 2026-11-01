@@ -20,7 +20,9 @@
 import joplin from 'api';
 import { ContentScriptType, MenuItemLocation, ToolbarButtonLocation } from 'api/types';
 import { CODEMIRROR_CONTENT_SCRIPT_ID, COMMAND_GO_TO_HEADING, EDITOR_COMMAND_TOGGLE_PANEL } from './commandIds';
+import { formatExternalHeadingLink, formatInternalHeadingLink } from './linkFormatting';
 import logger from './logger';
+import type { ContentScriptToPluginMessage, CopyHeadingLinkMessage, PanelRestoreState } from './messages';
 import {
     loadContentScriptSettings,
     loadCopyLinkSettings,
@@ -28,8 +30,6 @@ import {
     registerPanelSettings,
     savePinnedState,
 } from './settings';
-import type { ContentScriptToPluginMessage, CopyHeadingLinkMessage, PanelRestoreState } from './messages';
-import { formatExternalHeadingLink, formatInternalHeadingLink } from './linkFormatting';
 import type { ContentScriptSettings } from './types';
 
 /**

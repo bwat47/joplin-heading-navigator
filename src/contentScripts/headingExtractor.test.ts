@@ -1,7 +1,8 @@
-import { EditorState } from '@codemirror/state';
 import { markdown } from '@codemirror/lang-markdown';
-import { computeHeadingState } from './headingExtractor';
+import { EditorState } from '@codemirror/state';
+
 import { createMarkdownState, extractHeadingsFromMarkdown } from '../testing/markdownState';
+import { computeHeadingState } from './headingExtractor';
 
 describe('heading extraction', () => {
     it.each(['&amp;', '&#38;', '&#x26;', '&'])('preserves ampersand text and anchors for %s', (entity) => {

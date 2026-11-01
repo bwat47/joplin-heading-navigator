@@ -1,5 +1,6 @@
 import { EditorState } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
+
 import { HEADING_METADATA_DISPLAY, type HeadingMetadataDisplay } from '../../headingMetadataDisplay';
 import type { ContentScriptSettings, HeadingItem } from '../../types';
 import { HeadingPanel, type PanelCallbacks } from './headingPanel';

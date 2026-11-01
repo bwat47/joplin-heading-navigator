@@ -1,4 +1,6 @@
 import { SettingItemType, type SettingItem } from 'api/types';
+import { HEADING_METADATA_DISPLAY } from './headingMetadataDisplay';
+import { loadContentScriptSettings, registerPanelSettings } from './settings';
 
 const joplinSettingsMocks = vi.hoisted(() => ({
     registerSection: vi.fn(),
@@ -13,9 +15,6 @@ vi.mock('api', () => ({
         settings: joplinSettingsMocks,
     },
 }));
-
-import { HEADING_METADATA_DISPLAY } from './headingMetadataDisplay';
-import { loadContentScriptSettings, registerPanelSettings } from './settings';
 
 const METADATA_DISPLAY_KEY = 'headingNavigator.headingMetadataDisplay';
 const PREVIEW_HEADINGS_KEY = 'headingNavigator.previewHeadings';

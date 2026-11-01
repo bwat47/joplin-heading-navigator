@@ -16,13 +16,14 @@
  * @see extractInlineText - Recursive tree walker for extracting clean text
  */
 
-import type { EditorState, Text } from '@codemirror/state';
 import { ensureSyntaxTree, syntaxTree } from '@codemirror/language';
+import type { EditorState, Text } from '@codemirror/state';
+import uslug from '@joplin/fork-uslug';
 import type { SyntaxNode, Tree } from '@lezer/common';
+import { decodeHTMLStrict } from 'entities';
+
 import logger from '../logger';
 import type { HeadingItem } from '../types';
-import uslug from '@joplin/fork-uslug';
-import { decodeHTMLStrict } from 'entities';
 
 /**
  * Nodes whose source text is copied verbatim instead of being walked.

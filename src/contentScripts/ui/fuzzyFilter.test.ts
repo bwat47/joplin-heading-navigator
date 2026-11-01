@@ -1,5 +1,5 @@
-import { fuzzyFilter, highlightMatch } from './fuzzyFilter';
 import type { HeadingItem } from '../../types';
+import { fuzzyFilter, highlightMatch } from './fuzzyFilter';
 
 function createHeading(text: string, id: string): HeadingItem {
     return {

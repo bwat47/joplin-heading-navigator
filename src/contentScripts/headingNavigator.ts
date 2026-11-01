@@ -24,17 +24,18 @@
  * - ui/headingPanel.ts - Floating panel UI implementation
  */
 
+import { syntaxTree } from '@codemirror/language';
 import { EditorSelection, type FacetReader } from '@codemirror/state';
 import { EditorView, ViewPlugin, type ViewUpdate } from '@codemirror/view';
-import { syntaxTree } from '@codemirror/language';
+
 import type { CodeMirrorControl, ContentScriptContext, MarkdownEditorContentScriptModule } from 'api/types';
 import { EDITOR_COMMAND_TOGGLE_PANEL } from '../commandIds';
-import type { HeadingItem } from '../types';
-import type { ContentScriptToPluginMessage, PanelRestoreState } from '../messages';
-import { computeHeadingState } from './headingExtractor';
-import { HeadingPanel, type PanelCloseReason } from './ui/headingPanel';
 import logger from '../logger';
+import type { ContentScriptToPluginMessage, PanelRestoreState } from '../messages';
+import type { HeadingItem } from '../types';
+import { computeHeadingState } from './headingExtractor';
 import { createSettingsExtension, getContentScriptSettings, syncInitialContentScriptSettings } from './pluginSettings';
+import { HeadingPanel, type PanelCloseReason } from './ui/headingPanel';
 
 // Track active stabilization timeouts per editor. WeakMap ensures automatic
 // cleanup when editor instances are destroyed (e.g., note close, plugin reload).

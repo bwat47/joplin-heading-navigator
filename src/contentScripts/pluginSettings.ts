@@ -1,11 +1,12 @@
 import { Compartment, Facet, type EditorState, type Extension } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
+
 import type { ContentScriptContext } from 'api/types';
-import type { ContentScriptToPluginMessage } from '../messages';
 import { DEFAULT_HEADING_METADATA_DISPLAY, normalizeHeadingMetadataDisplay } from '../headingMetadataDisplay';
+import logger from '../logger';
+import type { ContentScriptToPluginMessage } from '../messages';
 import { DEFAULT_PANEL_TOP_OFFSET, normalizePanelDimensions, normalizePanelTopOffset } from '../panelDimensions';
 import { DEFAULT_PANEL_DIMENSIONS, DEFAULT_PREVIEW_HEADINGS, type ContentScriptSettings } from '../types';
-import logger from '../logger';
 
 export const DEFAULT_CONTENT_SCRIPT_SETTINGS: ContentScriptSettings = {
     dimensions: { ...DEFAULT_PANEL_DIMENSIONS },

@@ -1,13 +1,14 @@
 import { EditorSelection, EditorState, StateEffect, type Extension } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
+
 import type { CodeMirrorControl, ContentScriptContext } from 'api/types';
 import { EDITOR_COMMAND_TOGGLE_PANEL } from '../commandIds';
 import { HEADING_METADATA_DISPLAY } from '../headingMetadataDisplay';
-import type { ContentScriptSettings } from '../types';
-import type { PanelRestoreState } from '../messages';
-import * as headingExtractor from './headingExtractor';
 import logger from '../logger';
+import type { PanelRestoreState } from '../messages';
 import { markdownEditorExtension } from '../testing/markdownState';
+import type { ContentScriptSettings } from '../types';
+import * as headingExtractor from './headingExtractor';
 import headingNavigator from './headingNavigator';
 
 // Auto-spy the extractor module so tests can count heading recomputations while

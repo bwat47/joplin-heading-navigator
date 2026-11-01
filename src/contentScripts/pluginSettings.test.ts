@@ -1,5 +1,6 @@
 import { EditorState } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
+
 import { HEADING_METADATA_DISPLAY } from '../headingMetadataDisplay';
 import { DEFAULT_PANEL_TOP_OFFSET, MAX_PANEL_WIDTH, MIN_PANEL_HEIGHT_PERCENTAGE } from '../panelDimensions';
 import { DEFAULT_PANEL_DIMENSIONS } from '../types';
