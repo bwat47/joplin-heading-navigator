@@ -29,14 +29,18 @@ Start here when exploring the codebase:
 
 ## Build, Test, and Development Commands
 
-- `npm test` Run Vitest test suite.
+- `npm test` Run Vitest test suite, then the bundle tests (`test/*.test.mjs`).
 - `npm run test:watch` Run tests in watch mode during development.
-- `npm run dist` Build plugin and create archive at `publish/*.jpl`.
-- `npm run lint` Lint TypeScript with ESLint.
+- `npm run dist` Typecheck, bundle with esbuild, and create archive at `publish/*.jpl`.
+- `npm run typecheck` Check TypeScript without producing output.
+- `npm run lint` Lint TypeScript and bundle tests with ESLint.
 - `npm run lint:fix` Auto-fix lint issues.
 - `npm run format` Format code with Prettier.
 - `npm run knip` Find unused dependencies, exports and files.
-- `npm run updateVersion` Sync plugin version metadata.
+- `npm run updateVersion` Increment the patch version in package.json, src/manifest.json, and package-lock.json together.
+- `npm run updateApi` Update api/ from generator-joplin without regenerating the project.
+
+See docs/BUILDING.md for build and maintenance details.
 
 ## Design Principles
 

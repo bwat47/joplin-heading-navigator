@@ -17,5 +17,6 @@
             "api": ["./api/index.ts"],
             "api/*": ["./api/*"]
         }
-    }
+    },
+    "exclude": ["dist", ".api-staging-*"]
 }

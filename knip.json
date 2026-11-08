@@ -1,12 +1,9 @@
 {
     "$schema": "https://unpkg.com/knip@6/schema.json",
-    "entry": ["webpack.config.js", "src/index.ts", "src/contentScripts/headingNavigator.ts", "src/**/*.test.ts"],
-    "project": ["src/**/*.ts"],
-    "ignoreBinaries": ["yo"],
-    "ignoreDependencies": ["ts-loader"],
+    "entry": ["src/index.ts", "src/contentScripts/headingNavigator.ts", "src/**/*.test.ts", "test/*.test.mjs"],
+    "project": ["src/**/*.ts", "test/*.mjs"],
     "ignoreIssues": {
         "api/**": ["unlisted", "unresolved"]
     },
-    "tags": ["-lintignore"],
-    "webpack": false
+    "tags": ["-lintignore"]
 }

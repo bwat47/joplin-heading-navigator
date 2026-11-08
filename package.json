@@ -2,18 +2,22 @@
     "name": "joplin-plugin-heading-navigator",
     "version": "0.9.4",
     "scripts": {
-        "dist": "webpack --env joplin-plugin-config=buildMain && webpack --env joplin-plugin-config=buildExtraScripts && webpack --env joplin-plugin-config=createArchive",
+        "dist": "npm run typecheck && joplin-plugin-scripts build",
         "prepare": "npm run dist",
-        "updateVersion": "webpack --env joplin-plugin-config=updateVersion",
-        "update": "npm install -g generator-joplin && yo joplin --node-package-manager npm --update --force",
-        "lint": "eslint --ext .ts src/",
-        "lint:fix": "eslint --ext .ts src/ --fix",
+        "updateVersion": "joplin-plugin-scripts update-version",
+        "updateApi": "joplin-plugin-scripts update-api",
+        "lint": "eslint src/ test/",
+        "lint:fix": "eslint src/ test/ --fix",
         "format": "prettier --write \"src/**/*.ts\"",
-        "test": "vitest run",
+        "test": "vitest run && node --test test/*.test.mjs",
         "test:watch": "vitest",
-        "knip": "knip"
+        "knip": "knip",
+        "typecheck": "tsc --noEmit"
     },
     "license": "MIT",
+    "engines": {
+        "node": ">=22"
+    },
     "keywords": [
         "joplin-plugin"
     ],
@@ -21,6 +25,7 @@
         "publish"
     ],
     "devDependencies": {
+        "@bwat47/joplin-plugin-scripts": "^1.1.0",
         "@codemirror/lang-markdown": "6.5.1",
         "@codemirror/language": "6.12.4",
         "@codemirror/state": "6.5.2",
@@ -31,27 +36,20 @@
         "@lezer/markdown": "^1.6.0",
         "@types/node": "^25.9.4",
         "@vitest/eslint-plugin": "^1.6.27",
-        "chalk": "^4.1.0",
-        "copy-webpack-plugin": "^14.0.0",
+        "esbuild": "^0.28.2",
         "eslint": "^10.3.0",
         "eslint-config-prettier": "^10.1.8",
         "eslint-import-resolver-typescript": "^4.4.5",
         "eslint-plugin-import-x": "^4.16.2",
         "eslint-plugin-sonarjs": "^4.2.0",
         "eslint-plugin-tsdoc": "^0.5.4",
-        "fs-extra": "^10.1.0",
-        "glob": "^8.0.3",
         "globals": "^17.7.0",
         "jsdom": "^29.1.1",
         "knip": "^6.24.0",
         "prettier": "^3.8.3",
-        "tar": "^7.5.16",
-        "ts-loader": "^9.5.7",
         "typescript": "^6.0.3",
         "typescript-eslint": "8.72.1",
-        "vitest": "^5.0.3",
-        "webpack": "^5.106.2",
-        "webpack-cli": "^7.0.2"
+        "vitest": "^5.0.3"
     },
     "dependencies": {
         "@joplin/fork-uslug": "^2.0.6",

@@ -12,3 +12,4 @@ publish/
 .codex
 gemini/
 .prompts/
+.api-staging-*/

@@ -12,10 +12,16 @@ import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
 export default defineConfig([
-    globalIgnores(['api/**', 'dist/**', 'webpack.config.js']),
+    globalIgnores(['api/**', 'dist/**', '.api-staging-*/**']),
 
     js.configs.recommended,
     sonarjs.configs.recommended,
+
+    // Bundle tests run under node:test.
+    {
+        files: ['test/*.mjs'],
+        languageOptions: { globals: globals.node },
+    },
 
     // Project TS/JS sources
     {
