@@ -13,3 +13,6 @@ publish/
 gemini/
 .prompts/
 .api-staging-*/
+.claude/
+.codex/
+.agents/
