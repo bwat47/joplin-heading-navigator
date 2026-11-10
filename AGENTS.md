@@ -29,11 +29,11 @@ Start here when exploring the codebase:
 
 ## Build, Test, and Development Commands
 
-- `npm test` Run Vitest test suite, then the bundle tests (`test/*.test.mjs`).
+- `npm test` Run the Vitest test suite.
 - `npm run test:watch` Run tests in watch mode during development.
 - `npm run dist` Typecheck, bundle with esbuild, and create archive at `publish/*.jpl`.
 - `npm run typecheck` Check TypeScript without producing output.
-- `npm run lint` Lint TypeScript and bundle tests with ESLint.
+- `npm run lint` Lint TypeScript sources and tests with ESLint.
 - `npm run lint:fix` Auto-fix lint issues.
 - `npm run format` Format code with Prettier.
 - `npm run knip` Find unused dependencies, exports and files.
