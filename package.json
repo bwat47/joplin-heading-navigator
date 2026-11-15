@@ -34,14 +34,14 @@
         "@codemirror/view": "6.38.7",
         "@lezer/common": "^1.5.2",
         "@lezer/markdown": "^1.6.0",
-        "@types/node": "^25.9.4",
+        "@types/node": "^24.19.2",
         "fallow": "^3.43.0",
-        "jsdom": "^29.1.1",
+        "jsdom": "^31.0.1",
         "oxfmt": "^0.78.0",
         "oxlint": "^1.93.0",
         "oxlint-tsgolint": "^7.0.2007",
         "typescript": "^7.0.2",
-        "vitest": "^5.0.3"
+        "vitest": "^5.1.0"
     },
     "dependencies": {
         "@joplin/fork-uslug": "^2.0.6",
