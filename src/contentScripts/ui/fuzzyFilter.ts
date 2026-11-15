@@ -7,7 +7,7 @@
  * - Relevance-based ranking
  */
 
-import fuzzysort from 'fuzzysort';
+import * as fuzzysort from 'fuzzysort';
 
 import type { HeadingItem } from '../../types';
 

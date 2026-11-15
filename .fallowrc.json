@@ -1,0 +1,14 @@
+{
+    "$schema": "./node_modules/fallow/schema.json",
+    "entry": ["src/index.ts", "src/contentScripts/headingNavigator.ts"],
+    "supportEntry": ["src/**/*.test.ts"],
+    "ignorePatterns": ["**/*.d.ts", "api/**"],
+    "rules": {
+        "complexity-crap": "off",
+        "dev-dependencies-in-production": "off"
+    },
+    "health": {
+        "maxCognitive": 15,
+        "maxCyclomatic": 20
+    }
+}

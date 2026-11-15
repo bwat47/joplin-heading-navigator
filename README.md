@@ -69,3 +69,14 @@ Panel appearance settings take effect the next time the panel is opened. The cop
 - Long-press a heading to copy its link.
 
 - Filtering and keyboard navigation highlight headings in the panel without scrolling the note behind the modal. Selecting a heading still navigates to it.
+
+## Building from source
+
+Requires Node 22 or later.
+
+```sh
+npm ci
+npm run dist
+```
+
+The build creates the installable plugin at `publish/com.bwat47.heading-navigator.jpl`.

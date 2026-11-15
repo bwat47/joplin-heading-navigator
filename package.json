@@ -6,13 +6,14 @@
         "prepare": "npm run dist",
         "updateVersion": "joplin-plugin-scripts update-version",
         "updateApi": "joplin-plugin-scripts update-api",
-        "lint": "eslint src/",
-        "lint:fix": "eslint src/ --fix",
-        "format": "prettier --write .",
-        "format:check": "prettier --check .",
+        "lint": "oxlint src/ && npm run lint:dead-code && npm run lint:complexity",
+        "lint:dead-code": "fallow dead-code",
+        "lint:complexity": "fallow health --complexity",
+        "lint:fix": "oxlint src/ --fix",
+        "format": "oxfmt --write",
+        "format:check": "oxfmt --check",
         "test": "vitest run",
         "test:watch": "vitest",
-        "knip": "knip",
         "typecheck": "tsc --noEmit"
     },
     "license": "MIT",
@@ -31,34 +32,20 @@
         "@codemirror/language": "6.12.4",
         "@codemirror/state": "6.5.2",
         "@codemirror/view": "6.38.7",
-        "@eslint/js": "^10.0.1",
-        "@ianvs/prettier-plugin-sort-imports": "^4.7.1",
         "@lezer/common": "^1.5.2",
         "@lezer/markdown": "^1.6.0",
         "@types/node": "^25.9.4",
-        "@vitest/eslint-plugin": "^1.6.27",
-        "eslint": "^10.3.0",
-        "eslint-config-prettier": "^10.1.8",
-        "eslint-import-resolver-typescript": "^4.4.5",
-        "eslint-plugin-import-x": "^4.16.2",
-        "eslint-plugin-sonarjs": "^4.2.0",
-        "eslint-plugin-tsdoc": "^0.5.4",
-        "globals": "^17.7.0",
+        "fallow": "^3.43.0",
         "jsdom": "^29.1.1",
-        "knip": "^6.24.0",
-        "prettier": "^3.8.3",
-        "typescript": "^6.0.3",
-        "typescript-eslint": "8.72.1",
+        "oxfmt": "^0.78.0",
+        "oxlint": "^1.93.0",
+        "oxlint-tsgolint": "^7.0.2007",
+        "typescript": "^7.0.2",
         "vitest": "^5.0.3"
     },
     "dependencies": {
         "@joplin/fork-uslug": "^2.0.6",
         "entities": "^9.0.0",
         "fuzzysort": "^4.0.2"
-    },
-    "overrides": {
-        "eslint-plugin-tsdoc": {
-            "@typescript-eslint/utils": "8.72.1"
-        }
     }
 }

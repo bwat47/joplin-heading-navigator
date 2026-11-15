@@ -75,6 +75,8 @@ Panel appended to `view.scrollDOM.parentElement` to stay associated with specifi
 - **Heading Cache**: Recomputed 150 ms after document changes stop while the panel is open
 - **Cursor Following**: Selection-only updates change the active DOM marker without refiltering or reconciling the list
 
-## Build System
+## Build and packaging
 
-Standard Joplin yo-joplin scaffold with Webpack
+`npm run dist` typechecks, then delegates bundling and packaging to the shared `@bwat47/joplin-plugin-scripts` dev dependency, which uses esbuild to produce `dist/` and the `.jpl` in `publish/`. Build behavior lives in that package rather than in local scripts.
+
+`plugin.config.json` registers the `contentScripts/headingNavigator.ts` content script as an `extraScripts` entry. Content scripts keep Joplin's CodeMirror and Lezer libraries external.
