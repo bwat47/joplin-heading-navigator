@@ -23,6 +23,8 @@ class ResizeObserverMock {
     public disconnect(): void {}
 }
 
+const flushRestore = () => new Promise((resolve) => setTimeout(resolve, 0));
+
 function captureMeasureRequests(view: EditorView): Array<() => void> {
     const requests: Array<() => void> = [];
     vi.spyOn(view, 'requestMeasure').mockImplementation((request) => {
@@ -313,8 +315,6 @@ describe('heading navigator panel lifecycle', () => {
 
 describe('pinned panel restoration', () => {
     let view: EditorView;
-
-    const flushRestore = () => new Promise((resolve) => setTimeout(resolve, 0));
 
     function createEditor(
         restoreState: PanelRestoreState | undefined,
