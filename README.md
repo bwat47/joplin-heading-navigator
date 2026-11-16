@@ -50,11 +50,12 @@ The plugin can be customized via Tools | Options | Heading Navigator:
     - Prevents the panel from obscuring too much content
 - **Panel top offset**: 0-200px distance from the top of the editor (default: 12px)
     - Push the panel down to avoid overlapping other top-right editor decorations, such as a backlinks indicator (desktop only)
-- **Heading metadata display**: What each heading row shows alongside its text (default: Full)
-    - **Full**: the `H# - line #` metadata row
-    - **Compact**: an `H#` level badge instead of the metadata row
+- **Heading metadata display**: What each heading row shows alongside its text (default: Level and line number)
+    - **Level and line number**: an `H# - line #` metadata row above the text
+    - **Level badge**: an `H#` badge at the right edge of the row
+    - **Markdown prefix**: a Markdown heading prefix (`#` through `######`) before the text, including for headings written with Setext underlines
     - **None**: no level indicator at all
-    - Compact and None also reduce heading row height on desktop, so more headings fit in the panel. Mobile keeps its larger touch targets.
+    - Every option except Level and line number uses shorter, single-line rows on desktop, so more headings fit in the panel. Mobile keeps its larger touch targets.
 - **Preview headings while navigating**: Scroll the editor to the highlighted heading while filtering or using keyboard navigation (default: on, desktop only)
 - **Copy internal anchor links**: Copy `[Heading](#heading-anchor)` instead of `[Heading @ Note](:/noteId#heading-anchor)` (default: off)
 

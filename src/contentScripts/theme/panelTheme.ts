@@ -189,8 +189,8 @@ export function createPanelCss(dimensions: PanelDimensions): string {
     position: relative;
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    padding: 8px 12px;
+    gap: 0;
+    padding: 6px 12px;
     cursor: pointer;
     background-color: transparent;
 }
@@ -205,6 +205,7 @@ export function createPanelCss(dimensions: PanelDimensions): string {
 }
 
 .heading-navigator-item-level {
+    display: none;
     font-size: 11px;
     color: var(--joplin-color-faded, #7c8b9e);
 }
@@ -214,22 +215,47 @@ export function createPanelCss(dimensions: PanelDimensions): string {
     opacity: 0.85;
 }
 
-.heading-navigator-panel.is-compact .heading-navigator-item-level {
-    display: none;
+.heading-navigator-panel.has-metadata-row .heading-navigator-item-level {
+    display: block;
 }
 
 /*
- * Compact row geometry is desktop-only: mobile keeps the larger padding defined in the
- * .is-mobile block below so touch targets and the long-press copy gesture stay usable.
- * The :not(.is-mobile) guard makes that explicit rather than relying on source order.
+ * Rows are single-line by default. The metadata row adds a second line, so desktop rows that
+ * show it get extra vertical padding and a gap between the two lines. Mobile keeps the larger
+ * padding defined in the .is-mobile block below in every mode, so touch targets and the
+ * long-press copy gesture stay usable. The :not(.is-mobile) guard makes that explicit rather
+ * than relying on source order.
  */
-.heading-navigator-panel.is-compact:not(.is-mobile) .heading-navigator-item {
-    gap: 0;
-    padding-top: 6px;
-    padding-bottom: 6px;
+.heading-navigator-panel.has-metadata-row:not(.is-mobile) .heading-navigator-item {
+    gap: 2px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+}
+
+.heading-navigator-item-title {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5em;
+    min-width: 0;
+}
+
+.heading-navigator-atx-prefix {
+    display: none;
+    flex-shrink: 0;
+    color: var(--joplin-color-faded, #7c8b9e);
+}
+
+.heading-navigator-panel.is-atx .heading-navigator-atx-prefix {
+    display: block;
+}
+
+.heading-navigator-item.is-selected .heading-navigator-atx-prefix {
+    color: inherit;
+    opacity: 0.85;
 }
 
 .heading-navigator-item-text {
+    min-width: 0;
     white-space: normal;
     overflow-wrap: break-word;
     font-weight: 400;
@@ -244,7 +270,7 @@ export function createPanelCss(dimensions: PanelDimensions): string {
     display: none;
 }
 
-.heading-navigator-panel.is-compact .heading-navigator-level-badge {
+.heading-navigator-panel.has-level-badge .heading-navigator-level-badge {
     position: absolute;
     top: 50%;
     transform: translateY(-50%);
@@ -266,11 +292,7 @@ export function createPanelCss(dimensions: PanelDimensions): string {
     transition: opacity 160ms ease-out, background-color 120ms ease-out, color 120ms ease-out;
 }
 
-.heading-navigator-panel.is-compact.hide-level-badges .heading-navigator-level-badge {
-    display: none;
-}
-
-.heading-navigator-panel.is-compact .heading-navigator-item.is-selected .heading-navigator-level-badge {
+.heading-navigator-panel.has-level-badge .heading-navigator-item.is-selected .heading-navigator-level-badge {
     color: inherit;
 }
 
@@ -321,13 +343,13 @@ export function createPanelCss(dimensions: PanelDimensions): string {
 
 /*
  * Row right gutter. Reserved only where a level badge is actually rendered: rows carry no copy
- * button, so Full and None modes give the full row width to heading text.
+ * button, so every other mode gives the full row width to heading text.
  *
  * Deliberately last. It outranks both the base and the mobile padding rules on specificity, and
  * placing it after them keeps it winning under source order too, so the gutter does not depend on
  * which of the two a renderer weighs more heavily.
  */
-.heading-navigator-panel.is-compact:not(.hide-level-badges) .heading-navigator-item {
+.heading-navigator-panel.has-level-badge .heading-navigator-list > .heading-navigator-item {
     padding-right: 40px;
 }
 `;

@@ -26,6 +26,39 @@ export interface PanelCallbacks {
     onRequestEditorFocus: () => void;
 }
 
+const ATX_PREFIX_CHAR = '#';
+
+/** Text for each per-mode level indicator in a heading row; CSS decides which one is visible. */
+type HeadingRowLabels = {
+    /** Level and line number mode (`full`): `H2 - line 5` */
+    metadata: string;
+    /** Level badge mode (`compact`): `H2` */
+    badge: string;
+    /** Markdown prefix mode (`atx`): `##` */
+    atxPrefix: string;
+};
+
+/** Builds row labels in one place so row creation and in-place updates cannot drift apart. */
+function formatHeadingRowLabels(heading: HeadingItem): HeadingRowLabels {
+    return {
+        metadata: `H${heading.level} - line ${heading.line + 1}`,
+        badge: `H${heading.level}`,
+        atxPrefix: ATX_PREFIX_CHAR.repeat(heading.level),
+    };
+}
+
+/** Left padding that indents a row by heading level: H1 gets the base inset, each deeper level adds one step. */
+function formatHeadingIndent(level: number): string {
+    return `${INDENT_BASE_PX + (level - 1) * INDENT_PER_LEVEL_PX}px`;
+}
+
+/** Writes text only when it differs, avoiding needless DOM mutations during incremental renders. */
+function setTextIfChanged(element: Element | null, text: string): void {
+    if (element && element.textContent !== text) {
+        element.textContent = text;
+    }
+}
+
 /**
  * Floating panel UI for heading navigation with filtering, keyboard navigation, and copy functionality.
  *
@@ -532,14 +565,17 @@ export class HeadingPanel {
     /**
      * Reflects the metadata display mode on the panel element.
      *
-     * Applied on both platforms: `is-compact` swaps the `H# - line #` row for a level badge and
-     * `hide-level-badges` drops the badge too. The reduced row height that rides along with
-     * `is-compact` is scoped to desktop in the stylesheet, so mobile keeps its touch targets.
+     * Applied on both platforms: `has-metadata-row` shows the `H# - line #` row,
+     * `has-level-badge` shows the `H#` badge and its right gutter, and `is-atx` shows the
+     * Markdown prefix. Each visible indicator has exactly one positive class.
+     * Rows are single-line by default; the taller two-line geometry that comes with
+     * `has-metadata-row` is scoped to desktop in the stylesheet, so mobile keeps its touch targets.
      */
     private applyMetadataDisplayClasses(): void {
         const display = this.settings.metadataDisplay;
-        this.container.classList.toggle('is-compact', display !== HEADING_METADATA_DISPLAY.full);
-        this.container.classList.toggle('hide-level-badges', display === HEADING_METADATA_DISPLAY.none);
+        this.container.classList.toggle('has-metadata-row', display === HEADING_METADATA_DISPLAY.full);
+        this.container.classList.toggle('has-level-badge', display === HEADING_METADATA_DISPLAY.compact);
+        this.container.classList.toggle('is-atx', display === HEADING_METADATA_DISPLAY.atx);
     }
 
     /**
@@ -930,22 +966,32 @@ export class HeadingPanel {
         const item = document.createElement('li');
         item.className = 'heading-navigator-item';
         item.dataset.headingId = heading.id;
-        item.style.paddingLeft = `${INDENT_BASE_PX + (heading.level - 1) * INDENT_PER_LEVEL_PX}px`;
+        item.style.paddingLeft = formatHeadingIndent(heading.level);
+
+        const labels = formatHeadingRowLabels(heading);
 
         const level = document.createElement('span');
         level.className = 'heading-navigator-item-level';
-        level.textContent = `H${heading.level} - line ${heading.line + 1}`;
+        level.textContent = labels.metadata;
 
         const text = document.createElement('span');
         text.className = 'heading-navigator-item-text';
         text.appendChild(highlightMatch(heading.text, this.previousFilterText));
 
+        const prefix = document.createElement('span');
+        prefix.className = 'heading-navigator-atx-prefix';
+        prefix.textContent = labels.atxPrefix;
+
+        const title = document.createElement('span');
+        title.className = 'heading-navigator-item-title';
+        title.append(prefix, text);
+
         const levelBadge = document.createElement('span');
         levelBadge.className = 'heading-navigator-level-badge';
-        levelBadge.textContent = `H${heading.level}`;
+        levelBadge.textContent = labels.badge;
 
         item.appendChild(level);
-        item.appendChild(text);
+        item.appendChild(title);
         item.appendChild(levelBadge);
 
         return item;
@@ -953,24 +999,15 @@ export class HeadingPanel {
 
     private updateHeadingItem(item: HTMLLIElement, heading: HeadingItem): void {
         // Update padding if level changed
-        const newPadding = `${INDENT_BASE_PX + (heading.level - 1) * INDENT_PER_LEVEL_PX}px`;
+        const newPadding = formatHeadingIndent(heading.level);
         if (item.style.paddingLeft !== newPadding) {
             item.style.paddingLeft = newPadding;
         }
 
-        // Update level text
-        const levelSpan = item.querySelector('.heading-navigator-item-level');
-        const newLevelText = `H${heading.level} - line ${heading.line + 1}`;
-        if (levelSpan && levelSpan.textContent !== newLevelText) {
-            levelSpan.textContent = newLevelText;
-        }
-
-        // Update compact mode right-side heading level badge text
-        const levelBadge = item.querySelector('.heading-navigator-level-badge');
-        const newBadgeText = `H${heading.level}`;
-        if (levelBadge && levelBadge.textContent !== newBadgeText) {
-            levelBadge.textContent = newBadgeText;
-        }
+        const labels = formatHeadingRowLabels(heading);
+        setTextIfChanged(item.querySelector('.heading-navigator-item-level'), labels.metadata);
+        setTextIfChanged(item.querySelector('.heading-navigator-level-badge'), labels.badge);
+        setTextIfChanged(item.querySelector('.heading-navigator-atx-prefix'), labels.atxPrefix);
 
         // Update heading text with highlighting
         // Always rebuild when filter is active since highlight positions may change
