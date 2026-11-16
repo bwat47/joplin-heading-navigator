@@ -106,11 +106,12 @@ export async function registerPanelSettings(): Promise<void> {
             options: {
                 [HEADING_METADATA_DISPLAY.full]: 'Full (heading level and line number)',
                 [HEADING_METADATA_DISPLAY.compact]: 'Compact (heading level badge)',
+                [HEADING_METADATA_DISPLAY.atx]: 'ATX (Markdown heading prefix)',
                 [HEADING_METADATA_DISPLAY.none]: 'None',
             },
             label: 'Heading metadata display',
             description:
-                'What each heading row shows alongside its text. Compact and None also reduce row height on desktop; mobile keeps its larger touch targets.',
+                'What each heading row shows alongside its text. Compact, ATX, and None also reduce row height on desktop; mobile keeps its larger touch targets.',
         },
         [SETTING_PREVIEW_HEADINGS]: {
             value: DEFAULT_PREVIEW_HEADINGS,

@@ -30,7 +30,7 @@ describe('panel settings', () => {
         joplinSettingsMocks.value.mockResolvedValue(false);
     });
 
-    it('registers heading metadata display as a three-way enum defaulting to full', async () => {
+    it('registers heading metadata display as a four-way enum defaulting to full', async () => {
         await registerPanelSettings();
 
         const setting = registeredSettings()[METADATA_DISPLAY_KEY];
@@ -44,6 +44,7 @@ describe('panel settings', () => {
         expect(Object.keys(setting?.options as Record<string, string>)).toEqual([
             HEADING_METADATA_DISPLAY.full,
             HEADING_METADATA_DISPLAY.compact,
+            HEADING_METADATA_DISPLAY.atx,
             HEADING_METADATA_DISPLAY.none,
         ]);
     });

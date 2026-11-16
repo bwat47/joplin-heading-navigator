@@ -53,8 +53,9 @@ The plugin can be customized via Tools | Options | Heading Navigator:
 - **Heading metadata display**: What each heading row shows alongside its text (default: Full)
     - **Full**: the `H# - line #` metadata row
     - **Compact**: an `H#` level badge instead of the metadata row
+    - **ATX**: a Markdown heading prefix (`#` through `######`) before the text, including for headings written with Setext underlines
     - **None**: no level indicator at all
-    - Compact and None also reduce heading row height on desktop, so more headings fit in the panel. Mobile keeps its larger touch targets.
+    - Compact, ATX, and None also reduce heading row height on desktop, so more headings fit in the panel. Mobile keeps its larger touch targets.
 - **Preview headings while navigating**: Scroll the editor to the highlighted heading while filtering or using keyboard navigation (default: on, desktop only)
 - **Copy internal anchor links**: Copy `[Heading](#heading-anchor)` instead of `[Heading @ Note](:/noteId#heading-anchor)` (default: off)
 

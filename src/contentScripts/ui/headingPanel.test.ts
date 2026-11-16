@@ -2,6 +2,7 @@ import { EditorState } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 
 import { HEADING_METADATA_DISPLAY, type HeadingMetadataDisplay } from '../../headingMetadataDisplay';
+import { extractHeadingsFromMarkdown } from '../../testing/markdownState';
 import type { ContentScriptSettings, HeadingItem } from '../../types';
 import { HeadingPanel, type PanelCallbacks } from './headingPanel';
 
@@ -293,11 +294,13 @@ describe('HeadingPanel pinned mode', () => {
         expect(style.paddingRight).toBe('40px');
     });
 
-    it('switches row metadata between the full row, the level badge, and neither', () => {
+    it('switches row metadata between full, compact, ATX, and none without rebuilding rows', () => {
         const container = document.querySelector<HTMLDivElement>('.heading-navigator-panel')!;
+        const originalItem = items()[0];
 
         expect(container.classList.contains('is-compact')).toBe(false);
-        expect(container.classList.contains('hide-level-badges')).toBe(false);
+        expect(container.classList.contains('hide-level-badges')).toBe(true);
+        expect(computedDisplay('.heading-navigator-atx-prefix')).toBe('none');
         expect(computedDisplay('.heading-navigator-item-level')).not.toBe('none');
         expect(computedDisplay('.heading-navigator-level-badge')).toBe('none');
         // No badge and no copy button, so the row gutter is plain padding.
@@ -313,10 +316,20 @@ describe('HeadingPanel pinned mode', () => {
         // Only the badge earns gutter space.
         expect(computedItemPaddingRight()).toBe('40px');
 
+        panel.setSettings(panelSettings(HEADING_METADATA_DISPLAY.atx));
+
+        expect(container.classList.contains('is-atx')).toBe(true);
+        expect(computedDisplay('.heading-navigator-atx-prefix')).toBe('block');
+        expect(computedDisplay('.heading-navigator-item-level')).toBe('none');
+        expect(computedDisplay('.heading-navigator-level-badge')).toBe('none');
+        expect(getComputedStyle(items()[0]!).paddingTop).toBe('6px');
+        expect(computedItemPaddingRight()).toBe('12px');
+
         panel.setSettings(panelSettings(HEADING_METADATA_DISPLAY.none));
 
         expect(container.classList.contains('is-compact')).toBe(true);
         expect(container.classList.contains('hide-level-badges')).toBe(true);
+        expect(computedDisplay('.heading-navigator-atx-prefix')).toBe('none');
         // Badges stay in the DOM so switching back does not require re-rendering rows.
         expect(document.querySelectorAll('.heading-navigator-level-badge')).toHaveLength(headings.length);
         expect(computedDisplay('.heading-navigator-level-badge')).toBe('none');
@@ -327,6 +340,79 @@ describe('HeadingPanel pinned mode', () => {
         expect(container.classList.contains('is-compact')).toBe(false);
         expect(computedDisplay('.heading-navigator-level-badge')).toBe('none');
         expect(computedDisplay('.heading-navigator-item-level')).not.toBe('none');
+        expect(items()[0]).toBe(originalItem);
+    });
+
+    it('renders ATX prefixes for every heading level and updates them when levels change', () => {
+        panel.setSettings(panelSettings(HEADING_METADATA_DISPLAY.atx));
+        const allLevels = [1, 2, 3, 4, 5, 6].map((level) => ({
+            ...headings[0]!,
+            id: `level-${level}`,
+            level,
+        }));
+        panel.updateHeadings(allLevels, allLevels[0]!.id);
+
+        expect(items().map((item) => item.querySelector('.heading-navigator-atx-prefix')?.textContent)).toEqual([
+            '#',
+            '##',
+            '###',
+            '####',
+            '#####',
+            '######',
+        ]);
+        const originalItem = items()[0]!;
+        const originalPadding = originalItem.style.paddingLeft;
+        panel.updateHeadings([{ ...allLevels[0]!, level: 3 }], allLevels[0]!.id);
+
+        expect(items()[0]).toBe(originalItem);
+        expect(originalItem.querySelector('.heading-navigator-atx-prefix')?.textContent).toBe('###');
+        expect(originalItem.style.paddingLeft).not.toBe(originalPadding);
+    });
+
+    it('keeps ATX prefixes separate from filtered title highlights and copied headings', () => {
+        vi.useFakeTimers();
+        try {
+            panel.setSettings(panelSettings(HEADING_METADATA_DISPLAY.atx));
+            const input = document.querySelector<HTMLInputElement>('.heading-navigator-input')!;
+            input.value = 'Two';
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            vi.runAllTimers();
+
+            expect(items()).toHaveLength(1);
+            expect(items()[0]!.querySelector('.heading-navigator-atx-prefix')?.textContent).toBe('##');
+            expect(items()[0]!.querySelector('.heading-navigator-item-text b')?.textContent).toBe('Two');
+            rightClick(items()[0]!.querySelector('.heading-navigator-atx-prefix')!);
+            expect(callbacks.onCopy).toHaveBeenCalledWith(headings[1]);
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
+    it('displays Setext headings with prefixes based on their level', () => {
+        panel.setSettings(panelSettings(HEADING_METADATA_DISPLAY.atx));
+        panel.updateHeadings(extractHeadingsFromMarkdown('Title\n===\n\nSection\n---'), null);
+
+        expect(items().map((item) => item.querySelector('.heading-navigator-atx-prefix')?.textContent)).toEqual([
+            '#',
+            '##',
+        ]);
+        expect(items().map((item) => item.querySelector('.heading-navigator-item-text')?.textContent)).toEqual([
+            'Title',
+            'Section',
+        ]);
+    });
+
+    it('shows ATX prefixes on mobile while retaining touch-target padding', () => {
+        panel.destroy();
+        panel = new HeadingPanel(view, callbacks, panelSettings(HEADING_METADATA_DISPLAY.atx), true);
+        panel.open(headings, headings[0]!.id);
+
+        expect(computedDisplay('.heading-navigator-atx-prefix')).toBe('block');
+        expect(computedDisplay('.heading-navigator-level-badge')).toBe('none');
+        const style = getComputedStyle(items()[0]!);
+        expect(style.paddingTop).toBe('14px');
+        expect(style.paddingBottom).toBe('14px');
+        expect(style.paddingRight).toBe('16px');
     });
 
     it('copies the heading link on right-click and suppresses the default context menu', () => {

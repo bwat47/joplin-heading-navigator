@@ -229,7 +229,30 @@ export function createPanelCss(dimensions: PanelDimensions): string {
     padding-bottom: 6px;
 }
 
+.heading-navigator-item-title {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5em;
+    min-width: 0;
+}
+
+.heading-navigator-atx-prefix {
+    display: none;
+    flex-shrink: 0;
+    color: var(--joplin-color-faded, #7c8b9e);
+}
+
+.heading-navigator-panel.is-atx .heading-navigator-atx-prefix {
+    display: block;
+}
+
+.heading-navigator-item.is-selected .heading-navigator-atx-prefix {
+    color: inherit;
+    opacity: 0.85;
+}
+
 .heading-navigator-item-text {
+    min-width: 0;
     white-space: normal;
     overflow-wrap: break-word;
     font-weight: 400;
@@ -321,7 +344,7 @@ export function createPanelCss(dimensions: PanelDimensions): string {
 
 /*
  * Row right gutter. Reserved only where a level badge is actually rendered: rows carry no copy
- * button, so Full and None modes give the full row width to heading text.
+ * button, so Full, ATX, and None modes give the full row width to heading text.
  *
  * Deliberately last. It outranks both the base and the mobile padding rules on specificity, and
  * placing it after them keeps it winning under source order too, so the gutter does not depend on

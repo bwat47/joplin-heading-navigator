@@ -532,14 +532,16 @@ export class HeadingPanel {
     /**
      * Reflects the metadata display mode on the panel element.
      *
-     * Applied on both platforms: `is-compact` swaps the `H# - line #` row for a level badge and
-     * `hide-level-badges` drops the badge too. The reduced row height that rides along with
-     * `is-compact` is scoped to desktop in the stylesheet, so mobile keeps its touch targets.
+     * Applied on both platforms: `is-compact` hides the `H# - line #` row,
+     * `hide-level-badges` hides the badge, and `is-atx` shows the Markdown prefix.
+     * The reduced row height from `is-compact` is scoped to desktop in the stylesheet,
+     * so mobile keeps its touch targets.
      */
     private applyMetadataDisplayClasses(): void {
         const display = this.settings.metadataDisplay;
         this.container.classList.toggle('is-compact', display !== HEADING_METADATA_DISPLAY.full);
-        this.container.classList.toggle('hide-level-badges', display === HEADING_METADATA_DISPLAY.none);
+        this.container.classList.toggle('hide-level-badges', display !== HEADING_METADATA_DISPLAY.compact);
+        this.container.classList.toggle('is-atx', display === HEADING_METADATA_DISPLAY.atx);
     }
 
     /**
@@ -940,12 +942,20 @@ export class HeadingPanel {
         text.className = 'heading-navigator-item-text';
         text.appendChild(highlightMatch(heading.text, this.previousFilterText));
 
+        const prefix = document.createElement('span');
+        prefix.className = 'heading-navigator-atx-prefix';
+        prefix.textContent = '#'.repeat(heading.level);
+
+        const title = document.createElement('span');
+        title.className = 'heading-navigator-item-title';
+        title.append(prefix, text);
+
         const levelBadge = document.createElement('span');
         levelBadge.className = 'heading-navigator-level-badge';
         levelBadge.textContent = `H${heading.level}`;
 
         item.appendChild(level);
-        item.appendChild(text);
+        item.appendChild(title);
         item.appendChild(levelBadge);
 
         return item;
@@ -970,6 +980,12 @@ export class HeadingPanel {
         const newBadgeText = `H${heading.level}`;
         if (levelBadge && levelBadge.textContent !== newBadgeText) {
             levelBadge.textContent = newBadgeText;
+        }
+
+        const prefix = item.querySelector('.heading-navigator-atx-prefix');
+        const newPrefixText = '#'.repeat(heading.level);
+        if (prefix && prefix.textContent !== newPrefixText) {
+            prefix.textContent = newPrefixText;
         }
 
         // Update heading text with highlighting
