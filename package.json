@@ -27,7 +27,7 @@
         "publish"
     ],
     "devDependencies": {
-        "@bwat47/joplin-plugin-scripts": "^1.6.0",
+        "@bwat47/joplin-plugin-scripts": "^1.6.3",
         "@codemirror/lang-markdown": "6.5.0",
         "@codemirror/language": "6.12.3",
         "@codemirror/state": "6.7.1",
@@ -44,7 +44,7 @@
         "vitest": "^5.1.0"
     },
     "dependencies": {
-        "@joplin/fork-uslug": "^2.0.6",
+        "@joplin/fork-uslug": "^2.0.10",
         "entities": "^9.0.0",
         "fuzzysort": "^4.0.2"
     }
