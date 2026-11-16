@@ -12,6 +12,16 @@ import type { PanelDimensions } from '../../types';
 /** Inline CSS custom property carrying the panel's distance from the top of the editor. */
 export const PANEL_TOP_OFFSET_VAR = '--heading-navigator-top-offset';
 
+/**
+ * Inline CSS custom property carrying the editor's resolved font family.
+ *
+ * Joplin desktop applies the "Editor font family" setting only to `.cm-editor .cm-content` via a
+ * global stylesheet (there is no CSS variable for it), and the panel lives outside that element,
+ * so the content script copies the computed font onto the panel. `--joplin-font-family` is the
+ * fallback when the editor font cannot be read.
+ */
+export const PANEL_FONT_FAMILY_VAR = '--heading-navigator-font-family';
+
 const PANEL_BOTTOM_GAP_PX = 12;
 
 const SEARCH_CANCEL_MASK_DATA_URI =
@@ -42,7 +52,7 @@ export function createPanelCss(dimensions: PanelDimensions): string {
     );
     display: flex;
     flex-direction: column;
-    font-family: system-ui, sans-serif !important;
+    font-family: var(${PANEL_FONT_FAMILY_VAR}, var(--joplin-font-family, system-ui, sans-serif)) !important;
     background-color: var(--joplin-background-color3, #f4f5f6);
     color: var(--joplin-color, #32373f);
     border: 1px solid var(--joplin-divider-color, #dddddd);
@@ -84,6 +94,7 @@ export function createPanelCss(dimensions: PanelDimensions): string {
     border: none;
     background-color: inherit;
     color: inherit;
+    font-family: inherit;
     font-size: 14px;
     outline: none;
     -webkit-touch-callout: default;

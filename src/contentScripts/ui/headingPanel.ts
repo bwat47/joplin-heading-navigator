@@ -2,7 +2,7 @@ import type { EditorView } from '@codemirror/view';
 
 import { HEADING_METADATA_DISPLAY } from '../../headingMetadataDisplay';
 import type { ContentScriptSettings, HeadingItem, PanelDimensions } from '../../types';
-import { createPanelCss, PANEL_TOP_OFFSET_VAR } from '../theme/panelTheme';
+import { createPanelCss, PANEL_FONT_FAMILY_VAR, PANEL_TOP_OFFSET_VAR } from '../theme/panelTheme';
 import { fuzzyFilter, highlightMatch } from './fuzzyFilter';
 
 const PANEL_STYLE_ID = 'heading-navigator-styles';
@@ -414,6 +414,7 @@ export class HeadingPanel {
      */
     public open(headings: HeadingItem[], selectedId: string | null, focusInput = true): void {
         this.mount();
+        this.applyEditorFont();
         this.input.value = '';
         this.selectedHeadingId = selectedId;
         this.initialSelectedHeadingId = selectedId;
@@ -586,6 +587,20 @@ export class HeadingPanel {
      */
     private applyTopOffset(): void {
         this.container.style.setProperty(PANEL_TOP_OFFSET_VAR, `${this.settings.topOffset}px`);
+    }
+
+    /**
+     * Copies the editor's rendered font onto the panel so it follows Joplin's editor font setting.
+     * Read on every open, since the setting can change while the panel element stays cached.
+     */
+    private applyEditorFont(): void {
+        const contentDOM = this.view.contentDOM;
+        const fontFamily = contentDOM.ownerDocument.defaultView?.getComputedStyle(contentDOM).fontFamily;
+        if (fontFamily) {
+            this.container.style.setProperty(PANEL_FONT_FAMILY_VAR, fontFamily);
+        } else {
+            this.container.style.removeProperty(PANEL_FONT_FAMILY_VAR);
+        }
     }
 
     private mount(): void {

@@ -27,6 +27,10 @@ function computedItemPaddingRight(): string {
     return getComputedStyle(document.querySelector('.heading-navigator-item')!).paddingRight;
 }
 
+function computedPanelFont(): string {
+    return getComputedStyle(document.querySelector('.heading-navigator-panel')!).fontFamily;
+}
+
 function items(): HTMLLIElement[] {
     return Array.from(document.querySelectorAll<HTMLLIElement>('.heading-navigator-item'));
 }
@@ -486,6 +490,17 @@ describe('HeadingPanel pinned mode', () => {
 
         // afterEach destroys again; keep that safe by handing it a live panel.
         panel = new HeadingPanel(view, callbacks, panelSettings());
+    });
+
+    it('uses the editor content font and refreshes it on each open', () => {
+        view.contentDOM.style.fontFamily = '"Editor Font", serif';
+        panel.open(headings, headings[0]!.id);
+        expect(computedPanelFont()).toBe(getComputedStyle(view.contentDOM).fontFamily);
+        expect(computedPanelFont()).toContain('Editor Font');
+
+        view.contentDOM.style.fontFamily = '"Other Font", sans-serif';
+        panel.open(headings, headings[0]!.id);
+        expect(computedPanelFont()).toContain('Other Font');
     });
 
     it('copies on mobile long-press and ignores right-click there', () => {
