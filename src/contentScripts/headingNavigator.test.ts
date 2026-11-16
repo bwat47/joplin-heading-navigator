@@ -393,7 +393,7 @@ describe('pinned panel restoration', () => {
         expect(panelElement).not.toBeNull();
         expect(panelElement!.classList.contains('is-pinned')).toBe(true);
         expect(panelElement!.classList.contains('is-compact')).toBe(true);
-        expect(panelElement!.classList.contains('hide-level-badges')).toBe(true);
+        expect(panelElement!.classList.contains('has-level-badge')).toBe(false);
         expect(document.getElementById('heading-navigator-styles')?.textContent).toContain('width: 480px;');
         expect(document.activeElement).not.toBe(document.querySelector('.heading-navigator-input'));
         expect(postMessage).not.toHaveBeenCalledWith({ type: 'persistPinnedState', pinned: true });
@@ -457,7 +457,7 @@ describe('pinned panel restoration', () => {
         expect(document.querySelector('.heading-navigator-panel')).toBe(panelElement);
         expect(panelElement.classList.contains('is-pinned')).toBe(true);
         expect(panelElement.classList.contains('is-compact')).toBe(true);
-        expect(panelElement.classList.contains('hide-level-badges')).toBe(true);
+        expect(panelElement.classList.contains('has-level-badge')).toBe(false);
         expect(document.getElementById('heading-navigator-styles')?.textContent).toContain('width: 500px;');
     });
 

@@ -267,7 +267,7 @@ export function createPanelCss(dimensions: PanelDimensions): string {
     display: none;
 }
 
-.heading-navigator-panel.is-compact .heading-navigator-level-badge {
+.heading-navigator-panel.has-level-badge .heading-navigator-level-badge {
     position: absolute;
     top: 50%;
     transform: translateY(-50%);
@@ -289,11 +289,7 @@ export function createPanelCss(dimensions: PanelDimensions): string {
     transition: opacity 160ms ease-out, background-color 120ms ease-out, color 120ms ease-out;
 }
 
-.heading-navigator-panel.is-compact.hide-level-badges .heading-navigator-level-badge {
-    display: none;
-}
-
-.heading-navigator-panel.is-compact .heading-navigator-item.is-selected .heading-navigator-level-badge {
+.heading-navigator-panel.has-level-badge .heading-navigator-item.is-selected .heading-navigator-level-badge {
     color: inherit;
 }
 
@@ -350,7 +346,7 @@ export function createPanelCss(dimensions: PanelDimensions): string {
  * placing it after them keeps it winning under source order too, so the gutter does not depend on
  * which of the two a renderer weighs more heavily.
  */
-.heading-navigator-panel.is-compact:not(.hide-level-badges) .heading-navigator-item {
+.heading-navigator-panel.has-level-badge .heading-navigator-list > .heading-navigator-item {
     padding-right: 40px;
 }
 `;

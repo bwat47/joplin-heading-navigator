@@ -273,7 +273,7 @@ describe('HeadingPanel pinned mode', () => {
         const container = document.querySelector<HTMLDivElement>('.heading-navigator-panel')!;
         expect(document.querySelector('.heading-navigator-pin-button')).toBeNull();
         expect(container.classList.contains('is-compact')).toBe(true);
-        expect(container.classList.contains('hide-level-badges')).toBe(true);
+        expect(container.classList.contains('has-level-badge')).toBe(false);
         expect(computedDisplay('.heading-navigator-item-level')).toBe('none');
         expect(computedDisplay('.heading-navigator-level-badge')).toBe('none');
 
@@ -299,7 +299,7 @@ describe('HeadingPanel pinned mode', () => {
         const originalItem = items()[0];
 
         expect(container.classList.contains('is-compact')).toBe(false);
-        expect(container.classList.contains('hide-level-badges')).toBe(true);
+        expect(container.classList.contains('has-level-badge')).toBe(false);
         expect(computedDisplay('.heading-navigator-atx-prefix')).toBe('none');
         expect(computedDisplay('.heading-navigator-item-level')).not.toBe('none');
         expect(computedDisplay('.heading-navigator-level-badge')).toBe('none');
@@ -309,7 +309,7 @@ describe('HeadingPanel pinned mode', () => {
         panel.setSettings(panelSettings(HEADING_METADATA_DISPLAY.compact));
 
         expect(container.classList.contains('is-compact')).toBe(true);
-        expect(container.classList.contains('hide-level-badges')).toBe(false);
+        expect(container.classList.contains('has-level-badge')).toBe(true);
         expect(computedDisplay('.heading-navigator-item-level')).toBe('none');
         expect(computedDisplay('.heading-navigator-level-badge')).toBe('flex');
         expect(getComputedStyle(document.querySelector('.heading-navigator-item')!).paddingTop).toBe('6px');
@@ -328,7 +328,7 @@ describe('HeadingPanel pinned mode', () => {
         panel.setSettings(panelSettings(HEADING_METADATA_DISPLAY.none));
 
         expect(container.classList.contains('is-compact')).toBe(true);
-        expect(container.classList.contains('hide-level-badges')).toBe(true);
+        expect(container.classList.contains('has-level-badge')).toBe(false);
         expect(computedDisplay('.heading-navigator-atx-prefix')).toBe('none');
         // Badges stay in the DOM so switching back does not require re-rendering rows.
         expect(document.querySelectorAll('.heading-navigator-level-badge')).toHaveLength(headings.length);
