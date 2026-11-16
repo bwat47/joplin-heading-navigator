@@ -12,10 +12,11 @@
     "keywords": ["heading", "outline", "keyboard", "navigation", "toc"],
     "categories": ["productivity", "editor"],
     "screenshots": [
-        { "src": "images/screenshot1.png", "label": "Heading Navigator screenshot 1" },
-        { "src": "images/screenshot2.png", "label": "Heading Navigator screenshot 2" },
-        { "src": "images/screenshot3.png", "label": "Heading Navigator screenshot 3" },
+        { "src": "images/screenshot_theme_light.png", "label": "Heading Navigator light theme - heading badge mode" },
+        { "src": "images/screenshot_theme_dark.png", "label": "Heading Navigator dark theme - heading badge mode" },
+        { "src": "images/screenshot_mobile.png", "label": "Heading Navigator mobile screenshot" },
         { "src": "images/screenshot_full_mode.png", "label": "Heading Navigator screenshot full mode" },
+        { "src": "images/screenshot_atx_mode.png", "label": "Heading Navigator screenshot atx mode" },
         { "src": "images/screenshot_none_mode.png", "label": "Heading Navigator screenshot none mode" }
     ],
     "icons": {
@@ -27,7 +28,7 @@
         "16": "images/16.png"
     },
     "promo_tile": {
-        "src": "images/heading-navigator_promo_tile.png",
+        "src": "images/heading_navigator_promo_tile.png",
         "label": "heading Navigator Promo Tile"
     }
 }
