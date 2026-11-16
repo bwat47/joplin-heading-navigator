@@ -26,6 +26,34 @@ export interface PanelCallbacks {
     onRequestEditorFocus: () => void;
 }
 
+const ATX_PREFIX_CHAR = '#';
+
+/** Text for each per-mode level indicator in a heading row; CSS decides which one is visible. */
+type HeadingRowLabels = {
+    /** Full mode: `H2 - line 5` */
+    metadata: string;
+    /** Compact mode: `H2` */
+    badge: string;
+    /** ATX mode: `##` */
+    atxPrefix: string;
+};
+
+/** Builds row labels in one place so row creation and in-place updates cannot drift apart. */
+function formatHeadingRowLabels(heading: HeadingItem): HeadingRowLabels {
+    return {
+        metadata: `H${heading.level} - line ${heading.line + 1}`,
+        badge: `H${heading.level}`,
+        atxPrefix: ATX_PREFIX_CHAR.repeat(heading.level),
+    };
+}
+
+/** Writes text only when it differs, avoiding needless DOM mutations during incremental renders. */
+function setTextIfChanged(element: Element | null, text: string): void {
+    if (element && element.textContent !== text) {
+        element.textContent = text;
+    }
+}
+
 /**
  * Floating panel UI for heading navigation with filtering, keyboard navigation, and copy functionality.
  *
@@ -934,9 +962,11 @@ export class HeadingPanel {
         item.dataset.headingId = heading.id;
         item.style.paddingLeft = `${INDENT_BASE_PX + (heading.level - 1) * INDENT_PER_LEVEL_PX}px`;
 
+        const labels = formatHeadingRowLabels(heading);
+
         const level = document.createElement('span');
         level.className = 'heading-navigator-item-level';
-        level.textContent = `H${heading.level} - line ${heading.line + 1}`;
+        level.textContent = labels.metadata;
 
         const text = document.createElement('span');
         text.className = 'heading-navigator-item-text';
@@ -944,7 +974,7 @@ export class HeadingPanel {
 
         const prefix = document.createElement('span');
         prefix.className = 'heading-navigator-atx-prefix';
-        prefix.textContent = '#'.repeat(heading.level);
+        prefix.textContent = labels.atxPrefix;
 
         const title = document.createElement('span');
         title.className = 'heading-navigator-item-title';
@@ -952,7 +982,7 @@ export class HeadingPanel {
 
         const levelBadge = document.createElement('span');
         levelBadge.className = 'heading-navigator-level-badge';
-        levelBadge.textContent = `H${heading.level}`;
+        levelBadge.textContent = labels.badge;
 
         item.appendChild(level);
         item.appendChild(title);
@@ -968,25 +998,10 @@ export class HeadingPanel {
             item.style.paddingLeft = newPadding;
         }
 
-        // Update level text
-        const levelSpan = item.querySelector('.heading-navigator-item-level');
-        const newLevelText = `H${heading.level} - line ${heading.line + 1}`;
-        if (levelSpan && levelSpan.textContent !== newLevelText) {
-            levelSpan.textContent = newLevelText;
-        }
-
-        // Update compact mode right-side heading level badge text
-        const levelBadge = item.querySelector('.heading-navigator-level-badge');
-        const newBadgeText = `H${heading.level}`;
-        if (levelBadge && levelBadge.textContent !== newBadgeText) {
-            levelBadge.textContent = newBadgeText;
-        }
-
-        const prefix = item.querySelector('.heading-navigator-atx-prefix');
-        const newPrefixText = '#'.repeat(heading.level);
-        if (prefix && prefix.textContent !== newPrefixText) {
-            prefix.textContent = newPrefixText;
-        }
+        const labels = formatHeadingRowLabels(heading);
+        setTextIfChanged(item.querySelector('.heading-navigator-item-level'), labels.metadata);
+        setTextIfChanged(item.querySelector('.heading-navigator-level-badge'), labels.badge);
+        setTextIfChanged(item.querySelector('.heading-navigator-atx-prefix'), labels.atxPrefix);
 
         // Update heading text with highlighting
         // Always rebuild when filter is active since highlight positions may change
