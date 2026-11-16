@@ -47,6 +47,11 @@ function formatHeadingRowLabels(heading: HeadingItem): HeadingRowLabels {
     };
 }
 
+/** Left padding that indents a row by heading level: H1 gets the base inset, each deeper level adds one step. */
+function formatHeadingIndent(level: number): string {
+    return `${INDENT_BASE_PX + (level - 1) * INDENT_PER_LEVEL_PX}px`;
+}
+
 /** Writes text only when it differs, avoiding needless DOM mutations during incremental renders. */
 function setTextIfChanged(element: Element | null, text: string): void {
     if (element && element.textContent !== text) {
@@ -960,7 +965,7 @@ export class HeadingPanel {
         const item = document.createElement('li');
         item.className = 'heading-navigator-item';
         item.dataset.headingId = heading.id;
-        item.style.paddingLeft = `${INDENT_BASE_PX + (heading.level - 1) * INDENT_PER_LEVEL_PX}px`;
+        item.style.paddingLeft = formatHeadingIndent(heading.level);
 
         const labels = formatHeadingRowLabels(heading);
 
@@ -993,7 +998,7 @@ export class HeadingPanel {
 
     private updateHeadingItem(item: HTMLLIElement, heading: HeadingItem): void {
         // Update padding if level changed
-        const newPadding = `${INDENT_BASE_PX + (heading.level - 1) * INDENT_PER_LEVEL_PX}px`;
+        const newPadding = formatHeadingIndent(heading.level);
         if (item.style.paddingLeft !== newPadding) {
             item.style.paddingLeft = newPadding;
         }
