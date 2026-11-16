@@ -272,7 +272,7 @@ describe('HeadingPanel pinned mode', () => {
 
         const container = document.querySelector<HTMLDivElement>('.heading-navigator-panel')!;
         expect(document.querySelector('.heading-navigator-pin-button')).toBeNull();
-        expect(container.classList.contains('is-compact')).toBe(true);
+        expect(container.classList.contains('has-metadata-row')).toBe(false);
         expect(container.classList.contains('has-level-badge')).toBe(false);
         expect(computedDisplay('.heading-navigator-item-level')).toBe('none');
         expect(computedDisplay('.heading-navigator-level-badge')).toBe('none');
@@ -298,17 +298,20 @@ describe('HeadingPanel pinned mode', () => {
         const container = document.querySelector<HTMLDivElement>('.heading-navigator-panel')!;
         const originalItem = items()[0];
 
-        expect(container.classList.contains('is-compact')).toBe(false);
+        expect(container.classList.contains('has-metadata-row')).toBe(true);
         expect(container.classList.contains('has-level-badge')).toBe(false);
         expect(computedDisplay('.heading-navigator-atx-prefix')).toBe('none');
         expect(computedDisplay('.heading-navigator-item-level')).not.toBe('none');
         expect(computedDisplay('.heading-navigator-level-badge')).toBe('none');
+        // Two-line rows get the taller desktop geometry.
+        expect(getComputedStyle(items()[0]!).paddingTop).toBe('8px');
+        expect(getComputedStyle(items()[0]!).rowGap).toBe('2px');
         // No badge and no copy button, so the row gutter is plain padding.
         expect(computedItemPaddingRight()).toBe('12px');
 
         panel.setSettings(panelSettings(HEADING_METADATA_DISPLAY.compact));
 
-        expect(container.classList.contains('is-compact')).toBe(true);
+        expect(container.classList.contains('has-metadata-row')).toBe(false);
         expect(container.classList.contains('has-level-badge')).toBe(true);
         expect(computedDisplay('.heading-navigator-item-level')).toBe('none');
         expect(computedDisplay('.heading-navigator-level-badge')).toBe('flex');
@@ -327,7 +330,7 @@ describe('HeadingPanel pinned mode', () => {
 
         panel.setSettings(panelSettings(HEADING_METADATA_DISPLAY.none));
 
-        expect(container.classList.contains('is-compact')).toBe(true);
+        expect(container.classList.contains('has-metadata-row')).toBe(false);
         expect(container.classList.contains('has-level-badge')).toBe(false);
         expect(computedDisplay('.heading-navigator-atx-prefix')).toBe('none');
         // Badges stay in the DOM so switching back does not require re-rendering rows.
@@ -337,10 +340,24 @@ describe('HeadingPanel pinned mode', () => {
 
         panel.setSettings(panelSettings(HEADING_METADATA_DISPLAY.full));
 
-        expect(container.classList.contains('is-compact')).toBe(false);
+        expect(container.classList.contains('has-metadata-row')).toBe(true);
         expect(computedDisplay('.heading-navigator-level-badge')).toBe('none');
         expect(computedDisplay('.heading-navigator-item-level')).not.toBe('none');
+        expect(getComputedStyle(items()[0]!).paddingTop).toBe('8px');
         expect(items()[0]).toBe(originalItem);
+    });
+
+    it('keeps mobile touch-target geometry when the metadata row is shown', () => {
+        panel.destroy();
+        panel = new HeadingPanel(view, callbacks, panelSettings(HEADING_METADATA_DISPLAY.full), true);
+        panel.open(headings, headings[0]!.id);
+
+        expect(computedDisplay('.heading-navigator-item-level')).not.toBe('none');
+        const style = getComputedStyle(items()[0]!);
+        expect(style.paddingTop).toBe('14px');
+        expect(style.paddingBottom).toBe('14px');
+        expect(style.paddingRight).toBe('16px');
+        expect(style.rowGap).toBe('4px');
     });
 
     it('renders ATX prefixes for every heading level and updates them when levels change', () => {

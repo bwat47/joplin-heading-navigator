@@ -12,8 +12,9 @@ describe('createPanelCss', () => {
         const css = createPanelCss({ width: 400, maxHeightRatio: 0.7 });
 
         expect(css).toContain('.heading-navigator-panel');
-        expect(css).toContain('.heading-navigator-panel.is-compact .heading-navigator-item-level');
-        expect(css).toContain('.heading-navigator-panel.is-compact:not(.is-mobile) .heading-navigator-item');
+        expect(css).toContain('.heading-navigator-panel.has-metadata-row .heading-navigator-item-level');
+        expect(css).toContain('.heading-navigator-panel.has-metadata-row:not(.is-mobile) .heading-navigator-item');
+        expect(css).not.toContain('is-compact');
         expect(css).toContain('.heading-navigator-level-badge');
         expect(css).toContain('.heading-navigator-panel.has-level-badge .heading-navigator-level-badge');
         expect(css).toContain(

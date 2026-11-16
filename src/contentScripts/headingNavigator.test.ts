@@ -392,7 +392,7 @@ describe('pinned panel restoration', () => {
         const panelElement = document.querySelector('.heading-navigator-panel');
         expect(panelElement).not.toBeNull();
         expect(panelElement!.classList.contains('is-pinned')).toBe(true);
-        expect(panelElement!.classList.contains('is-compact')).toBe(true);
+        expect(panelElement!.classList.contains('has-metadata-row')).toBe(false);
         expect(panelElement!.classList.contains('has-level-badge')).toBe(false);
         expect(document.getElementById('heading-navigator-styles')?.textContent).toContain('width: 480px;');
         expect(document.activeElement).not.toBe(document.querySelector('.heading-navigator-input'));
@@ -449,14 +449,14 @@ describe('pinned panel restoration', () => {
         await flushRestore();
         const panelElement = document.querySelector('.heading-navigator-panel')!;
         expect(panelElement.classList.contains('is-pinned')).toBe(true);
-        expect(panelElement.classList.contains('is-compact')).toBe(false);
+        expect(panelElement.classList.contains('has-metadata-row')).toBe(true);
 
         respondWithSettings();
         await flushRestore();
 
         expect(document.querySelector('.heading-navigator-panel')).toBe(panelElement);
         expect(panelElement.classList.contains('is-pinned')).toBe(true);
-        expect(panelElement.classList.contains('is-compact')).toBe(true);
+        expect(panelElement.classList.contains('has-metadata-row')).toBe(false);
         expect(panelElement.classList.contains('has-level-badge')).toBe(false);
         expect(document.getElementById('heading-navigator-styles')?.textContent).toContain('width: 500px;');
     });
@@ -468,7 +468,7 @@ describe('pinned panel restoration', () => {
 
         const panelElement = document.querySelector('.heading-navigator-panel')!;
         expect(panelElement.classList.contains('is-pinned')).toBe(true);
-        expect(panelElement.classList.contains('is-compact')).toBe(false);
+        expect(panelElement.classList.contains('has-metadata-row')).toBe(true);
         expect(document.getElementById('heading-navigator-styles')?.textContent).toContain('width: 320px;');
     });
 

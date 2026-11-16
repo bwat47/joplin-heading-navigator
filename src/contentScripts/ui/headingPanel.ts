@@ -30,11 +30,11 @@ const ATX_PREFIX_CHAR = '#';
 
 /** Text for each per-mode level indicator in a heading row; CSS decides which one is visible. */
 type HeadingRowLabels = {
-    /** Full mode: `H2 - line 5` */
+    /** Level and line number mode (`full`): `H2 - line 5` */
     metadata: string;
-    /** Compact mode: `H2` */
+    /** Level badge mode (`compact`): `H2` */
     badge: string;
-    /** ATX mode: `##` */
+    /** Markdown prefix mode (`atx`): `##` */
     atxPrefix: string;
 };
 
@@ -565,15 +565,15 @@ export class HeadingPanel {
     /**
      * Reflects the metadata display mode on the panel element.
      *
-     * Applied on both platforms: `is-compact` hides the `H# - line #` row,
+     * Applied on both platforms: `has-metadata-row` shows the `H# - line #` row,
      * `has-level-badge` shows the `H#` badge and its right gutter, and `is-atx` shows the
      * Markdown prefix. Each visible indicator has exactly one positive class.
-     * The reduced row height from `is-compact` is scoped to desktop in the stylesheet,
-     * so mobile keeps its touch targets.
+     * Rows are single-line by default; the taller two-line geometry that comes with
+     * `has-metadata-row` is scoped to desktop in the stylesheet, so mobile keeps its touch targets.
      */
     private applyMetadataDisplayClasses(): void {
         const display = this.settings.metadataDisplay;
-        this.container.classList.toggle('is-compact', display !== HEADING_METADATA_DISPLAY.full);
+        this.container.classList.toggle('has-metadata-row', display === HEADING_METADATA_DISPLAY.full);
         this.container.classList.toggle('has-level-badge', display === HEADING_METADATA_DISPLAY.compact);
         this.container.classList.toggle('is-atx', display === HEADING_METADATA_DISPLAY.atx);
     }
