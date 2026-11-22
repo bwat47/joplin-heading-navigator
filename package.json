@@ -27,7 +27,7 @@
         "publish"
     ],
     "devDependencies": {
-        "@bwat47/joplin-plugin-scripts": "^1.8.0",
+        "@bwat47/joplin-plugin-scripts": "^2.0.0",
         "@codemirror/lang-markdown": "6.5.0",
         "@codemirror/language": "6.12.3",
         "@codemirror/state": "6.7.1",
