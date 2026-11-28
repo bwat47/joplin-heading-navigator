@@ -35,13 +35,14 @@
         "@lezer/common": "1.5.0",
         "@lezer/markdown": "1.6.3",
         "@types/node": "^24.19.2",
-        "fallow": "^3.45.0",
+        "fallow": "^3.50.0",
+        "fallow-type-aware": "^3.50.0",
         "jsdom": "^31.0.1",
-        "oxfmt": "^0.79.0",
-        "oxlint": "^1.94.0",
-        "oxlint-tsgolint": "^7.0.2008",
+        "oxfmt": "^0.80.0",
+        "oxlint": "^1.95.0",
+        "oxlint-tsgolint": "^7.0.2009",
         "typescript": "^7.0.2",
-        "vitest": "^5.1.1"
+        "vitest": "^5.1.2"
     },
     "dependencies": {
         "@joplin/fork-uslug": "^2.0.10",
