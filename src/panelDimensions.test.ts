@@ -8,7 +8,6 @@ import {
     MIN_PANEL_WIDTH,
     normalizePanelDimensions,
     normalizePanelHeightPercentage,
-    normalizePanelHeightRatio,
     normalizePanelTopOffset,
     normalizePanelWidth,
 } from './panelDimensions';
@@ -52,23 +51,6 @@ describe('normalizePanelHeightPercentage', () => {
         });
         expect(normalizePanelHeightPercentage(DEFAULT_PANEL_DIMENSIONS.maxHeightRatio * 100)).toEqual({
             value: Math.round(DEFAULT_PANEL_DIMENSIONS.maxHeightRatio * 100),
-            changed: false,
-        });
-    });
-});
-
-describe('normalizePanelHeightRatio', () => {
-    it('clamps ratio to valid range', () => {
-        expect(normalizePanelHeightRatio(-0.5)).toEqual({
-            value: MIN_PANEL_HEIGHT_PERCENTAGE / 100,
-            changed: true,
-        });
-        expect(normalizePanelHeightRatio(2)).toEqual({
-            value: MAX_PANEL_HEIGHT_PERCENTAGE / 100,
-            changed: true,
-        });
-        expect(normalizePanelHeightRatio(DEFAULT_PANEL_DIMENSIONS.maxHeightRatio)).toEqual({
-            value: DEFAULT_PANEL_DIMENSIONS.maxHeightRatio,
             changed: false,
         });
     });
@@ -119,5 +101,19 @@ describe('normalizePanelDimensions', () => {
             width: MAX_PANEL_WIDTH,
             maxHeightRatio: MIN_PANEL_HEIGHT_PERCENTAGE / 100,
         });
+    });
+
+    it('falls back to default height ratio for invalid or missing values', () => {
+        expect(normalizePanelDimensions({ maxHeightRatio: Number.NaN }).maxHeightRatio).toBe(
+            DEFAULT_PANEL_DIMENSIONS.maxHeightRatio
+        );
+        expect(normalizePanelDimensions({ maxHeightRatio: 'tall' as unknown as number }).maxHeightRatio).toBe(
+            DEFAULT_PANEL_DIMENSIONS.maxHeightRatio
+        );
+        expect(normalizePanelDimensions({ maxHeightRatio: null as unknown as number }).maxHeightRatio).toBe(
+            DEFAULT_PANEL_DIMENSIONS.maxHeightRatio
+        );
+        expect(normalizePanelDimensions().maxHeightRatio).toBe(DEFAULT_PANEL_DIMENSIONS.maxHeightRatio);
+        expect(normalizePanelDimensions({ maxHeightRatio: 0.65 }).maxHeightRatio).toBe(0.65);
     });
 });

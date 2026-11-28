@@ -8,8 +8,18 @@
     },
     "rules": {
         "complexity-crap": "off",
-        "dev-dependencies-in-production": "off"
+        "dev-dependencies-in-production": "off",
+        "test-only-exports": "warn",
+        "require-suppression-reason": "error"
     },
+    "overrides": [
+        {
+            "files": ["src/testing/**"],
+            "rules": {
+                "test-only-exports": "off"
+            }
+        }
+    ],
     "health": {
         "maxCognitive": 15,
         "maxCyclomatic": 20

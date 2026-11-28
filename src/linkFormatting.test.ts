@@ -1,31 +1,4 @@
-import { escapeLinkText, formatExternalHeadingLink, formatInternalHeadingLink } from './linkFormatting';
-
-describe('escapeLinkText', () => {
-    it('escapes square brackets', () => {
-        expect(escapeLinkText('Hello [World]')).toBe('Hello \\[World\\]');
-        expect(escapeLinkText('[Complex]')).toBe('\\[Complex\\]');
-    });
-
-    it('escapes backslashes', () => {
-        expect(escapeLinkText('Path\\to\\file')).toBe('Path\\\\to\\\\file');
-    });
-
-    it('escapes both brackets and backslashes', () => {
-        expect(escapeLinkText('[Test] \\Example\\')).toBe('\\[Test\\] \\\\Example\\\\');
-    });
-
-    it('escapes HTML angle brackets and ampersands', () => {
-        expect(escapeLinkText('<div>&Text>')).toBe('\\<div\\>\\&Text\\>');
-    });
-
-    it('returns original text when no escaping needed', () => {
-        expect(escapeLinkText('Simple text')).toBe('Simple text');
-    });
-
-    it('handles empty string', () => {
-        expect(escapeLinkText('')).toBe('');
-    });
-});
+import { formatExternalHeadingLink, formatInternalHeadingLink } from './linkFormatting';
 
 describe('formatExternalHeadingLink', () => {
     it('formats heading link with note title', () => {
@@ -61,7 +34,11 @@ describe('formatInternalHeadingLink', () => {
     });
 
     it('escapes special characters in heading text', () => {
-        const result = formatInternalHeadingLink('[API] <Guide> & Links', 'api-guide-links');
-        expect(result).toBe('[\\[API\\] \\<Guide\\> \\& Links](#api-guide-links)');
+        const result = formatInternalHeadingLink('[API] \\<Guide> & Links\\', 'api-guide-links');
+        expect(result).toBe('[\\[API\\] \\\\\\<Guide\\> \\& Links\\\\](#api-guide-links)');
+    });
+
+    it('handles empty heading text', () => {
+        expect(formatInternalHeadingLink('', 'empty')).toBe('[](#empty)');
     });
 });

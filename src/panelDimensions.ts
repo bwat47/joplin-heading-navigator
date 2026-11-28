@@ -59,13 +59,11 @@ export function normalizePanelTopOffset(raw: unknown): { value: number; changed:
     return { value: clamped, changed: clamped !== raw };
 }
 
-export function normalizePanelHeightRatio(raw: unknown): { value: number; changed: boolean } {
-    const fallback = DEFAULT_PANEL_DIMENSIONS.maxHeightRatio;
+function normalizePanelHeightRatio(raw: unknown): number {
     if (typeof raw !== 'number' || Number.isNaN(raw)) {
-        return { value: fallback, changed: true };
+        return DEFAULT_PANEL_DIMENSIONS.maxHeightRatio;
     }
-    const clamped = clamp(raw, MIN_PANEL_HEIGHT_RATIO, MAX_PANEL_HEIGHT_RATIO);
-    return { value: clamped, changed: clamped !== raw };
+    return clamp(raw, MIN_PANEL_HEIGHT_RATIO, MAX_PANEL_HEIGHT_RATIO);
 }
 
 /**
@@ -80,9 +78,8 @@ export function normalizePanelHeightRatio(raw: unknown): { value: number; change
  */
 export function normalizePanelDimensions(dimensions?: Partial<PanelDimensions>): PanelDimensions {
     const widthResult = normalizePanelWidth(dimensions?.width);
-    const heightResult = normalizePanelHeightRatio(dimensions?.maxHeightRatio);
     return {
         width: widthResult.value,
-        maxHeightRatio: heightResult.value,
+        maxHeightRatio: normalizePanelHeightRatio(dimensions?.maxHeightRatio),
     };
 }

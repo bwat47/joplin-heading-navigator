@@ -8,7 +8,7 @@ import type { ContentScriptToPluginMessage } from '../messages';
 import { DEFAULT_PANEL_TOP_OFFSET, normalizePanelDimensions, normalizePanelTopOffset } from '../panelDimensions';
 import { DEFAULT_PANEL_DIMENSIONS, DEFAULT_PREVIEW_HEADINGS, type ContentScriptSettings } from '../types';
 
-export const DEFAULT_CONTENT_SCRIPT_SETTINGS: ContentScriptSettings = {
+const DEFAULT_CONTENT_SCRIPT_SETTINGS: ContentScriptSettings = {
     dimensions: { ...DEFAULT_PANEL_DIMENSIONS },
     metadataDisplay: DEFAULT_HEADING_METADATA_DISPLAY,
     previewHeadings: DEFAULT_PREVIEW_HEADINGS,
@@ -25,7 +25,7 @@ export function getContentScriptSettings(state: EditorState): ContentScriptSetti
     return state.facet(settingsFacet);
 }
 
-export function normalizeContentScriptSettings(value: unknown): ContentScriptSettings {
+function normalizeContentScriptSettings(value: unknown): ContentScriptSettings {
     if (!value || typeof value !== 'object') {
         return DEFAULT_CONTENT_SCRIPT_SETTINGS;
     }
@@ -54,7 +54,7 @@ export function createSettingsExtension(): Extension {
     return settingsCompartment.of(settingsFacet.of(DEFAULT_CONTENT_SCRIPT_SETTINGS));
 }
 
-export function applyContentScriptSettings(view: EditorView, settings: unknown): ContentScriptSettings {
+function applyContentScriptSettings(view: EditorView, settings: unknown): ContentScriptSettings {
     const normalized = normalizeContentScriptSettings(settings);
     view.dispatch({
         effects: settingsCompartment.reconfigure(settingsFacet.of(normalized)),
